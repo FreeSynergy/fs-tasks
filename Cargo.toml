@@ -1,0 +1,31 @@
+[package]
+name        = "fs-tasks"
+description = "FreeSynergy Tasks — data offers, task builder and task templates"
+version     = "0.1.0"
+edition     = "2021"
+license     = "MIT"
+authors     = ["FreeSynergy.Net"]
+repository  = "https://github.com/FreeSynergy/fs-tasks"
+
+[lib]
+name = "fs_tasks"
+path = "src/lib.rs"
+
+[[bin]]
+name = "fs-tasks"
+path = "src/main.rs"
+
+[features]
+default  = ["desktop"]
+desktop  = ["dioxus/desktop"]
+web      = ["dioxus/web"]
+
+[dependencies]
+dioxus  = { version = "0.7.3", default-features = false, features = ["macro", "html", "signals", "hooks", "launch"] }
+serde   = { version = "1", features = ["derive"] }
+toml    = { version = "1", features = ["preserve_order"] }
+chrono  = { version = "0.4", features = ["serde"] }
+
+# ── Local patches ──────────────────────────────────────────────────────────────
+[patch.crates-io]
+dioxus-desktop = { path = "../fs-desktop/vendor/dioxus-desktop" }
