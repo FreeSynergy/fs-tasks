@@ -140,9 +140,9 @@ fn TriggerSelector(trigger: DataTrigger, on_change: EventHandler<DataTrigger>) -
 
     rsx! {
         div { style: "display: flex; flex-direction: column; gap: 6px;",
-            TriggerOption { label: "Manual only",     selected: is_manual,    on_select: move |()| on_change.call(DataTrigger::Manual) }
-            TriggerOption { label: "On event",        selected: is_on_event,  on_select: move |()| on_change.call(DataTrigger::OnEvent("commit-pushed".into())) }
-            TriggerOption { label: "Scheduled (cron)", selected: is_scheduled, on_select: move |()| on_change.call(DataTrigger::Scheduled("0 8 * * *".into())) }
+            TriggerOption { label: "Manual only",     selected: is_manual,    on_select: move |_| on_change.call(DataTrigger::Manual) }
+            TriggerOption { label: "On event",        selected: is_on_event,  on_select: move |_| on_change.call(DataTrigger::OnEvent("commit-pushed".into())) }
+            TriggerOption { label: "Scheduled (cron)", selected: is_scheduled, on_select: move |_| on_change.call(DataTrigger::Scheduled("0 8 * * *".into())) }
         }
     }
 }

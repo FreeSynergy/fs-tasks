@@ -139,20 +139,20 @@ pub fn TasksApp() -> Element {
                                 }
                                 editing.set(false);
                             },
-                            on_cancel: move |()| editing.set(false),
+                            on_cancel: move |_| editing.set(false),
                         }
                     } else {
                         TaskDetail {
                             task,
-                            on_edit: move |()| editing.set(true),
-                            on_delete: move |()| {
+                            on_edit: move |_| editing.set(true),
+                            on_delete: move |_| {
                                 if let Some(i) = sel_idx {
                                     tasks.write().tasks.remove(i);
                                     let _ = tasks.read().save();
                                     selected_idx.set(None);
                                 }
                             },
-                            on_run: move |()| {},
+                            on_run: move |_| {},
                         }
                     }
                 } else {

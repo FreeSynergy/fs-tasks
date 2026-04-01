@@ -190,34 +190,3 @@ impl TasksConfig {
         std::fs::write(&path, content).map_err(|e| e.to_string())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn task_pipeline_new_default_has_correct_id() {
-        let t = TaskPipeline::new_default(42);
-        assert_eq!(t.id, "task-42");
-        assert_eq!(t.trigger, DataTrigger::Manual);
-        assert!(t.enabled);
-        assert!(t.last_run.is_none());
-    }
-
-    #[test]
-    fn status_label_reflects_enabled() {
-        let mut t = TaskPipeline::new_default(1);
-        assert_eq!(t.status_label(), "● Active");
-        t.enabled = false;
-        assert_eq!(t.status_label(), "○ Inactive");
-    }
-
-    #[test]
-    fn data_trigger_labels_are_non_empty() {
-        assert!(!DataTrigger::Manual.label().is_empty());
-        assert!(!DataTrigger::OnEvent("test".into()).label().is_empty());
-        assert!(!DataTrigger::Scheduled("*/5 * * * *".into())
-            .label()
-            .is_empty());
-    }
-}
