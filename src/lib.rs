@@ -7,6 +7,7 @@
 #![allow(clippy::return_self_not_must_use)]
 #![allow(clippy::struct_excessive_bools)]
 #![allow(clippy::needless_for_each)]
+#![allow(clippy::missing_panics_doc)]
 
 pub mod cli;
 pub mod controller;
