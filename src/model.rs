@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DataTrigger {
     Manual,
@@ -20,14 +20,14 @@ impl DataTrigger {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DataField {
     pub name: String,
     pub label: String,
     pub example: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum FieldTransform {
     Direct,
@@ -45,28 +45,28 @@ impl FieldTransform {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FieldMapping {
     pub source_field: Option<String>,
     pub target_field: String,
     pub transform: FieldTransform,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DataSource {
     pub service: String,
     pub offer: String,
     pub fields: Vec<DataField>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DataTarget {
     pub service: String,
     pub accept: String,
     pub fields: Vec<DataField>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TaskPipeline {
     pub id: String,
     pub name: String,
@@ -76,6 +76,7 @@ pub struct TaskPipeline {
     pub trigger: DataTrigger,
     pub enabled: bool,
     #[serde(default)]
+    #[schema(value_type = Option<String>, example = "2026-01-01T00:00:00Z")]
     pub last_run: Option<DateTime<Utc>>,
 }
 

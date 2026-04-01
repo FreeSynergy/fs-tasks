@@ -96,10 +96,7 @@ async fn toggle_task(
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ToggleTaskResult>) {
     match ctrl.toggle(&id) {
-        Some(enabled) => (
-            StatusCode::OK,
-            Json(ToggleTaskResult { ok: true, enabled }),
-        ),
+        Some(enabled) => (StatusCode::OK, Json(ToggleTaskResult { ok: true, enabled })),
         None => (
             StatusCode::NOT_FOUND,
             Json(ToggleTaskResult {
