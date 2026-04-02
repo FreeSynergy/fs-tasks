@@ -12,8 +12,11 @@
 pub mod cli;
 pub mod controller;
 pub mod grpc;
+pub mod keys;
 pub mod model;
 pub mod rest;
+pub mod view;
 
 pub use controller::TaskController;
 pub use model::{TaskPipeline, TasksConfig};
+pub use view::{CreateTaskView, TaskDetailView, TasksView};
