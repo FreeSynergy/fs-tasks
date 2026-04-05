@@ -15,8 +15,10 @@ pub mod grpc;
 pub mod keys;
 pub mod model;
 pub mod rest;
+pub mod store;
 pub mod view;
 
 pub use controller::TaskController;
-pub use model::{TaskPipeline, TasksConfig};
+pub use model::TaskPipeline;
+pub use store::{InMemoryTaskStore, TaskStore, TomlTaskStore};
 pub use view::{CreateTaskView, TaskDetailView, TasksView};

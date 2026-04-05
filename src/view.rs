@@ -9,7 +9,7 @@ use fs_render::{
 };
 
 use crate::keys;
-use crate::model::{TaskPipeline, TasksConfig};
+use crate::model::TaskPipeline;
 
 // ── TasksView ─────────────────────────────────────────────────────────────────
 
@@ -94,7 +94,10 @@ impl FsView for TaskDetailView {
                 self.task.name.clone(),
                 status.to_string(),
                 trigger_label,
-                format!("{} → {}", self.task.source.service, self.task.target.service),
+                format!(
+                    "{} → {}",
+                    self.task.source.service, self.task.target.service
+                ),
             ]
             .into_iter()
             .chain(mapping_items)
@@ -163,10 +166,7 @@ mod tests {
 
     #[test]
     fn tasks_view_shows_all_tasks() {
-        let tasks = vec![
-            TaskPipeline::new_default(1),
-            TaskPipeline::new_default(2),
-        ];
+        let tasks = vec![TaskPipeline::new_default(1), TaskPipeline::new_default(2)];
         let v = TasksView::new(tasks);
         let w = v.view();
         assert_eq!(w.widget_id(), "tasks-list");
