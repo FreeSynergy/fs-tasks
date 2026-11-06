@@ -52,9 +52,10 @@ async fn subscribers_see_changes_until_they_drop_the_capability() {
         write_uuid(delete.get().init_id(), Some(id));
         delete.send().promise.await.unwrap();
         settle().await;
-        assert_eq!(seen.0.borrow().last().map(String::as_str), Some("deleted"));
-        assert!(seen.0.borrow().iter().any(|s| s == "created Watched"));
-        assert_eq!(seen.0.borrow().len(), 3, "{:?}", seen.0.borrow());
+        assert_eq!(
+            *seen.0.borrow(),
+            ["created Watched", "updated Watched", "deleted"]
+        );
 
         drop(subscription);
         drop(answer);

@@ -23,13 +23,16 @@ impl TaskItems for TaskRepo {
         capabilities()
     }
     async fn create(&self, task: Task) -> Result<TaskEntry> {
+        let _one_at_a_time = self.writes.lock().await;
         self.create_inner(task, None).await
     }
     async fn edit(&self, id: ObjectId, task: Task) -> Result<TaskEntry> {
+        let _one_at_a_time = self.writes.lock().await;
         self.edit_inner(id, task).await
     }
     async fn assign(&self, id: ObjectId, name: &str, email: &str) -> Result<TaskEntry> {
         let (name, email) = (name.to_string(), email.to_string());
+        let _one_at_a_time = self.writes.lock().await;
         self.modify(id, move |t| {
             t.assign(&name, &email);
         })
@@ -37,10 +40,12 @@ impl TaskItems for TaskRepo {
     }
     async fn relate(&self, id: ObjectId, other_uid: &str, relation: Relation) -> Result<TaskEntry> {
         let uid = other_uid.to_string();
+        let _one_at_a_time = self.writes.lock().await;
         self.modify(id, move |t| t.relate(&uid, relation)).await
     }
     async fn label(&self, id: ObjectId, label: &str) -> Result<TaskEntry> {
         let label = label.to_string();
+        let _one_at_a_time = self.writes.lock().await;
         self.modify(id, move |t| t.label(&label)).await
     }
     async fn get(&self, id: ObjectId) -> Result<Option<TaskEntry>> {
@@ -53,6 +58,7 @@ impl TaskItems for TaskRepo {
             .transpose()
     }
     async fn delete(&self, id: ObjectId) -> Result<()> {
+        let _one_at_a_time = self.writes.lock().await;
         self.delete_inner(id).await
     }
     async fn list(&self) -> Result<Vec<TaskEntry>> {
@@ -62,6 +68,7 @@ impl TaskItems for TaskRepo {
         self.query_inner(query).await
     }
     async fn import_ics(&self, text: &str) -> Result<ImportReport> {
+        let _one_at_a_time = self.writes.lock().await;
         self.import_ics_inner(text).await
     }
     async fn export_ics(&self, ids: &[ObjectId]) -> Result<String> {

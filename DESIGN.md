@@ -35,7 +35,8 @@ Version 0.5.0: `fs-tasks-server`, the contract over a Unix socket; `TaskEntry` c
 | Server `fs-tasks-server`: every method of `Items`, `subscribe` (with `ended`), `capabilities` (what the provider offers), `supportReport`; `boards` answers `Unsupported`; errors as typed problems (`tasks/not-found` 404, `tasks/conflict` 409, `tasks/invalid` 422, `Unsupported` 501); binary with `--socket`, `--data`, `--actor` | done, draft; pages cut from the whole list, limit in `fs-interfaces/DESIGN.md` |
 | Boards, columns, `task_link`, card moves (`Update` on `task_link`, never on the task) | not started (design.md; `Boards` is a placeholder) |
 | Provider rule: `Error::Unsupported`; `capabilities()` and the reads (`get`, `get_by_uid`, `list`, `query`) are required, all other methods default to `Unsupported`; `TaskRepo` reports all but the boards ids (unsupported: "Boards is a placeholder; not built yet, it is possible") | done |
-| Tests | 20 in the core (18 without the `contract` feature); 7 for the server over a real socket, one of them the real binary across a restart |
+| Integrity: a uid that names an existing object is a `Conflict`, not an overwrite; write flows run one at a time (`writes`); `progress` is indexed as its RFC 8984 §5.2.5 effective value; `list` is by due date, undated last; range bounds round up to the index's seconds; imports report what they lost | done |
+| Tests | core `tests/integrity.rs` plus the earlier ones; server over a real socket, comparing values, exact problem types, the real binary across a restart, exit codes, data directory mode |
 | ADR 0043 | every file <= 200 lines, `//! Pattern:` in every module, `#![deny(missing_docs)]`, `#![warn(clippy::pedantic)]` clean |
 
 ## Structure and pattern map (ADR 0043)

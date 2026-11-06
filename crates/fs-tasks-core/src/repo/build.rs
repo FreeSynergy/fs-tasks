@@ -41,9 +41,7 @@ impl TaskRepo {
         if let Some(d) = span.due {
             put("due_utc", fmt_utc(d));
         }
-        if let Some(p) = &task.progress {
-            put("progress", p.clone());
-        }
+        put("progress", task.effective_progress().to_string());
         if let Some(s) = task.task_status() {
             put("task_status", s.to_string());
         }

@@ -6,13 +6,13 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fs_interfaces::rpc::read_object_id;
+use fs_interfaces::rpc::{check_answer, check_intake, read_object_id};
 use fs_interfaces::tasks_capnp::items;
 use fs_tasks_core::contract::{read_filter, relation_from_wire};
 use fs_tasks_core::{TaskItems, TaskQuery};
 
 use crate::errors::rpc_error;
-use crate::wire::{read_ids, read_task, write_page, write_report, write_task};
+use crate::wire::{read_ids, read_task, required, write_page, write_report, write_task};
 
 pub(crate) struct ItemsImpl {
     pub(crate) items: Arc<dyn TaskItems>,
@@ -52,7 +52,7 @@ impl items::Server for ItemsImpl {
     ) -> Done {
         let p = params.get()?;
         let id = read_object_id(p.get_id()?)?;
-        let (name, email) = (p.get_name()?.to_str()?, p.get_email()?.to_str()?);
+        let (name, email) = (p.get_name()?.to_str()?, required(p.get_email()?, "email")?);
         let entry = self
             .items
             .assign(id, name, email)
@@ -70,7 +70,7 @@ impl items::Server for ItemsImpl {
         let p = params.get()?;
         let id = read_object_id(p.get_id()?)?;
         let relation = relation_from_wire(p.get_relation()?);
-        let other = p.get_other_uid()?.to_str()?;
+        let other = required(p.get_other_uid()?, "otherUid")?;
         let entry = self
             .items
             .relate(id, other, relation)
@@ -87,7 +87,7 @@ impl items::Server for ItemsImpl {
     ) -> Done {
         let p = params.get()?;
         let id = read_object_id(p.get_id()?)?;
-        let label = p.get_label()?.to_str()?;
+        let label = required(p.get_label()?, "label")?;
         let entry = self.items.label(id, label).await.map_err(rpc_error)?;
         write_task(results.get().init_task(), &entry);
         Ok(())
@@ -158,11 +158,9 @@ impl items::Server for ItemsImpl {
         mut results: items::ImportIcsResults,
     ) -> Done {
         let p = params.get()?;
-        let report = self
-            .items
-            .import_ics(p.get_text()?.to_str()?)
-            .await
-            .map_err(rpc_error)?;
+        let text = p.get_text()?.to_str()?;
+        check_intake(text.len())?;
+        let report = self.items.import_ics(text).await.map_err(rpc_error)?;
         write_report(results.get().init_report(), &report)
     }
 
@@ -173,6 +171,7 @@ impl items::Server for ItemsImpl {
     ) -> Done {
         let ids = read_ids(params.get()?.get_ids()?)?;
         let text = self.items.export_ics(&ids).await.map_err(rpc_error)?;
+        check_answer(text.len())?;
         results.get().set_text(text.as_str());
         Ok(())
     }

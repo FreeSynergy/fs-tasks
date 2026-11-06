@@ -4,7 +4,8 @@
 //! JSCalendar JSON stays authoritative for the content; the envelope is the routing summary.
 
 use fs_interfaces::rpc::{
-    DEFAULT_PAGE_SIZE, Page, read_object_id, write_envelope, write_object_id,
+    DEFAULT_PAGE_SIZE, Page, check_intake, envelope_weight, read_object_id, write_envelope,
+    write_object_id,
 };
 use fs_interfaces::{common_capnp, tasks_capnp};
 use fs_store::ObjectId;
@@ -24,9 +25,20 @@ pub(crate) fn write_task(mut out: tasks_capnp::task::Builder<'_>, entry: &TaskEn
 
 /// Read the JSCalendar text of a request.
 pub(crate) fn read_task(text: capnp::text::Reader<'_>) -> capnp::Result<Task> {
+    let text = text.to_str()?;
+    check_intake(text.len())?;
     let value: serde_json::Value =
-        serde_json::from_str(text.to_str()?).map_err(|e| invalid(e.to_string()))?;
+        serde_json::from_str(text).map_err(|e| invalid(e.to_string()))?;
     Task::from_value(value).map_err(|e| invalid(e.to_string()))
+}
+
+/// A required text of a request; empty is refused here, so it never reaches the store as an index.
+pub(crate) fn required<'a>(text: capnp::text::Reader<'a>, what: &str) -> capnp::Result<&'a str> {
+    let text = text.to_str()?;
+    if text.is_empty() {
+        return Err(invalid(format!("{what} must not be empty")));
+    }
+    Ok(text)
 }
 
 /// Cut the page at `cursor` and write it.
@@ -37,7 +49,7 @@ pub(crate) fn write_page(
 ) -> capnp::Result<()> {
     let opaque = cursor?.get_opaque()?;
     let page = Page::of_weighted(all, opaque, DEFAULT_PAGE_SIZE, |e: &TaskEntry| {
-        e.task.to_value().to_string().len()
+        e.task.to_value().to_string().len() + envelope_weight(&e.envelope)
     })?;
     let mut items = out.reborrow().init_items(count(page.items.len())?);
     for (i, entry) in (0u32..).zip(&page.items) {

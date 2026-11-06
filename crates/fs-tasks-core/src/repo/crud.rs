@@ -37,6 +37,10 @@ impl TaskRepo {
                 .push(tzdb_version().into());
         }
         let id = o.envelope.id;
+        // A uid that is a UUID becomes the object id, so it can name an object that already exists.
+        if self.objects.get(id).await?.is_some() {
+            return Err(Error::Conflict(format!("an object with id {id} exists")));
+        }
         self.objects.put(o, &self.actor).await?;
         self.feed.notify(&TaskChange::Created(id));
         self.entry(id).await?.ok_or(Error::NotFound(id))

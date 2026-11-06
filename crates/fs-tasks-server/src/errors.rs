@@ -10,15 +10,24 @@ const NOT_FOUND: &str = "https://freesynergy.net/problems/tasks/not-found";
 const CONFLICT: &str = "https://freesynergy.net/problems/tasks/conflict";
 const INVALID: &str = "https://freesynergy.net/problems/tasks/invalid";
 
-/// A core error as an RPC error.
+/// A core error as an RPC error. `Json` means data already stored no longer reads: not the caller's
+/// fault. What a client sends is read before the core sees it (`wire::read_task`).
 pub(crate) fn rpc_error(e: Error) -> capnp::Error {
+    use fs_store::Error as Store;
     let text = e.to_string();
     match e {
         Error::Unsupported(not_possible) => unsupported(&not_possible),
-        Error::NotFound(_) => Problem::new(NOT_FOUND, "Task not found", text, 404).into_error(),
-        Error::Conflict(_) => Problem::new(CONFLICT, "Conflict", text, 409).into_error(),
-        Error::Invalid(_) | Error::Time(_) | Error::ICalendar(_) | Error::Json(_) => invalid(text),
-        Error::Store(_) => failed(text),
+        Error::NotFound(_) | Error::Store(Store::NotFound(_)) => {
+            Problem::new(NOT_FOUND, "Task not found", text, 404).into_error()
+        }
+        Error::Conflict(_) | Error::Store(Store::Conflict(_)) => {
+            Problem::new(CONFLICT, "Conflict", text, 409).into_error()
+        }
+        Error::Invalid(_)
+        | Error::Time(_)
+        | Error::ICalendar(_)
+        | Error::Store(Store::Invalid(_)) => invalid(text),
+        Error::Json(_) | Error::Store(_) => failed(text),
     }
 }
 

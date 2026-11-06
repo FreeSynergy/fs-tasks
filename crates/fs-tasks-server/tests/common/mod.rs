@@ -4,8 +4,9 @@
 
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{bind_socket, connect, read_envelope, serve};
-use fs_interfaces::tasks_capnp::{items, tasks};
+use fs_interfaces::common_capnp;
+use fs_interfaces::rpc::{bind_socket, connect, read_envelope, serve, write_uuid};
+use fs_interfaces::tasks_capnp::{self, items, tasks};
 use fs_store::{Store, TursoStore};
 use fs_tasks_core::TaskRepo;
 use fs_tasks_server::TasksServer;
@@ -69,4 +70,14 @@ pub async fn create(items: &items::Client, uid: &str, title: &str) -> Uuid {
     assert_eq!(env.name, title);
     assert_eq!(env.context.as_deref(), Some("tasks"));
     env.id.as_uuid()
+}
+
+/// Write a task id.
+pub fn set_id(out: common_capnp::uuid::Builder<'_>, id: Uuid) {
+    write_uuid(out, Some(id));
+}
+
+/// The JSCalendar content of a task on the wire.
+pub fn task_json(task: tasks_capnp::task::Reader<'_>) -> serde_json::Value {
+    serde_json::from_str(task.get_jscalendar().unwrap().to_str().unwrap()).unwrap()
 }

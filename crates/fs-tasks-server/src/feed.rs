@@ -31,11 +31,16 @@ pub(crate) fn subscribe(
     })
 }
 
-/// A task that is gone again by now has nothing to report but its own `Deleted`, which follows.
-async fn notice(items: &dyn TaskItems, change: TaskChange) -> Option<Notice> {
-    match change {
-        TaskChange::Created(id) => Some(Notice::Created(items.get(id).await.ok()??.envelope)),
-        TaskChange::Updated(id) => Some(Notice::Updated(items.get(id).await.ok()??.envelope)),
+/// A task that is gone again by now has nothing to report but its own `Deleted`, which follows. A
+/// failed read is something else: the consumer would miss a change, so it ends the feed.
+async fn notice(items: &dyn TaskItems, change: TaskChange) -> Result<Option<Notice>, String> {
+    let envelope = async |id| {
+        let entry = items.get(id).await.map_err(|e| e.to_string())?;
+        Ok::<_, String>(entry.map(|e| e.envelope))
+    };
+    Ok(match change {
+        TaskChange::Created(id) => envelope(id).await?.map(Notice::Created),
+        TaskChange::Updated(id) => envelope(id).await?.map(Notice::Updated),
         TaskChange::Deleted(id) => Some(Notice::Deleted(id)),
-    }
+    })
 }

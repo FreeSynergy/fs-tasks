@@ -15,6 +15,7 @@ use crate::now_utc;
 
 impl TaskRepo {
     pub(super) async fn edit_inner(&self, id: ObjectId, mut new: Task) -> Result<TaskEntry> {
+        new.normalise();
         let old_stored = self.stored(id).await?.ok_or(Error::NotFound(id))?;
         let old = Task::from_value(old_stored.content.clone())?;
         if old.uid != new.uid {

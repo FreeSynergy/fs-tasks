@@ -16,7 +16,17 @@ impl TaskRepo {
     /// ADR 0030); known `uid`s are skipped; the tz database version is recorded (`tzdb_version`).
     pub(super) async fn import_ics_inner(&self, text: &str) -> Result<ImportReport> {
         let mut report = ImportReport::default();
-        for part in split_ics(text) {
+        if !text.to_ascii_uppercase().contains("BEGIN:VCALENDAR") {
+            report.failed.push("not an iCalendar text".into());
+            return Ok(report);
+        }
+        let parts = split_ics(text);
+        let found = |t: &str| t.to_ascii_uppercase().matches("BEGIN:VTODO").count();
+        let kept: usize = parts.iter().map(|p| found(&p.text)).sum();
+        for _ in kept..found(text) {
+            report.failed.push("VTODO without a UID".into());
+        }
+        for part in parts {
             if self.stored_by_uid(&part.uid).await?.is_some() {
                 report.skipped.push(part.uid);
                 continue;

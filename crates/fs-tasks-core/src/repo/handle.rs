@@ -22,6 +22,8 @@ pub struct TaskRepo {
     pub(crate) actor: String,
     pub(crate) instance: String,
     pub(crate) floating: Zone,
+    /// One write flow at a time: each reads, decides and writes, and a backend may yield in between.
+    pub(crate) writes: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl TaskRepo {
@@ -45,6 +47,7 @@ impl TaskRepo {
             actor: actor.into(),
             instance: "local.invalid".into(),
             floating: Zone::Utc,
+            writes: Arc::default(),
         }
     }
 

@@ -33,20 +33,20 @@ pub fn issues(t: &Task) -> Vec<Issue> {
     if t.percent_complete.is_some_and(|p| p > 100) {
         c.bad("/percentComplete", "0..=100");
     }
-    if let Some(s) = &t.due {
-        if parse_local(s).is_err() {
-            c.bad("/due", format!("not a LocalDateTime: {s:?}"));
-        }
+    if let Some(s) = &t.due
+        && parse_local(s).is_err()
+    {
+        c.bad("/due", format!("not a LocalDateTime: {s:?}"));
     }
-    if let Some(d) = &t.estimated_duration {
-        if Dur::parse(d).is_err() {
-            c.bad("/estimatedDuration", format!("not a duration: {d:?}"));
-        }
+    if let Some(d) = &t.estimated_duration
+        && Dur::parse(d).is_err()
+    {
+        c.bad("/estimatedDuration", format!("not a duration: {d:?}"));
     }
-    if let Some(s) = &t.progress_updated {
-        if parse_utc(s).is_err() {
-            c.bad("/progressUpdated", "not a UTCDateTime");
-        }
+    if let Some(s) = &t.progress_updated
+        && parse_utc(s).is_err()
+    {
+        c.bad("/progressUpdated", "not a UTCDateTime");
     }
     shared(&mut c, t);
     c.into_issues()
