@@ -1,16 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["crates/fs-tasks-core", "crates/fs-tasks-server"]
+members = ["crates/fs-tasks-core", "crates/fs-tasks-server", "crates/fs-tasks-app"]
 
 [workspace.package]
 version = "0.5.3"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.89"
-
-# Local until fs-interfaces and fs-jscalendar have their tags. Stays for now: the pins in the crates change
-# and this goes when those are tagged, in the commit that tags fs-tasks. A fresh clone does not build until then.
-[patch."https://github.com/FreeSynergy/fs-interfaces"]
-fs-interfaces = { path = "../.wt-rpc-interfaces/crates/fs-interfaces" }
-[patch."https://github.com/FreeSynergy/fs-jscalendar"]
-fs-jscalendar = { path = "../.wt-jscal/crates/fs-jscalendar" }
