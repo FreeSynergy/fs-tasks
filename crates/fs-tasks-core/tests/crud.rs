@@ -74,15 +74,14 @@ async fn assign_relate_and_label() {
 
 #[tokio::test]
 async fn capabilities_are_listed() {
-    let r = repo().await;
-    assert_eq!(
-        r.capabilities(),
-        [
-            "task.create",
-            "task.edit",
-            "task.assign",
-            "relation.create",
-            "label.assign"
-        ]
-    );
+    let caps = repo().await.capabilities();
+    for id in [
+        "task.create",
+        "task.edit",
+        "task.assign",
+        "relation.create",
+        "label.assign",
+    ] {
+        assert!(caps.is_supported(id), "{id}");
+    }
 }

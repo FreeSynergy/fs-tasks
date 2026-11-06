@@ -6,17 +6,22 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use fs_interfaces::Capabilities;
 use fs_store::ObjectId;
 
 use super::handle::TaskRepo;
 use crate::error::Result;
 use crate::interface::{
-    ImportReport, Subscription, TaskEntry, TaskFeed, TaskItems, TaskListener, TaskQuery,
+    CAPABILITIES, ImportReport, Subscription, TaskEntry, TaskFeed, TaskItems, TaskListener,
+    TaskQuery,
 };
 use crate::model::{Relation, Task};
 
 #[async_trait]
 impl TaskItems for TaskRepo {
+    fn capabilities(&self) -> Capabilities {
+        capabilities()
+    }
     async fn create(&self, task: Task) -> Result<TaskEntry> {
         self.create_inner(task, None).await
     }
@@ -68,4 +73,36 @@ impl TaskFeed for TaskRepo {
     fn subscribe(&self, listener: Arc<dyn TaskListener>) -> Subscription {
         self.feed.add(listener)
     }
+}
+
+/// The store-backed provider offers every method and the live feed. The five ids of the schema
+/// plus the ids this repo names for the other methods (the schema gives none, see `DESIGN.md`).
+fn capabilities() -> Capabilities {
+    let mut caps = Capabilities::new("fs-tasks");
+    for id in CAPABILITIES {
+        caps.supported(id);
+    }
+    for id in [
+        "task.read",
+        "task.query",
+        "task.delete",
+        "task.import",
+        "task.export",
+        "task.subscribe",
+    ] {
+        caps.supported(id);
+    }
+    for id in [
+        "board.open",
+        "board.create",
+        "column.create",
+        "column.limit",
+        "card.move",
+    ] {
+        caps.unsupported(
+            id,
+            "Boards is a placeholder in the contract; not built yet, it is possible",
+        );
+    }
+    caps
 }

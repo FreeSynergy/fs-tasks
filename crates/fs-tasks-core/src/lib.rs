@@ -20,6 +20,7 @@
 )]
 
 // The Cap'n Proto contract and its generated code live in `fs-interfaces` (ADR 0045); re-exported here.
+pub use fs_interfaces::{Capabilities, Unsupported};
 #[cfg(feature = "contract")]
 pub use fs_interfaces::{common_capnp, tasks_capnp};
 #[cfg(feature = "contract")]

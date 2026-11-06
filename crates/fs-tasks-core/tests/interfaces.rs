@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use common::{repo, t};
+use fs_interfaces::Capabilities;
 use fs_store::ObjectId;
 use fs_tasks_core::{
     ImportReport, Relation, Result, Task, TaskChange, TaskEntry, TaskFeed, TaskItems, TaskListener,
@@ -38,6 +39,9 @@ struct Nothing;
 
 #[async_trait]
 impl TaskItems for Nothing {
+    fn capabilities(&self) -> Capabilities {
+        Capabilities::new("nothing")
+    }
     async fn create(&self, task: Task) -> Result<TaskEntry> {
         Ok(TaskEntry {
             id: ObjectId::new(),
@@ -86,7 +90,7 @@ impl TaskItems for Nothing {
 async fn a_fake_implements_the_interface() {
     let items: Arc<dyn TaskItems> = Arc::new(Nothing);
     assert_eq!(items.list().await.unwrap().len(), 0);
-    assert_eq!(items.capabilities().len(), 5, "default capabilities");
+    assert_eq!(items.capabilities().provider(), "nothing");
 }
 
 #[derive(Default)]

@@ -30,6 +30,9 @@ pub enum Error {
     /// JSON could not be read or written.
     #[error("json: {0}")]
     Json(#[from] serde_json::Error),
+    /// The explicit "not possible" of a provider (ADR 0045).
+    #[error(transparent)]
+    Unsupported(#[from] fs_interfaces::Unsupported),
     /// The operation conflicts with the current state (duplicate uid, ...).
     #[error("{0}")]
     Conflict(String),
