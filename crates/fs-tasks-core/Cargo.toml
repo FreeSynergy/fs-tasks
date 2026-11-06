@@ -1,0 +1,35 @@
+[package]
+name = "fs-tasks-core"
+description = "Program core of FreeSynergy tasks: JSCalendar 2.0 Task over fs-store behind the TaskItems interface, RFC 9253 relations, iCalendar VTODO"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[features]
+# Cap'n Proto contract (schema/tasks.capnp): compiles the committed generated code (ADR 0040).
+contract = ["dep:capnp"]
+# Re-generate src/contract/*_capnp.rs from ../../schema (needs no C++ toolchain).
+regenerate = ["contract", "dep:capnpc", "dep:capnpc-embedded"]
+
+[dependencies]
+fs-store = { git = "https://github.com/FreeSynergy/fs-store", tag = "v0.2.0" }
+# Last MIT/Apache version before Stalwart moved later releases to AGPL: pinned exactly (see DESIGN.md).
+calcard = "=0.3.14"
+# Zones: jiff (Unlicense OR MIT) with the system tzdb preferred and a bundled copy as fallback (ADR 0026).
+jiff = { version = "0.2", features = ["tzdb-bundle-always"] }
+jiff-tzdb = "0.1"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+async-trait = "0.1"
+capnp = { version = "0.27", optional = true }
+
+[build-dependencies]
+capnpc = { version = "0.27", optional = true }
+capnpc-embedded = { version = "0.2", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
