@@ -12,6 +12,10 @@ use super::task::Task;
 /// RFC 10051 task status has no JSCalendar form yet.
 pub const TASK_STATUS_KEY: &str = "freesynergy.net:taskStatus";
 
+fn progress_of(p: &Participant) -> Option<&str> {
+    p.extra.get("progress").and_then(Value::as_str)
+}
+
 impl Task {
     /// The progress, also when omitted: RFC 8984 §5.2.5 computes it from the participants, in this
     /// order. A task without participants has no one who completed it, so it needs action.
@@ -19,15 +23,16 @@ impl Task {
         if let Some(p) = self.progress.as_deref() {
             return p;
         }
-        fn of(p: &Participant) -> Option<&str> {
-            p.extra.get("progress").and_then(Value::as_str)
-        }
-        let any = |wanted: &str| self.participants.values().any(|p| of(p) == Some(wanted));
+        let any = |wanted: &str| {
+            self.participants
+                .values()
+                .any(|p| progress_of(p) == Some(wanted))
+        };
         if !self.participants.is_empty()
             && self
                 .participants
                 .values()
-                .all(|p| of(p) == Some("completed"))
+                .all(|p| progress_of(p) == Some("completed"))
         {
             "completed"
         } else if any("failed") {

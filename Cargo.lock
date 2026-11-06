@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-core"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "async-trait",
  "capnp",
@@ -690,7 +690,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-server"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "capnp",
  "capnp-rpc",
