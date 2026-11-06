@@ -7,9 +7,9 @@ use fs_store::{Blob, Envelope, ObjectId, StoredObject};
 
 use super::consts::{CONTENT_TYPE, CONTEXT, TASK_TYPE};
 use super::handle::TaskRepo;
+use super::span::index_time;
 use crate::error::{Error, MAX_TASK_BYTES, Result};
 use crate::model::Task;
-use crate::time::fmt_utc;
 use crate::validate::validate;
 
 impl TaskRepo {
@@ -20,8 +20,9 @@ impl TaskRepo {
         original: Option<Blob>,
     ) -> Result<StoredObject> {
         validate(task)?;
-        // Checked as it will be stored: small edits add up, and escaping can multiply the text.
-        let bytes = task.to_value().to_string().len();
+        // Checked as it will be answered: small edits add up, escaping can multiply the text, and the
+        // title also travels as the envelope's name.
+        let bytes = task.to_value().to_string().len() + task.display_title().len();
         if bytes > MAX_TASK_BYTES {
             return Err(Error::TooLarge(bytes));
         }
@@ -43,13 +44,13 @@ impl TaskRepo {
         put("uid", task.uid.clone());
         put("type", "task".into());
         if let Some(s) = span.start {
-            put("start_utc", fmt_utc(s));
+            put("start_utc", index_time(s));
         }
         if let Some(e) = span.end {
-            put("end_utc", fmt_utc(e));
+            put("end_utc", index_time(e));
         }
         if let Some(d) = span.due {
-            put("due_utc", fmt_utc(d));
+            put("due_utc", index_time(d));
         }
         put("progress", task.effective_progress().to_string());
         if let Some(s) = task.task_status() {

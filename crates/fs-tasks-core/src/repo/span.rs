@@ -2,12 +2,24 @@
 //!
 //! Pattern: Value object + pure function — `start` / `due` / `estimatedDuration` in UTC.
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, Utc};
 
+use super::consts::{FIRST_INDEX_TIME, LAST_INDEX_TIME};
 use super::handle::TaskRepo;
 use crate::error::Result;
 use crate::model::Task;
-use crate::time::{Dur, Zone, parse_local};
+use crate::time::{Dur, Zone, fmt_utc, parse_local};
+
+/// The index value of an instant. A local time near the edge of years 0 to 9999 can leave them in UTC,
+/// and then its text would no longer sort: `-0001-...` falls out of every range. So it stays at the
+/// edge. The task keeps its real time, only the order in the index is at stake.
+pub(super) fn index_time(t: DateTime<Utc>) -> String {
+    match t.year() {
+        ..0 => FIRST_INDEX_TIME.into(),
+        0..10_000 => fmt_utc(t),
+        _ => LAST_INDEX_TIME.into(),
+    }
+}
 
 /// `(start, end, due)`, all UTC.
 pub(super) struct Span {

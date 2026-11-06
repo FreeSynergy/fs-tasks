@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-use fs_interfaces::rpc::connect;
+use fs_interfaces::rpc::{connect, read_envelope};
 use fs_interfaces::tasks_capnp::tasks;
 
 fn start(socket: &Path, data: &Path) -> Child {
@@ -108,6 +108,75 @@ async fn tasks_survive_a_restart_and_a_second_start_is_refused() {
             terminate(again);
         })
         .await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn the_instance_names_the_iri_of_a_new_task() {
+    let local = tokio::task::LocalSet::new();
+    local
+        .run_until(async {
+            let dir = tempfile::tempdir().unwrap();
+            let socket = dir.path().join("tasks.sock");
+            let server = Command::new(env!("CARGO_BIN_EXE_fs-tasks-server"))
+                .arg("--socket")
+                .arg(&socket)
+                .arg("--data")
+                .arg(dir.path().join("data"))
+                .args(["--instance", "tasks.example.org"])
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap();
+            wait_for(&socket).await;
+            let connection = connect::<tasks::Client>(&socket).await.unwrap();
+            let answer = connection
+                .client
+                .items_request()
+                .send()
+                .promise
+                .await
+                .unwrap();
+            let items = answer.get().unwrap().get_items().unwrap();
+            let mut create = items.create_request();
+            create
+                .get()
+                .set_jscalendar(r#"{"@type":"Task","version":"2.0","uid":"i","title":"I"}"#);
+            let created = create.send().promise.await.unwrap();
+            let task = created.get().unwrap().get_task().unwrap();
+            let envelope = read_envelope(task.get_envelope().unwrap()).unwrap();
+            let iri = envelope.iri.unwrap();
+            drop(created);
+            drop(answer);
+            drop(connection);
+            // Stopped first: a failed assertion must not leave the server running.
+            terminate(server);
+            assert!(iri.starts_with("https://tasks.example.org/tasks/"), "{iri}");
+        })
+        .await;
+}
+
+#[test]
+fn it_refuses_an_instance_that_is_no_domain() {
+    let dir = tempfile::tempdir().unwrap();
+    for bad in [
+        "a/b",
+        "x y",
+        "user@example.org",
+        "example.org:80",
+        "-a.example",
+    ] {
+        let code = Command::new(env!("CARGO_BIN_EXE_fs-tasks-server"))
+            .arg("--socket")
+            .arg(dir.path().join("x.sock"))
+            .arg("--data")
+            .arg(dir.path().join("data"))
+            .args(["--instance", bad])
+            .stderr(Stdio::null())
+            .status()
+            .unwrap()
+            .code();
+        assert_eq!(code, Some(2), "{bad}");
+    }
+    assert!(!dir.path().join("data").exists(), "nothing was opened");
 }
 
 #[test]

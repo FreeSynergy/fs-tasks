@@ -13,6 +13,7 @@ mod items;
 mod queries;
 mod span;
 mod transfer;
+mod unread;
 
 pub use consts::{CONTENT_TYPE, CONTEXT, TASK_TYPE};
 pub use handle::TaskRepo;

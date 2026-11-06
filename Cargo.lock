@@ -626,7 +626,7 @@ checksum = "1c66915cc5391097de7a2b0b972e8505aa33c0df401fd3a6811dbdb32881ba48"
 
 [[package]]
 name = "fs-interfaces"
-version = "0.26.0"
+version = "0.32.0"
 dependencies = [
  "capnp",
  "capnp-rpc",
@@ -641,7 +641,7 @@ dependencies = [
 
 [[package]]
 name = "fs-jscalendar"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "calcard",
  "chrono",
@@ -672,7 +672,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-core"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
  "async-trait",
  "capnp",
@@ -688,8 +688,9 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-server"
-version = "0.5.2"
+version = "0.5.3"
 dependencies = [
+ "async-trait",
  "capnp",
  "capnp-rpc",
  "fs-interfaces",
@@ -2296,6 +2297,7 @@ dependencies = [
  "futures-core",
  "futures-io",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]

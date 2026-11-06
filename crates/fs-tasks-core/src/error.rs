@@ -6,8 +6,9 @@
 use fs_jscalendar::Issue;
 use fs_store::ObjectId;
 
-/// Largest task, as JSON. Any answer carries a task with its envelope, and that has to fit one
-/// message of the contract (`fs_interfaces::rpc::MAX_INTAKE_BYTES`).
+/// Largest task: its JSON plus the name in its envelope, as an answer carries both and the title counts
+/// twice. With the rest of the envelope that always fits a page of the contract
+/// (`fs_interfaces::rpc::MAX_INTAKE_BYTES`, half of `MAX_PAGE_BYTES`).
 pub const MAX_TASK_BYTES: usize = 16 * 1024 * 1024;
 
 /// Result of every fallible operation of this crate.
@@ -38,7 +39,7 @@ pub enum Error {
     #[error(transparent)]
     Unsupported(#[from] fs_interfaces::Unsupported),
     /// The task would be too large to come back in one answer (`MAX_TASK_BYTES`).
-    #[error("the task has {0} bytes, at most {MAX_TASK_BYTES} are possible")]
+    #[error("the task and its name have {0} bytes, at most {MAX_TASK_BYTES} are possible")]
     TooLarge(usize),
     /// The operation conflicts with the current state (duplicate uid, ...).
     #[error("{0}")]

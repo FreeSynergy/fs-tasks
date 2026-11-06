@@ -1,4 +1,4 @@
-//! `fs-tasks-server`. Usage: `fs-tasks-server [--socket PATH] [--data DIR] [--actor IRI]`.
+//! `fs-tasks-server`. Usage: `fs-tasks-server [--socket PATH] [--data DIR] [--actor IRI] [--instance DOMAIN]`.
 //!
 //! Pattern: none (thin binary) — reads its options, opens the store, serves until a signal.
 
@@ -18,7 +18,7 @@ fn main() {
         instance,
     } = options;
     let served = run_until_signal(&socket, || async move {
-        prepare_data_dir(&data)?;
+        let data = prepare_data_dir(&data)?;
         let store = TursoStore::open(data.join("objects.db"))
             .await
             .map_err(std::io::Error::other)?;

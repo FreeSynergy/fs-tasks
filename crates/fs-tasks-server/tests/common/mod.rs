@@ -8,7 +8,7 @@ use fs_interfaces::common_capnp;
 use fs_interfaces::rpc::{bind_socket, connect, read_envelope, serve, write_uuid};
 use fs_interfaces::tasks_capnp::{self, items, tasks};
 use fs_store::{Store, TursoStore};
-use fs_tasks_core::TaskRepo;
+use fs_tasks_core::{TaskFeed, TaskItems, TaskRepo};
 use fs_tasks_server::TasksServer;
 use uuid::Uuid;
 
@@ -26,14 +26,23 @@ where
     F: FnOnce(tasks::Client) -> Fut,
     Fut: Future<Output = ()>,
 {
+    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let repo = Arc::new(TaskRepo::new(store, ME));
+    with_provider(repo.clone(), repo, test).await;
+}
+
+/// A real server in front of this provider.
+pub async fn with_provider<F, Fut>(items: Arc<dyn TaskItems>, feed: Arc<dyn TaskFeed>, test: F)
+where
+    F: FnOnce(tasks::Client) -> Fut,
+    Fut: Future<Output = ()>,
+{
     let local = tokio::task::LocalSet::new();
     local
         .run_until(async {
             let dir = tempfile::tempdir().unwrap();
             let path = dir.path().join("tasks.sock");
-            let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
-            let repo = Arc::new(TaskRepo::new(store, ME));
-            let root = TasksServer::new(repo.clone(), repo).into_client();
+            let root = TasksServer::new(items, feed).into_client();
             let bound = bind_socket(&path).await.unwrap();
             let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
             let serving = tokio::task::spawn_local(serve(bound, root.client, async {

@@ -3,8 +3,8 @@
 //! Pattern: Specification (composite) — the task-specific rules here, the shared ones from
 //! `fs-jscalendar`; `validate` turns a non-empty list into `Error::Invalid`.
 
-use fs_jscalendar::Issue;
 use fs_jscalendar::validate::{Ctx, common, into_result, shared};
+use fs_jscalendar::{Issue, quoted};
 
 use crate::error::Result;
 use crate::model::Task;
@@ -36,12 +36,15 @@ pub fn issues(t: &Task) -> Vec<Issue> {
     if let Some(s) = &t.due
         && parse_local(s).is_err()
     {
-        c.bad("/due", format!("not a LocalDateTime: {s:?}"));
+        c.bad("/due", format!("not a LocalDateTime: {}", quoted(s)));
     }
     if let Some(d) = &t.estimated_duration
         && Dur::parse(d).is_err()
     {
-        c.bad("/estimatedDuration", format!("not a duration: {d:?}"));
+        c.bad(
+            "/estimatedDuration",
+            format!("not a duration: {}", quoted(d)),
+        );
     }
     if let Some(s) = &t.progress_updated
         && parse_utc(s).is_err()

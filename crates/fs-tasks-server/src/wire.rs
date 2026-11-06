@@ -3,9 +3,11 @@
 //! Pattern: Adapter — `TaskEntry`, `ImportReport` and ids between Rust and `tasks.capnp`. The
 //! JSCalendar JSON stays authoritative for the content; the envelope is the routing summary.
 
+use std::borrow::Cow;
+
 use fs_interfaces::rpc::{
-    DEFAULT_PAGE_SIZE, Page, check_intake, envelope_weight, read_object_id, write_envelope,
-    write_object_id,
+    DEFAULT_PAGE_SIZE, MAX_PAGE_BYTES, Page, capped, check_intake, envelope_weight, read_object_id,
+    write_envelope, write_object_id,
 };
 use fs_interfaces::{common_capnp, tasks_capnp};
 use fs_store::ObjectId;
@@ -60,7 +62,31 @@ pub(crate) fn write_page(
     Ok(())
 }
 
-/// Write the report of an import.
+/// What one id of a report weighs, and one text beyond its own bytes.
+const ID_BYTES: usize = 24;
+const TEXT_BYTES: usize = 16;
+/// Room for the last line of a list that was cut.
+const MORE_BYTES: usize = 64;
+
+/// The texts of `items` that fit `budget`, each cut to what an answer carries, ending with
+/// `... N more` if not all do. Takes what it used from `budget`.
+fn fitting<'a>(items: &'a [String], budget: &mut usize) -> Vec<Cow<'a, str>> {
+    let mut kept: Vec<Cow<'a, str>> = Vec::new();
+    for text in items {
+        let text = capped(text);
+        let weight = text.len() + TEXT_BYTES;
+        if weight > *budget {
+            kept.push(format!("... {} more", items.len() - kept.len()).into());
+            break;
+        }
+        *budget -= weight;
+        kept.push(text.into());
+    }
+    kept
+}
+
+/// Write the report of an import. `created` stays whole: those tasks exist, and a consumer has no other
+/// way to learn their ids. The texts share what is left of a page, what failed first.
 pub(crate) fn write_report(
     mut out: tasks_capnp::import_report::Builder<'_>,
     report: &ImportReport,
@@ -69,21 +95,21 @@ pub(crate) fn write_report(
     for (i, id) in (0u32..).zip(&report.created) {
         write_object_id(created.reborrow().get(i), *id);
     }
-    let texts = |list: capnp::text_list::Builder<'_>, items: &[String]| {
+    let texts = |list: capnp::text_list::Builder<'_>, items: &[Cow<'_, str>]| {
         let mut list = list;
         for (i, s) in (0u32..).zip(items) {
-            list.set(i, s.as_str());
+            list.set(i, s.as_ref());
         }
     };
-    let skipped = report.skipped.len();
-    texts(
-        out.reborrow().init_skipped(count(skipped)?),
-        &report.skipped,
-    );
-    let failed = report.failed.len();
-    texts(out.reborrow().init_failed(count(failed)?), &report.failed);
-    let notes = report.notes.len();
-    texts(out.init_notes(count(notes)?), &report.notes);
+    let mut budget = MAX_PAGE_BYTES
+        .saturating_sub(report.created.len().saturating_mul(ID_BYTES))
+        .saturating_sub(3 * MORE_BYTES);
+    let failed = fitting(&report.failed, &mut budget);
+    let skipped = fitting(&report.skipped, &mut budget);
+    let notes = fitting(&report.notes, &mut budget);
+    texts(out.reborrow().init_failed(count(failed.len())?), &failed);
+    texts(out.reborrow().init_skipped(count(skipped.len())?), &skipped);
+    texts(out.init_notes(count(notes.len())?), &notes);
     Ok(())
 }
 

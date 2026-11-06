@@ -4,7 +4,7 @@
 //! component kind and our type. `VEVENT`s of the same text belong to `fs-calendar`.
 
 use fs_jscalendar::ical::{self, Component};
-pub use fs_jscalendar::ical::{ICS_MEDIA_TYPE, IcsPart};
+pub use fs_jscalendar::ical::{ICS_MEDIA_TYPE, IcsPart, unfolded_lines};
 
 use crate::error::Result;
 use crate::model::Task;

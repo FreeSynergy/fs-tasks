@@ -6,8 +6,9 @@
 use fs_store::{Blob, ObjectId};
 
 use super::handle::TaskRepo;
+use super::unread::unread_properties;
 use crate::error::{Error, Result};
-use crate::ical::{ICS_MEDIA_TYPE, parse_ics, split_ics, to_ics};
+use crate::ical::{ICS_MEDIA_TYPE, parse_ics, split_ics, to_ics, unfolded_lines};
 use crate::interface::ImportReport;
 use crate::model::Task;
 
@@ -21,10 +22,11 @@ impl TaskRepo {
             return Ok(report);
         }
         let parts = split_ics(text);
-        // Whole lines only: a description may quote the words.
+        // Whole unfolded lines only: a description may quote the words, also on a continuation line.
         let found = |t: &str| {
-            t.lines()
-                .filter(|l| l.trim().eq_ignore_ascii_case("BEGIN:VTODO"))
+            unfolded_lines(t)
+                .iter()
+                .filter(|l| l.eq_ignore_ascii_case("BEGIN:VTODO"))
                 .count()
         };
         let kept: usize = parts.iter().map(|p| found(&p.text)).sum();
@@ -96,24 +98,4 @@ impl TaskRepo {
         }
         to_ics(&tasks)
     }
-}
-
-/// The iCalendar conversion leaves out a value it cannot read. A person should hear about it.
-fn unread_properties(text: &str, tasks: &[Task]) -> Vec<String> {
-    let has = |name: &str| {
-        text.lines().any(|l| {
-            let upper = l.to_ascii_uppercase();
-            upper.starts_with(&format!("{name}:")) || upper.starts_with(&format!("{name};"))
-        })
-    };
-    let mut notes = vec![];
-    for t in tasks {
-        if has("DUE") && t.due.is_none() {
-            notes.push(format!("{}: DUE could not be read", t.uid));
-        }
-        if has("DURATION") && t.estimated_duration.is_none() {
-            notes.push(format!("{}: DURATION could not be read", t.uid));
-        }
-    }
-    notes
 }
