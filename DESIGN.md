@@ -42,7 +42,7 @@ Version 0.5.0: `fs-tasks-server`, the contract over a Unix socket; `TaskEntry` c
 
 ## Frontend (`crates/fs-tasks-app`, provisional)
 
-A list and a view by status of one set of tasks; search; create, edit (title, description, due, priority, status, labels), delete; a card moved by keyboard, by the buttons beside the task, or by a frontend's gesture through `TasksWidget::board()`; iCalendar in and out by path on the command line (`--store`, `--import`, `--export`, `--export-sensitive`, `--snapshot`, `--size`, `--view list|status`). It imports no `blinc_*` crate. The work surface is the workbench `tasks` in `fs-components`, which knows no store and no type of this repo and has no window function: it gives its host a plain context (selected key, view; ADR 0056).
+A list and a view by status of one set of tasks; search; create, edit (title, description, due, priority, status, labels), delete; a card moved by keyboard, by the buttons beside the task, or by a frontend's gesture through `TasksWidget::board()`; iCalendar in and out by path on the command line (`--store`, `--import`, `--export`, `--export-sensitive`, `--snapshot`, `--size`, `--view list|status`). It imports no `blinc_*` crate. Its menus (ADR 0056, only real commands, in `surface.rs`): Task: New; View: List, Status; the compact variant has none. The work surface is the workbench `tasks` in `fs-components`, which knows no store and no type of this repo and has no window function: it gives its host a plain context (selected key, view; ADR 0056).
 
 **In process, provisional.** `TaskAdapter` drives `Arc<dyn TaskItems>` with a tokio handle from the interface thread, until the RPC client of `fs-tasks-server` exists. `TaskSource` is synchronous, so a slow core freezes the window.
 

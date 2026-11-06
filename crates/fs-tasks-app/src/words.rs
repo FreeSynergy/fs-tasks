@@ -17,6 +17,9 @@ pub fn labels() -> TaskLabels {
         field::PRIORITY.into(),
         field::STATUS.into(),
     ];
+    labels.create = menu::NEW.into();
+    labels.view_list = menu::LIST.into();
+    labels.view_status = menu::STATUS.into();
     labels
 }
 
@@ -30,6 +33,15 @@ pub(crate) fn progress_title(progress: &str) -> &str {
         "cancelled" => "Cancelled",
         other => other,
     }
+}
+
+/// The menus of the window.
+pub(crate) mod menu {
+    pub const TASK: &str = "Task";
+    pub const NEW: &str = "New";
+    pub const VIEW: &str = "View";
+    pub const LIST: &str = "List";
+    pub const STATUS: &str = "Status";
 }
 
 /// Headings and labels of what is shown about a task.
