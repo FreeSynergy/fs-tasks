@@ -1,0 +1,20 @@
+[package]
+name = "fs-tasks-app"
+description = "The tasks program of FreeSynergy, first window: list and status view of one set of tasks; search, create, edit, delete, move; iCalendar in and out; on fs-components"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+fs-tasks-core = { path = "../fs-tasks-core" }
+fs-store = { git = "https://github.com/FreeSynergy/fs-store", tag = "v0.2.0" }
+# provisional: becomes a tag once reviewed
+fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", rev = "f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d" }
+# provisional: becomes a tag once reviewed
+fs-components-workbenches = { git = "https://github.com/FreeSynergy/fs-components", rev = "f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d" }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread"] }
+
+[dev-dependencies]
+# provisional: becomes a tag once reviewed
+fs-components-render = { git = "https://github.com/FreeSynergy/fs-components", rev = "f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d" }
