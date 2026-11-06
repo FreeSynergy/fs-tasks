@@ -2,7 +2,7 @@
 //!
 //! Pattern: Facade (declarations) — `TaskItems` and `TaskFeed` are the contract (ADR 0043,
 //! 0050); the store-backed implementation is `repo::TaskRepo`.
-//! Interface status: draft (ADR 0045); the Cap'n Proto form is `schema/tasks.capnp`.
+//! Interface status: draft (ADR 0045); the Cap'n Proto form is `tasks.capnp` in fs-interfaces.
 
 mod feed;
 mod items;

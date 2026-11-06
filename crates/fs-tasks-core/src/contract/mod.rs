@@ -1,4 +1,4 @@
-//! The Cap'n Proto contract `schema/tasks.capnp` (draft) and its conversions: module map.
+//! The Cap'n Proto contract `tasks.capnp` in fs-interfaces (draft) and its conversions: module map.
 //!
 //! Pattern: Adapter (declarations) — the generated code (`tasks_capnp`, `common_capnp` at the crate
 //! root, committed, ADR 0040) is wrapped by `convert`, which maps wire types to the Rust

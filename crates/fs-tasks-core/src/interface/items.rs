@@ -2,7 +2,7 @@
 //!
 //! Pattern: Repository (interface) — callers (fs-calendar, the GUI, the hub, tests with fakes)
 //! depend on this trait, never on the store-backed `TaskRepo`. Mirrors the `Items` interface of
-//! `schema/tasks.capnp`; capability ids follow `design.md`.
+//! `tasks.capnp` in fs-interfaces; capability ids follow `design.md`.
 
 use async_trait::async_trait;
 use fs_store::ObjectId;

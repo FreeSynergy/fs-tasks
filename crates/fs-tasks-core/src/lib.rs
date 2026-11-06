@@ -20,12 +20,9 @@
 )]
 
 mod clock;
-// The generated Cap'n Proto code refers to itself as `crate::common_capnp` / `crate::tasks_capnp`.
+// The Cap'n Proto contract and its generated code live in `fs-interfaces` (ADR 0045); re-exported here.
 #[cfg(feature = "contract")]
-#[allow(clippy::all, clippy::pedantic, missing_docs, unused)]
-#[rustfmt::skip]
-#[path = "contract/common_capnp.rs"]
-pub mod common_capnp;
+pub use fs_interfaces::{common_capnp, tasks_capnp};
 #[cfg(feature = "contract")]
 pub mod contract;
 mod error;
@@ -33,11 +30,6 @@ pub mod ical;
 mod interface;
 pub mod model;
 mod repo;
-#[cfg(feature = "contract")]
-#[allow(clippy::all, clippy::pedantic, missing_docs, unused)]
-#[rustfmt::skip]
-#[path = "contract/tasks_capnp.rs"]
-pub mod tasks_capnp;
 pub mod time;
 pub mod upgrade;
 pub mod validate;
