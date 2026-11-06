@@ -76,5 +76,6 @@ pub(super) fn entry_of(o: StoredObject) -> Result<TaskEntry> {
     Ok(TaskEntry {
         id: o.envelope.id,
         task: Task::from_value(o.content)?,
+        envelope: o.envelope,
     })
 }

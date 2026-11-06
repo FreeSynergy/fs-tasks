@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use common::{repo, t};
 use fs_interfaces::Capabilities;
-use fs_store::ObjectId;
+use fs_store::{Envelope, ObjectId};
 use fs_tasks_core::{
     ImportReport, Relation, Result, Task, TaskChange, TaskEntry, TaskFeed, TaskItems, TaskListener,
     TaskQuery,
@@ -46,6 +46,7 @@ impl TaskItems for Nothing {
         Ok(TaskEntry {
             id: ObjectId::new(),
             task,
+            envelope: Envelope::new("Task", "fake"),
         })
     }
     async fn edit(&self, _: ObjectId, task: Task) -> Result<TaskEntry> {
@@ -64,6 +65,7 @@ impl TaskItems for Nothing {
         Ok(Some(TaskEntry {
             id,
             task: Task::new("fake"),
+            envelope: Envelope::new("Task", "fake"),
         }))
     }
     async fn get_by_uid(&self, _: &str) -> Result<Option<TaskEntry>> {

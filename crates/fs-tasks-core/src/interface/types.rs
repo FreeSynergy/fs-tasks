@@ -4,7 +4,7 @@
 //! small Builder so callers state only the filters they need.
 
 use chrono::{DateTime, Utc};
-use fs_store::ObjectId;
+use fs_store::{Envelope, ObjectId};
 
 use crate::model::Task;
 
@@ -15,6 +15,8 @@ pub struct TaskEntry {
     pub id: ObjectId,
     /// The task.
     pub task: Task,
+    /// Its AS2 envelope, as stored (`Task.envelope` in `tasks.capnp`).
+    pub envelope: Envelope,
 }
 
 /// Filters of [`TaskItems::query`](super::TaskItems::query); all optional, combined with AND.

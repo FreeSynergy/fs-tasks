@@ -1,12 +1,12 @@
 //! Wire types <-> the Rust interface types of `TaskItems`.
 //!
 //! Pattern: Adapter — small pure functions between generated Cap'n Proto structs and
-//! `TaskQuery` / `Relation` / the capability list; the RPC server (later) only calls these.
+//! `TaskQuery` / `Relation`; the RPC server (`fs-tasks-server`) calls these.
 
 use capnp::Result;
 
 use crate::common_capnp;
-use crate::interface::{CAPABILITIES, TaskQuery};
+use crate::interface::TaskQuery;
 use crate::model::Relation;
 use crate::tasks_capnp::{Relation as Wire, task_filter};
 
@@ -63,9 +63,10 @@ pub fn read_filter(f: task_filter::Reader<'_>) -> Result<TaskQuery> {
         if !has {
             return Ok(None);
         }
-        Ok(chrono::DateTime::from_timestamp_millis(
-            get?.get_unix_millis(),
-        ))
+        let millis = get?.get_unix_millis();
+        chrono::DateTime::from_timestamp_millis(millis)
+            .map(Some)
+            .ok_or_else(|| capnp::Error::failed(format!("timestamp {millis} out of range")))
     };
     let text = |s: capnp::text::Reader<'_>| -> Result<Option<String>> {
         let s = s.to_str()?;
@@ -77,13 +78,4 @@ pub fn read_filter(f: task_filter::Reader<'_>) -> Result<TaskQuery> {
         progress: text(f.get_progress()?)?,
         label: text(f.get_label()?)?,
     })
-}
-
-/// Write the capability ids of the `Items` interface.
-pub fn write_capabilities(mut out: common_capnp::capability_list::Builder<'_>) {
-    out.reborrow().set_contract_version("tasks 0.1 (draft)");
-    let mut ids = out.init_ids(u32::try_from(CAPABILITIES.len()).unwrap_or(u32::MAX));
-    for (i, id) in (0..).zip(CAPABILITIES) {
-        ids.set(i, id);
-    }
 }

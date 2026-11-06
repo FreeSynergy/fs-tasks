@@ -6,6 +6,7 @@
 
 mod convert;
 
-pub use convert::{
-    read_filter, relation_from_wire, relation_to_wire, write_capabilities, write_filter,
-};
+pub use convert::{read_filter, relation_from_wire, relation_to_wire, write_filter};
+
+/// Version of the contract in `tasks.capnp`, as written in its header.
+pub const CONTRACT_VERSION: &str = "tasks 0.1 (draft)";

@@ -1,11 +1,9 @@
 //! The committed Cap'n Proto code matches the Rust interface types (feature `contract`).
 #![cfg(feature = "contract")]
 
-use fs_tasks_core::contract::{
-    read_filter, relation_from_wire, relation_to_wire, write_capabilities, write_filter,
-};
+use fs_tasks_core::contract::{read_filter, relation_from_wire, relation_to_wire, write_filter};
 use fs_tasks_core::tasks_capnp::task_filter;
-use fs_tasks_core::{CAPABILITIES, Relation, TaskQuery, common_capnp, utc};
+use fs_tasks_core::{Relation, TaskQuery, utc};
 
 #[test]
 fn filter_roundtrips_through_the_wire() {
@@ -31,20 +29,8 @@ fn filter_roundtrips_through_the_wire() {
 }
 
 #[test]
-fn relations_and_capabilities_map_both_ways() {
+fn relations_map_both_ways() {
     for r in Relation::ALL {
         assert_eq!(relation_from_wire(relation_to_wire(r)), r);
     }
-    let mut msg = capnp::message::Builder::new_default();
-    write_capabilities(msg.init_root::<common_capnp::capability_list::Builder>());
-    let list = msg
-        .get_root_as_reader::<common_capnp::capability_list::Reader>()
-        .unwrap();
-    let ids: Vec<_> = list
-        .get_ids()
-        .unwrap()
-        .iter()
-        .map(|s| s.unwrap().to_string().unwrap())
-        .collect();
-    assert_eq!(ids, CAPABILITIES);
 }
