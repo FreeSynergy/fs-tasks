@@ -56,8 +56,12 @@ fn an_export_leaves_out_what_is_sensitive_names_it_and_can_be_read_back() {
     let handle = w.runtime.handle().clone();
     let report = export_all(w.repo.as_ref(), &handle, &file, &[]).unwrap();
     assert_eq!(report.written, 1);
-    assert_eq!(report.left_out, ["Clinic (clinic)"]);
-    assert!(report.message(&file).contains("clinic"));
+    assert_eq!(report.left_out, ["clinic"]);
+    let said = report.message(&file);
+    assert!(
+        said.contains("clinic") && !said.contains("Clinic"),
+        "the uid, not the title: {said}"
+    );
     let text = std::fs::read_to_string(&file).unwrap();
     assert!(text.contains("Plain") && !text.contains("Clinic"));
     let other = World::new();
@@ -78,8 +82,14 @@ fn a_sensitive_task_named_by_uid_is_released_and_only_that_one() {
     let handle = w.runtime.handle().clone();
     let report = export_all(w.repo.as_ref(), &handle, &file, &["clinic".into()]).unwrap();
     assert_eq!(report.written, 1);
-    assert_eq!(report.released, ["Clinic (clinic)"]);
-    assert_eq!(report.left_out, ["Clinic (court)"]);
+    assert_eq!(report.released, ["clinic"]);
+    assert_eq!(report.left_out, ["court"]);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::metadata(&file).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600, "for its owner alone");
+    }
 }
 
 #[test]
@@ -131,4 +141,22 @@ fn the_same_uuid_in_another_form_overwrites_nothing_on_create_and_on_import() {
     eprintln!("the core's answer: {}", summary.message());
     assert!(!summary.is_clean(), "said, not hidden");
     assert_eq!(w.json(&key)["title"], "First", "not overwritten");
+}
+
+#[test]
+fn one_unreadable_stored_task_is_said_plainly_and_nothing_is_written() {
+    // Not yet what it should be: `TaskItems::list` answers all or nothing, and the contract offers no
+    // other way to go through the tasks, so the adapter cannot keep the rest (with Thread 3).
+    let w = World::new();
+    w.add(Task::new("Good"));
+    let mut envelope = fs_store::Envelope::new(fs_tasks_core::TASK_TYPE, "Bad");
+    envelope.context = Some(fs_tasks_core::CONTEXT.into());
+    let bad = fs_store::StoredObject::new(envelope, fs_tasks_core::CONTENT_TYPE, json!({"uid": 5}));
+    w.runtime.block_on(w.store.put(bad, common::ME)).unwrap();
+    let s = w.state();
+    assert!(s.list_problem().is_some(), "not an empty list");
+    let dir = Scratch::new();
+    let handle = w.runtime.handle().clone();
+    assert!(export_all(w.repo.as_ref(), &handle, &dir.file("out.ics"), &[]).is_err());
+    assert!(dir.names().is_empty());
 }

@@ -161,15 +161,16 @@ fn the_list_and_the_status_view_are_views_of_one_set_of_tasks() {
     let key = w.plain("Plain");
     let widget = TasksWidget::new(w.adapter.clone(), labels());
     widget.with_state(|s| s.set_view(TaskView::Status));
-    let board = widget.board();
-    assert_eq!(board.lanes().len(), 5, "one column per value of progress");
-    assert_eq!(board.lanes()[0].items[0].key, key);
-    assert_eq!(board.lanes()[0].title, "To do (1)");
-    let moved = board.move_item(&key, &Place::new("completed", 0));
+    assert_eq!(widget.lanes().len(), 5, "one column per value of progress");
+    assert_eq!(widget.lanes()[0].items[0].key, key);
+    assert_eq!(widget.lanes()[0].title, "To do (1)");
+    assert!(matches!(widget.grab(&key), BoardOutcome::Grabbed(_)));
+    widget.hover(&Place::new("completed", 0));
+    let moved = widget.drop_held();
     assert!(matches!(moved, BoardOutcome::Moved(_)), "{moved:?}");
     assert_eq!(w.json(&key)["progress"], "completed");
-    assert!(board.lanes()[0].items.is_empty(), "the lanes follow");
-    assert_eq!(board.lanes()[2].items[0].key, key);
+    assert!(widget.lanes()[0].items.is_empty(), "the lanes follow");
+    assert_eq!(widget.lanes()[2].items[0].key, key);
     let row = widget.with_state(|s| s.rows()[0].cells[3].clone());
     assert_eq!(row, "Done", "and so does the list");
     assert_eq!(widget.context().view, TaskView::Status);
@@ -181,10 +182,9 @@ fn a_move_by_gesture_that_the_core_refuses_puts_the_card_back() {
     let w = World::new();
     let key = w.add_json(series());
     let widget = TasksWidget::new(w.adapter.clone(), labels());
-    let board = widget.board();
-    let refused = board.grab(&key);
+    let refused = widget.grab(&key);
     assert!(matches!(refused, BoardOutcome::Refused(_)), "{refused:?}");
-    assert_eq!(board.lanes()[0].items[0].key, key);
+    assert_eq!(widget.lanes()[0].items[0].key, key);
     let says = widget.with_state(|s| s.notice().map(str::to_string));
     assert!(says.unwrap().contains("repeats"));
 }

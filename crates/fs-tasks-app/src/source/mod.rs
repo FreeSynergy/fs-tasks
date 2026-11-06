@@ -7,6 +7,7 @@
 mod adapter;
 mod apply;
 mod draft;
+mod labels;
 mod marks;
 mod provider;
 mod rows;

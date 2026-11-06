@@ -67,6 +67,62 @@ fn every_form_of_a_marking_counts_and_a_mention_does_not() {
     }
 }
 
+fn repeating(patch: Value) -> Value {
+    json!({"start": "2026-11-02T09:00:00",
+        "recurrenceRule": {"@type": "RecurrenceRule", "frequency": "weekly"},
+        "recurrenceOverrides": {"2026-11-09T09:00:00": patch}})
+}
+
+#[test]
+fn a_marking_written_as_a_patch_path_counts() {
+    let w = World::new();
+    for (uid, patch) in [
+        (
+            "as-path",
+            json!({"participants/p/freesynergy.net:sensitive": ["x"]}),
+        ),
+        ("in-patch", json!({"freesynergy.net:sensitive": ["x"]})),
+        ("private-patch", json!({"privacy": "private"})),
+        ("private-path", json!({"participants/p/privacy": "secret"})),
+    ] {
+        let key = w.add_json(task(uid, repeating(patch)));
+        assert!(marked(&w, &key), "{uid}");
+    }
+}
+
+#[test]
+fn a_key_of_an_id_map_is_data_and_marks_nothing() {
+    let w = World::new();
+    for (uid, extra) in [
+        (
+            "label",
+            json!({"keywords": {"privacy": true, "freesynergy.net:sensitive": true}}),
+        ),
+        ("label-path", repeating(json!({"keywords/privacy": true}))),
+        (
+            "label-path-2",
+            repeating(json!({"keywords/freesynergy.net:sensitive": true})),
+        ),
+        ("public-patch", repeating(json!({"privacy": "public"}))),
+        (
+            "participant-id",
+            json!({"participants": {"privacy": {"@type": "Participant",
+            "roles": {"attendee": true}}}}),
+        ),
+        (
+            "related-uid",
+            json!({"relatedTo": {"privacy": {"@type": "Relation"}}}),
+        ),
+    ] {
+        let key = w.add_json(task(uid, extra));
+        assert!(!marked(&w, &key), "{uid}");
+    }
+    let marked_inside = json!({"participants": {"privacy": {"@type": "Participant",
+        "freesynergy.net:sensitive": ["x"], "roles": {"attendee": true}}}});
+    let key = w.add_json(task("inside", marked_inside));
+    assert!(marked(&w, &key), "the value of an id is still looked at");
+}
+
 #[test]
 fn a_mark_on_the_envelope_alone_counts() {
     let w = World::new();
