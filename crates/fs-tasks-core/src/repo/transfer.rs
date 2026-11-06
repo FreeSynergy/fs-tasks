@@ -66,7 +66,8 @@ impl TaskRepo {
         let uid = task.uid.clone();
         match self.create_inner(task, Some(original.clone())).await {
             Ok(e) => report.created.push(e.id),
-            Err(e @ (Error::Invalid(_) | Error::Time(_))) => {
+            // One refused task must not lose the report of all the others.
+            Err(e @ (Error::Invalid(_) | Error::Time(_) | Error::Conflict(_))) => {
                 report.failed.push(format!("{uid}: {e}"));
             }
             Err(e) => return Err(e),

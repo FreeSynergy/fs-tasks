@@ -144,6 +144,51 @@ async fn an_import_says_what_it_lost() {
     assert!(report.created.is_empty());
 }
 
+fn vtodo(uid: &str) -> String {
+    format!(
+        "BEGIN:VTODO\r\nUID:{uid}\r\nDTSTAMP:20261101T000000Z\r\nSUMMARY:{uid}\r\nEND:VTODO\r\n"
+    )
+}
+
+fn calendar(todos: &[String]) -> String {
+    format!(
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\n{}END:VCALENDAR\r\n",
+        todos.concat()
+    )
+}
+
+#[tokio::test]
+async fn an_import_with_another_form_of_a_uuid_neither_overwrites_nor_loses_the_report() {
+    let r = repo().await;
+    let existing = r
+        .create(task(&format!("urn:uuid:{UUID}"), None))
+        .await
+        .unwrap();
+    for form in [UUID.to_string(), UUID.to_uppercase()] {
+        let report = r
+            .import_ics(&calendar(&[vtodo(&form), vtodo(&format!("other-{form}"))]))
+            .await
+            .unwrap();
+        assert_eq!(report.failed.len(), 1, "{form}: {report:?}");
+        assert!(report.failed[0].contains(&form), "{report:?}");
+        assert_eq!(
+            report.created.len(),
+            1,
+            "{form}: the other one still came in"
+        );
+        let kept = r.get(existing.id).await.unwrap().unwrap();
+        assert_eq!(kept.task.uid, format!("urn:uuid:{UUID}"), "not overwritten");
+    }
+}
+
+#[tokio::test]
+async fn create_refuses_an_uppercase_form_of_a_uuid_too() {
+    let r = repo().await;
+    r.create(task(UUID, None)).await.unwrap();
+    let second = r.create(task(&UUID.to_uppercase(), None)).await;
+    assert!(matches!(second, Err(Error::Conflict(_))), "{second:?}");
+}
+
 /// A backend that yields at every step, as a remote one would.
 struct Yielding(Arc<dyn Store>);
 
