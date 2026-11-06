@@ -172,7 +172,7 @@ dependencies = [
  "objc2-foundation 0.3.2",
  "parking_lot",
  "percent-encoding",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
  "x11rb",
 ]
 
@@ -917,7 +917,7 @@ checksum = "fe6d2e5af09e8c8ad56c969f2157a3d4238cebc7c55f0a517728c38f7b200f81"
 dependencies = [
  "serde",
  "termcolor",
- "unicode-width 0.1.14",
+ "unicode-width 0.2.3",
 ]
 
 [[package]]
@@ -1399,7 +1399,7 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 [[package]]
 name = "fs-components-app"
 version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d#f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4#97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1413,7 +1413,7 @@ dependencies = [
 [[package]]
 name = "fs-components-primitives"
 version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d#f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4#97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4"
 dependencies = [
  "blinc_cn",
  "blinc_core",
@@ -1423,7 +1423,7 @@ dependencies = [
 [[package]]
 name = "fs-components-render"
 version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d#f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4#97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1438,7 +1438,7 @@ dependencies = [
 [[package]]
 name = "fs-components-widgets"
 version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d#f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4#97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4"
 dependencies = [
  "blinc_cn",
  "blinc_core",
@@ -1454,7 +1454,7 @@ dependencies = [
 [[package]]
 name = "fs-components-workbenches"
 version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d#f95f8c425ff1b7e8bf75117cf0af5aea108fcd0d"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4#97197d6e0107f6ff4ca60d356fa93f16fcb0c3d4"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -5420,7 +5420,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
