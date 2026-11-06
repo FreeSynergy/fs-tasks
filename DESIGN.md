@@ -62,9 +62,8 @@ column -> status mapping and ordering arrives with boards.
 
 ## Decisions
 
-* **Independent of fs-calendar.** The time module (`Zone`, `Dur`, tzdb choice), the `Participant` / `RecurrenceRule` value
-  types and the ICS splitting are small copies of what fs-calendar-core has. This costs duplication, but `Task` stands on its own
-  (ADR 0050). Open: a shared `jscalendar-common` crate would remove it (needs the owner's decision on a new repo).
+* **Independent of fs-calendar.** `Task` stands on its own (ADR 0050). What it shares with `Event` lives in `fs-jscalendar`, a plain
+  library without data or program, so neither program copies it and neither depends on the other for it.
 * **Context `tasks`.** Tasks written by fs-calendar 0.1 have `context=calendar`; they are not found by `TaskRepo`. No data
   existed outside tests, so there is no migration.
 * **Assign** adds a participant with role `owner`; assigning the same address twice keeps one participant.
@@ -76,7 +75,7 @@ column -> status mapping and ordering arrives with boards.
 ## Crates
 
 * `fs-store` (git tag v0.2.0), `fs-jscalendar` (git tag v0.1.0; it also holds the exact pin of `calcard`).
-* `jiff` + `jiff-tzdb` (zones, system tzdb preferred, bundled fallback), `chrono`, `serde`, `serde_json`, `thiserror`, `async-trait`.
+* `chrono`, `serde`, `serde_json`, `thiserror`, `async-trait`.
 * Optional (feature `contract`): `capnp` 0.27, `fs-interfaces` (git tag v0.1.0).
 
 ## Open points
