@@ -1,28 +1,18 @@
-//! What a task can do to itself: vendor properties, assignment, relations, labels, status.
+//! What a task can do to itself: assignment, relations, labels, status.
 //!
 //! Pattern: Command (in-memory, no I/O) — each method is one small edit of the value; the
 //! repository applies them under `edit` and stores the result.
 
-use std::collections::BTreeMap;
-
+use fs_jscalendar::model::{Participant, next_participant_key};
 use serde_json::{Value, json};
 
-use super::consts::TASK_STATUS_KEY;
-use super::participant::Participant;
 use super::relation::Relation;
 use super::task::Task;
 
+/// RFC 10051 task status has no JSCalendar form yet.
+pub const TASK_STATUS_KEY: &str = "freesynergy.net:taskStatus";
+
 impl Task {
-    /// Vendor / unknown property.
-    pub fn vendor(&self, key: &str) -> Option<&Value> {
-        self.extra.get(key)
-    }
-
-    /// Set a vendor / unknown property.
-    pub fn set_vendor(&mut self, key: &str, v: Value) {
-        self.extra.insert(key.to_string(), v);
-    }
-
     /// RFC 10051 task status (stored as the vendor property `freesynergy.net:taskStatus`).
     pub fn task_status(&self) -> Option<&str> {
         self.vendor(TASK_STATUS_KEY).and_then(Value::as_str)
@@ -33,20 +23,8 @@ impl Task {
         self.set_vendor(TASK_STATUS_KEY, json!(status));
     }
 
-    /// Key of the participant with this e-mail address (case-insensitive).
-    pub fn participant_by_email(&self, email: &str) -> Option<&str> {
-        let want = bare(email);
-        self.participants.iter().find_map(|(k, p)| {
-            let e = p.email.as_deref().or(p.calendar_address.as_deref())?;
-            (bare(e) == want).then_some(k.as_str())
-        })
-    }
-
     /// Assign the task to a person (role `owner`); returns the participant key. Assigning the
     /// same address twice keeps the one participant.
-    ///
-    /// # Panics
-    /// Never: among `n + 1` candidate keys at most `n` are taken.
     pub fn assign(&mut self, name: &str, email: &str) -> String {
         if let Some(k) = self.participant_by_email(email) {
             let key = k.to_string();
@@ -55,23 +33,9 @@ impl Task {
             }
             return key;
         }
-        let key = (1..=self.participants.len() + 1)
-            .map(|i| format!("p{i}"))
-            .find(|k| !self.participants.contains_key(k))
-            .expect("one of n + 1 candidate keys is free");
-        self.participants.insert(
-            key.clone(),
-            Participant {
-                type_: Some("Participant".into()),
-                name: Some(name.into()),
-                email: Some(email.into()),
-                calendar_address: Some(format!("mailto:{email}")),
-                kind: Some("individual".into()),
-                roles: BTreeMap::from([("owner".to_string(), true)]),
-                participation_status: Some("needs-action".into()),
-                ..Default::default()
-            },
-        );
+        let key = next_participant_key(&self.participants);
+        self.participants
+            .insert(key.clone(), Participant::person(name, email, "owner"));
         key
     }
 
@@ -105,8 +69,4 @@ impl Task {
     pub fn label(&mut self, label: &str) {
         self.keywords.insert(label.to_string(), true);
     }
-}
-
-fn bare(address: &str) -> String {
-    address.trim().trim_start_matches("mailto:").to_lowercase()
 }

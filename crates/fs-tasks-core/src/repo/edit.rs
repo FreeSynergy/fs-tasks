@@ -8,10 +8,10 @@ use fs_store::ObjectId;
 
 use super::crud::entry_of;
 use super::handle::TaskRepo;
-use crate::clock::now_utc;
 use crate::error::{Error, Result};
 use crate::interface::{TaskChange, TaskEntry};
 use crate::model::Task;
+use crate::now_utc;
 
 impl TaskRepo {
     pub(super) async fn edit_inner(&self, id: ObjectId, mut new: Task) -> Result<TaskEntry> {

@@ -7,10 +7,10 @@ use fs_store::{Blob, ObjectId, Query, StoredObject};
 
 use super::consts::{CONTEXT, TASK_TYPE};
 use super::handle::TaskRepo;
-use crate::clock::now_utc;
 use crate::error::{Error, Result};
 use crate::interface::{TaskChange, TaskEntry};
 use crate::model::Task;
+use crate::now_utc;
 use crate::time::tzdb_version;
 
 impl TaskRepo {

@@ -24,9 +24,9 @@ impl TaskRepo {
             None => self.floating.clone(),
         };
         let local = |s: &Option<String>| -> Result<Option<DateTime<Utc>>> {
-            s.as_deref()
+            Ok(s.as_deref()
                 .map(|x| parse_local(x).map(|l| zone.to_utc(l)))
-                .transpose()
+                .transpose()?)
         };
         let (start, due) = (local(&t.start)?, local(&t.due)?);
         let est = t

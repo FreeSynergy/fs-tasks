@@ -19,7 +19,6 @@
     clippy::module_name_repetitions
 )]
 
-mod clock;
 // The Cap'n Proto contract and its generated code live in `fs-interfaces` (ADR 0045); re-exported here.
 #[cfg(feature = "contract")]
 pub use fs_interfaces::{common_capnp, tasks_capnp};
@@ -30,12 +29,11 @@ pub mod ical;
 mod interface;
 pub mod model;
 mod repo;
-pub mod time;
-pub mod upgrade;
 pub mod validate;
 
-pub use clock::now_utc;
-pub use error::{Error, Issue, Result};
+pub use error::{Error, Result};
+pub use fs_jscalendar::upgrade::{Upgraded, upgrade};
+pub use fs_jscalendar::{Issue, now_utc, time, upgrade};
 pub use interface::{
     CAPABILITIES, ImportReport, Registry, Subscription, TaskChange, TaskEntry, TaskFeed, TaskItems,
     TaskListener, TaskQuery,
@@ -43,4 +41,3 @@ pub use interface::{
 pub use model::{Participant, RecurrenceRule, Relation, Task};
 pub use repo::{CONTENT_TYPE, CONTEXT, TASK_TYPE, TaskRepo};
 pub use time::{Zone, parse_utc as utc};
-pub use upgrade::{Upgraded, upgrade};
