@@ -3,11 +3,7 @@ resolver = "2"
 members = ["crates/fs-tasks-core", "crates/fs-tasks-server"]
 
 [workspace.package]
-version = "0.4.1"
+version = "0.5.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.85"
-
-# Local until fs-interfaces has its tag with feature `rpc`; removed before the commit that tags.
-[patch."https://github.com/FreeSynergy/fs-interfaces"]
-fs-interfaces = { path = "../.wt-rpc-interfaces/crates/fs-interfaces" }

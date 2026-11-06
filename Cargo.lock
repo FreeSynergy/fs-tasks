@@ -626,7 +626,8 @@ checksum = "1c66915cc5391097de7a2b0b972e8505aa33c0df401fd3a6811dbdb32881ba48"
 
 [[package]]
 name = "fs-interfaces"
-version = "0.16.0"
+version = "0.18.0"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.18.0#c2eba7bd4177d9ef013ae21ff86071cdf9068e15"
 dependencies = [
  "capnp",
  "capnp-rpc",
@@ -673,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-core"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "capnp",
@@ -689,7 +690,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-server"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "capnp",
  "capnp-rpc",

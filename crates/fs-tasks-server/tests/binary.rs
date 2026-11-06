@@ -40,7 +40,13 @@ fn terminate(mut child: Child) {
 
 async fn stored_tasks(socket: &Path) -> usize {
     let connection = connect::<tasks::Client>(socket).await.unwrap();
-    let answer = connection.items_request().send().promise.await.unwrap();
+    let answer = connection
+        .client
+        .items_request()
+        .send()
+        .promise
+        .await
+        .unwrap();
     let items = answer.get().unwrap().get_items().unwrap();
     let listed = items.list_request().send().promise.await.unwrap();
     listed
@@ -70,7 +76,13 @@ async fn tasks_survive_a_restart_and_a_second_start_is_refused() {
             assert!(socket.exists(), "the second start touched the first");
 
             let connection = connect::<tasks::Client>(&socket).await.unwrap();
-            let answer = connection.items_request().send().promise.await.unwrap();
+            let answer = connection
+                .client
+                .items_request()
+                .send()
+                .promise
+                .await
+                .unwrap();
             let items = answer.get().unwrap().get_items().unwrap();
             let mut create = items.create_request();
             create
