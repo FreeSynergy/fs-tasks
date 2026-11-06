@@ -36,7 +36,9 @@ pub(crate) fn write_page(
     cursor: capnp::Result<common_capnp::cursor::Reader<'_>>,
 ) -> capnp::Result<()> {
     let opaque = cursor?.get_opaque()?;
-    let page = Page::of(all, opaque, DEFAULT_PAGE_SIZE)?;
+    let page = Page::of_weighted(all, opaque, DEFAULT_PAGE_SIZE, |e: &TaskEntry| {
+        e.task.to_value().to_string().len()
+    })?;
     let mut items = out.reborrow().init_items(count(page.items.len())?);
     for (i, entry) in (0u32..).zip(&page.items) {
         write_task(items.reborrow().get(i), entry);

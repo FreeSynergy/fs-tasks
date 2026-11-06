@@ -33,16 +33,14 @@ where
             let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
             let repo = Arc::new(TaskRepo::new(store, ME));
             let root = TasksServer::new(repo.clone(), repo).into_client();
-            let listener = bind_socket(&path).await.unwrap();
+            let bound = bind_socket(&path).await.unwrap();
             let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
-            let at = path.clone();
-            let serving = tokio::task::spawn_local(async move {
-                serve(listener, &at, root.client, async {
-                    let _ = stopped.await;
-                })
-                .await
-            });
-            test(connect(&path).await.unwrap()).await;
+            let serving = tokio::task::spawn_local(serve(bound, root.client, async {
+                let _ = stopped.await;
+            }));
+            let connection = connect::<tasks::Client>(&path).await.unwrap();
+            test(connection.client.clone()).await;
+            drop(connection);
             let _ = stop.send(());
             serving.await.unwrap().unwrap();
         })

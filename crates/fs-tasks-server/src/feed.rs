@@ -6,16 +6,14 @@
 use std::sync::Arc;
 
 use fs_interfaces::common_capnp::{change_listener, subscription};
-use fs_interfaces::rpc::{Notice, forward};
+use fs_interfaces::rpc::{ChangeSender, Notice, change_channel, forward};
 use fs_tasks_core::{TaskChange, TaskFeed, TaskItems, TaskListener};
-use tokio::sync::mpsc;
 
-struct ToChannel(mpsc::UnboundedSender<TaskChange>);
+struct ToChannel(ChangeSender<TaskChange>);
 
 impl TaskListener for ToChannel {
     fn changed(&self, change: &TaskChange) {
-        // A closed channel means the subscription is ending; nothing is left to tell.
-        let _ = self.0.send(*change);
+        self.0.send(*change);
     }
 }
 
@@ -25,7 +23,7 @@ pub(crate) fn subscribe(
     items: Arc<dyn TaskItems>,
     listener: change_listener::Client,
 ) -> subscription::Client {
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx) = change_channel();
     let core_subscription = feed.subscribe(Arc::new(ToChannel(tx)));
     forward(rx, core_subscription, listener, move |change| {
         let items = items.clone();
