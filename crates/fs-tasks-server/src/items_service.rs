@@ -6,7 +6,7 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{check_answer, check_intake, read_object_id};
+use fs_interfaces::rpc::{check_answer, check_intake, invalid_request, read_object_id, run_to_end};
 use fs_interfaces::tasks_capnp::items;
 use fs_tasks_core::contract::{read_filter, relation_from_wire};
 use fs_tasks_core::{TaskItems, TaskQuery};
@@ -27,7 +27,10 @@ impl items::Server for ItemsImpl {
         mut results: items::CreateResults,
     ) -> Done {
         let task = read_task(params.get()?.get_jscalendar()?)?;
-        let entry = self.items.create(task).await.map_err(rpc_error)?;
+        let items = self.items.clone();
+        let entry = run_to_end(async move { items.create(task).await })
+            .await?
+            .map_err(rpc_error)?;
         write_task(results.get().init_task(), &entry);
         Ok(())
     }
@@ -40,7 +43,10 @@ impl items::Server for ItemsImpl {
         let p = params.get()?;
         let id = read_object_id(p.get_id()?)?;
         let task = read_task(p.get_jscalendar()?)?;
-        let entry = self.items.edit(id, task).await.map_err(rpc_error)?;
+        let items = self.items.clone();
+        let entry = run_to_end(async move { items.edit(id, task).await })
+            .await?
+            .map_err(rpc_error)?;
         write_task(results.get().init_task(), &entry);
         Ok(())
     }
@@ -52,11 +58,12 @@ impl items::Server for ItemsImpl {
     ) -> Done {
         let p = params.get()?;
         let id = read_object_id(p.get_id()?)?;
-        let (name, email) = (p.get_name()?.to_str()?, required(p.get_email()?, "email")?);
-        let entry = self
-            .items
-            .assign(id, name, email)
-            .await
+        let name = p.get_name()?.to_str()?;
+        check_intake(name.len())?;
+        let email = required(p.get_email()?, "email")?;
+        let (items, name, email) = (self.items.clone(), name.to_string(), email.to_string());
+        let entry = run_to_end(async move { items.assign(id, &name, &email).await })
+            .await?
             .map_err(rpc_error)?;
         write_task(results.get().init_task(), &entry);
         Ok(())
@@ -71,10 +78,9 @@ impl items::Server for ItemsImpl {
         let id = read_object_id(p.get_id()?)?;
         let relation = relation_from_wire(p.get_relation()?);
         let other = required(p.get_other_uid()?, "otherUid")?;
-        let entry = self
-            .items
-            .relate(id, other, relation)
-            .await
+        let (items, other) = (self.items.clone(), other.to_string());
+        let entry = run_to_end(async move { items.relate(id, &other, relation).await })
+            .await?
             .map_err(rpc_error)?;
         write_task(results.get().init_task(), &entry);
         Ok(())
@@ -88,7 +94,10 @@ impl items::Server for ItemsImpl {
         let p = params.get()?;
         let id = read_object_id(p.get_id()?)?;
         let label = required(p.get_label()?, "label")?;
-        let entry = self.items.label(id, label).await.map_err(rpc_error)?;
+        let (items, label) = (self.items.clone(), label.to_string());
+        let entry = run_to_end(async move { items.label(id, &label).await })
+            .await?
+            .map_err(rpc_error)?;
         write_task(results.get().init_task(), &entry);
         Ok(())
     }
@@ -125,7 +134,10 @@ impl items::Server for ItemsImpl {
 
     async fn delete(self: Rc<Self>, params: items::DeleteParams, _: items::DeleteResults) -> Done {
         let id = read_object_id(params.get()?.get_id()?)?;
-        self.items.delete(id).await.map_err(rpc_error)
+        let items = self.items.clone();
+        run_to_end(async move { items.delete(id).await })
+            .await?
+            .map_err(rpc_error)
     }
 
     async fn list(
@@ -144,7 +156,7 @@ impl items::Server for ItemsImpl {
     ) -> Done {
         let p = params.get()?;
         let filter = if p.has_filter() {
-            read_filter(p.get_filter()?)?
+            read_filter(p.get_filter()?).map_err(|e| invalid_request(e.extra))?
         } else {
             TaskQuery::new()
         };
@@ -160,7 +172,10 @@ impl items::Server for ItemsImpl {
         let p = params.get()?;
         let text = p.get_text()?.to_str()?;
         check_intake(text.len())?;
-        let report = self.items.import_ics(text).await.map_err(rpc_error)?;
+        let (items, text) = (self.items.clone(), text.to_string());
+        let report = run_to_end(async move { items.import_ics(&text).await })
+            .await?
+            .map_err(rpc_error)?;
         write_report(results.get().init_report(), &report)
     }
 

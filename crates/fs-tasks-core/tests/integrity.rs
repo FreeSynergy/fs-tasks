@@ -189,6 +189,71 @@ async fn create_refuses_an_uppercase_form_of_a_uuid_too() {
     assert!(matches!(second, Err(Error::Conflict(_))), "{second:?}");
 }
 
+#[tokio::test]
+async fn nothing_in_an_import_loses_the_report_or_the_value_silently() {
+    let r = repo().await;
+    let bad = "BEGIN:VTODO\r\nUID:bad\r\nDTSTAMP:20261101T000000Z\r\nATTENDEE:mailto:\r\nCATEGORIES:\r\nDUE:garbage\r\nDURATION:P99999999999W\r\nSUMMARY:b\r\nEND:VTODO\r\n";
+    let report = r
+        .import_ics(&calendar(&[vtodo("first"), bad.to_string(), vtodo("last")]))
+        .await
+        .unwrap();
+    assert!(r.get_by_uid("first").await.unwrap().is_some());
+    assert!(r.get_by_uid("last").await.unwrap().is_some(), "{report:?}");
+    let said = format!("{:?}{:?}", report.failed, report.notes);
+    assert!(said.contains("DUE") && said.contains("DURATION"), "{said}");
+}
+
+#[tokio::test]
+async fn a_description_quoting_a_component_is_no_lost_component() {
+    let r = repo().await;
+    let todo = "BEGIN:VTODO\r\nUID:q\r\nDTSTAMP:20261101T000000Z\r\nDESCRIPTION:BEGIN:VTODO quoted\r\nSUMMARY:q\r\nEND:VTODO\r\n";
+    let report = r.import_ics(&calendar(&[todo.to_string()])).await.unwrap();
+    assert!(report.failed.is_empty(), "{report:?}");
+}
+
+#[tokio::test]
+async fn small_edits_cannot_grow_a_task_past_what_fits() {
+    let r = repo().await;
+    let id = r.create(task("grows", None)).await.unwrap().id;
+    let big = "x".repeat(6 * 1024 * 1024);
+    let mut last = Ok(());
+    for i in 0..4 {
+        last = r.label(id, &format!("{i}{big}")).await.map(|_| ());
+    }
+    assert!(matches!(last, Err(Error::TooLarge(_))), "{last:?}");
+    assert!(r.get(id).await.unwrap().is_some());
+    let escaped = serde_json::json!({"@type": "Task", "version": "2.0", "uid": "e",
+        "title": "\u{1}".repeat(3 * 1024 * 1024)});
+    let refused = r.create(Task::from_value(escaped).unwrap()).await;
+    assert!(
+        matches!(refused, Err(Error::TooLarge(_))),
+        "escaping counts"
+    );
+}
+
+#[tokio::test]
+async fn extreme_query_bounds_answer_and_the_last_second_counts() {
+    let r = repo().await;
+    r.create(task("last", Some("9999-12-31T23:59:59")))
+        .await
+        .unwrap();
+    let extreme = chrono::DateTime::from_timestamp_millis(8_210_266_876_799_999).unwrap();
+    let mut q = TaskQuery::new();
+    q.due_to = Some(extreme);
+    assert_eq!(
+        r.query(&q).await.unwrap().len(),
+        1,
+        "no panic, all before it"
+    );
+    let mut q = TaskQuery::new();
+    q.due_from = Some(t("9999-01-01T00:00:00Z"));
+    assert_eq!(
+        r.query(&q).await.unwrap().len(),
+        1,
+        "a from without a to is open"
+    );
+}
+
 /// A backend that yields at every step, as a remote one would.
 struct Yielding(Arc<dyn Store>);
 

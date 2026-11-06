@@ -15,6 +15,7 @@ fn main() {
         socket,
         data,
         actor,
+        instance,
     } = options;
     let served = run_until_signal(&socket, || async move {
         prepare_data_dir(&data)?;
@@ -22,7 +23,11 @@ fn main() {
             .await
             .map_err(std::io::Error::other)?;
         let store: Arc<dyn Store> = Arc::new(store);
-        let repo = Arc::new(TaskRepo::new(store, actor));
+        let mut repo = TaskRepo::new(store, actor);
+        if let Some(instance) = instance {
+            repo = repo.with_instance(instance);
+        }
+        let repo = Arc::new(repo);
         Ok(TasksServer::new(repo.clone(), repo).into_client().client)
     });
     if let Err(e) = served {

@@ -7,3 +7,9 @@ version = "0.5.2"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.89"
+
+# Local until fs-interfaces and fs-jscalendar have their tags; removed before the commit that tags.
+[patch."https://github.com/FreeSynergy/fs-interfaces"]
+fs-interfaces = { path = "../.wt-rpc-interfaces/crates/fs-interfaces" }
+[patch."https://github.com/FreeSynergy/fs-jscalendar"]
+fs-jscalendar = { path = "../.wt-jscal/crates/fs-jscalendar" }

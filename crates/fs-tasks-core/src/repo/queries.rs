@@ -11,8 +11,10 @@ use super::crud::entry_of;
 use super::handle::TaskRepo;
 use crate::error::Result;
 use crate::interface::{TaskEntry, TaskQuery};
-use crate::time::{FOREVER, fmt_utc};
+use crate::time::fmt_utc;
 
+/// Sorts after every `UTCDateTime`: the range is half-open, so a task due at the last second counts.
+const OPEN_END: &str = "9999-12-31T23:59:60Z";
 /// Lowest `UTCDateTime`: lower bound of a range without `due_from`.
 const EPOCH: &str = "0000-01-01T00:00:00Z";
 
@@ -21,14 +23,14 @@ const EPOCH: &str = "0000-01-01T00:00:00Z";
 /// Outside the years 0 to 9999 the text form no longer sorts, so the bound stops there.
 fn bound(t: DateTime<Utc>) -> String {
     let ceil = if t.timestamp_subsec_nanos() > 0 {
-        t + Duration::seconds(1)
+        t.checked_add_signed(Duration::seconds(1))
     } else {
-        t
+        Some(t)
     };
-    match ceil.year() {
-        ..0 => EPOCH.into(),
-        10_000.. => FOREVER.into(),
-        _ => fmt_utc(ceil),
+    match ceil {
+        Some(c) if (0..10_000).contains(&c.year()) => fmt_utc(c),
+        Some(c) if c.year() < 0 => EPOCH.into(),
+        _ => OPEN_END.into(),
     }
 }
 
@@ -37,7 +39,7 @@ impl TaskRepo {
         let mut q = Query::new().of_type(TASK_TYPE).in_context(CONTEXT);
         q = if query.due_from.is_some() || query.due_to.is_some() {
             let from = query.due_from.map_or_else(|| EPOCH.into(), bound);
-            let to = query.due_to.map_or_else(|| FOREVER.into(), bound);
+            let to = query.due_to.map_or_else(|| OPEN_END.into(), bound);
             q.index_between("due_utc", from, to)
                 .order_by_index("due_utc")
         } else {

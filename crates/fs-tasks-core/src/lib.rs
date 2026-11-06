@@ -32,7 +32,7 @@ pub mod model;
 mod repo;
 pub mod validate;
 
-pub use error::{Error, Result};
+pub use error::{Error, MAX_TASK_BYTES, Result};
 pub use fs_jscalendar::upgrade::{Upgraded, upgrade};
 pub use fs_jscalendar::{Issue, now_utc, time, upgrade};
 pub use interface::{

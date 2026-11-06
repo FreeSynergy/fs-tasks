@@ -3,7 +3,7 @@
 //! Pattern: Adapter — each error the core can name becomes a typed RFC 9457 problem, so a consumer
 //! can tell "not found" from "not possible" without reading a message.
 
-use fs_interfaces::rpc::{Problem, failed, unsupported};
+use fs_interfaces::rpc::{Problem, failed, too_large, unsupported};
 use fs_tasks_core::Error;
 
 const NOT_FOUND: &str = "https://freesynergy.net/problems/tasks/not-found";
@@ -27,6 +27,7 @@ pub(crate) fn rpc_error(e: Error) -> capnp::Error {
         | Error::Time(_)
         | Error::ICalendar(_)
         | Error::Store(Store::Invalid(_)) => invalid(text),
+        Error::TooLarge(_) => too_large(text),
         Error::Json(_) | Error::Store(_) => failed(text),
     }
 }

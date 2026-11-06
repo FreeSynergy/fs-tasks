@@ -38,6 +38,7 @@ pub(crate) fn required<'a>(text: capnp::text::Reader<'a>, what: &str) -> capnp::
     if text.is_empty() {
         return Err(invalid(format!("{what} must not be empty")));
     }
+    check_intake(text.len())?;
     Ok(text)
 }
 

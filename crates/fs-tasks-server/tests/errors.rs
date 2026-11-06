@@ -73,6 +73,18 @@ async fn errors_arrive_typed() {
         assign.get().set_email("");
         is(&assign.send().promise.await.err().unwrap(), INVALID, 422);
 
+        let mut query = items.query_request();
+        query
+            .get()
+            .init_filter()
+            .init_due_to()
+            .set_unix_millis(i64::MAX);
+        is(
+            &query.send().promise.await.err().unwrap(),
+            INVALID_REQUEST,
+            422,
+        );
+
         let e = root.boards_request().send().promise.await.err().unwrap();
         is(&e, UNSUPPORTED_PROBLEM_TYPE, 501);
     })
@@ -151,6 +163,52 @@ async fn capabilities_and_report_match() {
         assert!(refused.iter().all(|i| i.starts_with("board.")
             || i.starts_with("column.")
             || i.starts_with("card.")));
+    })
+    .await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn every_text_is_limited_and_a_task_too_large_never_blocks_the_list() {
+    with_server(|root| async move {
+        let items = items_of(&root).await;
+        let id = create(&items, "uid-1", "First").await;
+        let huge = "x".repeat(20 * 1024 * 1024);
+        let mut label = items.assign_label_request();
+        set_id(label.get().init_id(), id);
+        label.get().set_label(huge.as_str());
+        is(&label.send().promise.await.err().unwrap(), TOO_LARGE, 413);
+
+        let mut assign = items.assign_request();
+        set_id(assign.get().init_id(), id);
+        assign.get().set_name(huge.as_str());
+        assign.get().set_email("a@example.org");
+        is(&assign.send().promise.await.err().unwrap(), TOO_LARGE, 413);
+
+        let mut relation = items.create_relation_request();
+        set_id(relation.get().init_id(), id);
+        relation.get().set_other_uid(huge.as_str());
+        is(
+            &relation.send().promise.await.err().unwrap(),
+            TOO_LARGE,
+            413,
+        );
+
+        let list = items
+            .list_request()
+            .send()
+            .promise
+            .await
+            .expect("still connected");
+        assert_eq!(
+            list.get()
+                .unwrap()
+                .get_page()
+                .unwrap()
+                .get_items()
+                .unwrap()
+                .len(),
+            1
+        );
     })
     .await;
 }

@@ -7,7 +7,7 @@ use fs_store::{Blob, Envelope, ObjectId, StoredObject};
 
 use super::consts::{CONTENT_TYPE, CONTEXT, TASK_TYPE};
 use super::handle::TaskRepo;
-use crate::error::Result;
+use crate::error::{Error, MAX_TASK_BYTES, Result};
 use crate::model::Task;
 use crate::time::fmt_utc;
 use crate::validate::validate;
@@ -20,6 +20,11 @@ impl TaskRepo {
         original: Option<Blob>,
     ) -> Result<StoredObject> {
         validate(task)?;
+        // Checked as it will be stored: small edits add up, and escaping can multiply the text.
+        let bytes = task.to_value().to_string().len();
+        if bytes > MAX_TASK_BYTES {
+            return Err(Error::TooLarge(bytes));
+        }
         let mut env = existing
             .cloned()
             .unwrap_or_else(|| self.fresh_envelope(task));
@@ -29,7 +34,12 @@ impl TaskRepo {
         env.end_time = span.end;
         let mut o = StoredObject::new(env, CONTENT_TYPE, task.to_value());
         o.original = original;
-        let mut put = |k: &str, v: String| o.index.entry(k.into()).or_default().push(v);
+        // The store refuses empty index values, and an empty one says nothing anyway.
+        let mut put = |k: &str, v: String| {
+            if !v.is_empty() {
+                o.index.entry(k.into()).or_default().push(v);
+            }
+        };
         put("uid", task.uid.clone());
         put("type", "task".into());
         if let Some(s) = span.start {

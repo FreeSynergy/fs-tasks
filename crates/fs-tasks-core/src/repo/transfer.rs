@@ -21,7 +21,12 @@ impl TaskRepo {
             return Ok(report);
         }
         let parts = split_ics(text);
-        let found = |t: &str| t.to_ascii_uppercase().matches("BEGIN:VTODO").count();
+        // Whole lines only: a description may quote the words.
+        let found = |t: &str| {
+            t.lines()
+                .filter(|l| l.trim().eq_ignore_ascii_case("BEGIN:VTODO"))
+                .count()
+        };
         let kept: usize = parts.iter().map(|p| found(&p.text)).sum();
         for _ in kept..found(text) {
             report.failed.push("VTODO without a UID".into());
@@ -34,10 +39,12 @@ impl TaskRepo {
             match parse_ics(&part.text) {
                 Ok((tasks, notes)) => {
                     report.notes.extend(notes);
+                    let part_text = part.text.clone();
                     let original = Blob {
                         media_type: ICS_MEDIA_TYPE.into(),
                         bytes: part.text.into_bytes(),
                     };
+                    report.notes.extend(unread_properties(&part_text, &tasks));
                     for task in tasks {
                         self.import_one(task, &original, &mut report).await?;
                     }
@@ -67,7 +74,13 @@ impl TaskRepo {
         match self.create_inner(task, Some(original.clone())).await {
             Ok(e) => report.created.push(e.id),
             // One refused task must not lose the report of all the others.
-            Err(e @ (Error::Invalid(_) | Error::Time(_) | Error::Conflict(_))) => {
+            Err(
+                e @ (Error::Invalid(_)
+                | Error::Time(_)
+                | Error::Conflict(_)
+                | Error::TooLarge(_)
+                | Error::Store(fs_store::Error::Invalid(_))),
+            ) => {
                 report.failed.push(format!("{uid}: {e}"));
             }
             Err(e) => return Err(e),
@@ -83,4 +96,24 @@ impl TaskRepo {
         }
         to_ics(&tasks)
     }
+}
+
+/// The iCalendar conversion leaves out a value it cannot read. A person should hear about it.
+fn unread_properties(text: &str, tasks: &[Task]) -> Vec<String> {
+    let has = |name: &str| {
+        text.lines().any(|l| {
+            let upper = l.to_ascii_uppercase();
+            upper.starts_with(&format!("{name}:")) || upper.starts_with(&format!("{name};"))
+        })
+    };
+    let mut notes = vec![];
+    for t in tasks {
+        if has("DUE") && t.due.is_none() {
+            notes.push(format!("{}: DUE could not be read", t.uid));
+        }
+        if has("DURATION") && t.estimated_duration.is_none() {
+            notes.push(format!("{}: DURATION could not be read", t.uid));
+        }
+    }
+    notes
 }
