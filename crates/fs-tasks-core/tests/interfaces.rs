@@ -85,7 +85,7 @@ impl TaskItems for Nothing {
 #[tokio::test]
 async fn a_fake_implements_the_interface() {
     let items: Arc<dyn TaskItems> = Arc::new(Nothing);
-    assert!(items.list().await.unwrap().is_empty());
+    assert_eq!(items.list().await.unwrap().len(), 0);
     assert_eq!(items.capabilities().len(), 5, "default capabilities");
 }
 
