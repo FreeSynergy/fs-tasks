@@ -9,14 +9,16 @@
 //! in the provider; nobody can slip in between. The app cannot derive the revision itself: the wire
 //! carries time in milliseconds, the store keeps microseconds.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use fs_components_workbenches::SourceError;
+use fs_components_workbenches::tasks::RowQuery;
 use fs_store::ObjectId;
 use fs_tasks_client::{Revised, RevisedTasks, TaskPages};
 use fs_tasks_core::{Error, Revision, TaskItems};
 use tokio::runtime::Handle;
 
+use super::reading::Reading;
 use crate::words::{fill, say};
 
 /// The contract of the tasks program, for the workbench. Do not call it from inside the runtime: it
@@ -24,7 +26,8 @@ use crate::words::{fill, say};
 pub struct TaskAdapter {
     pub(super) items: Arc<dyn TaskItems>,
     pub(super) revised: Arc<dyn RevisedTasks>,
-    pub(super) _pages: Arc<dyn TaskPages>,
+    pages: Arc<dyn TaskPages>,
+    reading: Mutex<Option<Reading>>,
     pub(super) runtime: Handle,
 }
 
@@ -40,9 +43,28 @@ impl TaskAdapter {
         Self {
             items,
             revised,
-            _pages: pages,
+            pages,
+            reading: Mutex::new(None),
             runtime,
         }
+    }
+
+    /// The rows of `query` from `offset`, read on from the cursor of the last call when it ended
+    /// there. A reading that failed is dropped, so the next call starts clean.
+    pub(super) fn read_rows(
+        &self,
+        query: &RowQuery,
+        offset: usize,
+        limit: usize,
+    ) -> Result<Vec<Revised>, Error> {
+        let mut slot = self.reading.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut reading = match slot.take() {
+            Some(r) if r.query == *query => r,
+            _ => Reading::new(self.pages.clone(), query),
+        };
+        let rows = self.runtime.block_on(reading.take(offset, limit))?;
+        *slot = Some(reading);
+        Ok(rows)
     }
 
     /// The task with this key, and its revision.

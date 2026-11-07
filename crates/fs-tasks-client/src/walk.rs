@@ -7,12 +7,20 @@ use std::sync::Arc;
 
 use fs_tasks_core::{Result, TaskQuery};
 
-use crate::pages::{TaskPage, TaskPages};
+use crate::pages::{Cursor, TaskPage, TaskPages};
+
+/// Where the walk stands.
+enum Place {
+    Start,
+    At(Cursor),
+    End,
+}
 
 /// A walk over the pages of one query. Dropping it forgets the place; a new query is a new walk.
 pub struct PageWalk {
-    _pages: Arc<dyn TaskPages>,
-    _query: TaskQuery,
+    pages: Arc<dyn TaskPages>,
+    query: TaskQuery,
+    place: Place,
 }
 
 impl PageWalk {
@@ -20,8 +28,9 @@ impl PageWalk {
     #[must_use]
     pub fn new(pages: Arc<dyn TaskPages>, query: TaskQuery) -> Self {
         Self {
-            _pages: pages,
-            _query: query,
+            pages,
+            query,
+            place: Place::Start,
         }
     }
 
@@ -29,8 +38,13 @@ impl PageWalk {
     ///
     /// # Errors
     /// As [`TaskPages::first`] and [`TaskPages::next`].
-    #[allow(clippy::unused_async)]
     pub async fn next_page(&mut self) -> Result<Option<TaskPage>> {
-        todo!("step 3: walk")
+        let page = match &self.place {
+            Place::End => return Ok(None),
+            Place::Start => self.pages.first(&self.query).await?,
+            Place::At(cursor) => self.pages.next(&self.query, cursor).await?,
+        };
+        self.place = page.next.clone().map_or(Place::End, Place::At);
+        Ok(Some(page))
     }
 }

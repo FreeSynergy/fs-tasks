@@ -15,7 +15,7 @@ use fs_tasks_core::validate::PROGRESS;
 use super::adapter::{TaskAdapter, reason, revision_in};
 use super::apply::{apply_draft, set_progress};
 use super::draft::{blank_draft, draft_of, is_series};
-use super::rows::{is_open, matches, row_of};
+use super::rows::row_of;
 use super::sheet::sheet_of;
 use crate::words::{progress_title, say};
 
@@ -37,26 +37,16 @@ impl TaskSource for TaskAdapter {
             .collect()
     }
 
-    /// Cut from the whole list: `TaskItems` has no paging or text search yet.
+    /// Read on from the cursor of the last call (`reading.rs`): the contract pages the list, the app
+    /// filters it by text and by "open".
     fn rows(
         &self,
         query: &RowQuery,
         offset: usize,
         limit: usize,
     ) -> Result<Vec<TaskRow>, SourceError> {
-        let all = self
-            .runtime
-            .block_on(self.revised.list_revised())
-            .map_err(|e| reason(&e))?;
-        let term = query.term.to_lowercase();
-        Ok(all
-            .iter()
-            .filter(|r| matches(&r.entry.task, &term))
-            .filter(|r| !query.open_only || is_open(&r.entry.task))
-            .skip(offset)
-            .take(limit)
-            .map(row_of)
-            .collect())
+        let found = self.read_rows(query, offset, limit);
+        Ok(found.map_err(|e| reason(&e))?.iter().map(row_of).collect())
     }
 
     fn read(&self, key: &str) -> Result<TaskSheet, SourceError> {

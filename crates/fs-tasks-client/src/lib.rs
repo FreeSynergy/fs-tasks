@@ -18,6 +18,7 @@
 )]
 
 mod calls;
+mod calls_page;
 mod calls_revised;
 mod detail;
 mod items_impl;

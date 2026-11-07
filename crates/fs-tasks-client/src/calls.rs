@@ -1,18 +1,16 @@
 //! The calls of `Items`, one function each, on the connection's thread.
 //!
 //! Pattern: Adapter — one request in, one reply read back as values of the core. A list is read page
-//! by page until the cursor is empty.
+//! by page until the cursor is empty (`calls_page.rs`).
 
 use fs_interfaces::rpc::write_object_id;
 use fs_interfaces::tasks_capnp::items::Client;
-use fs_interfaces::tasks_capnp::task_page;
 use fs_store::ObjectId;
-use fs_tasks_core::contract::write_filter;
 use fs_tasks_core::{ImportReport, Result, Task, TaskEntry, TaskQuery};
 
+use crate::calls_page::pages;
 use crate::problems::{Subject, error_of};
-use crate::read::{entry, report, revised, unreadable};
-use crate::revised::Revised;
+use crate::read::{entry, report, unreadable};
 
 /// The JSON text of a task, as the server reads it.
 pub(crate) fn task_text(task: &Task) -> String {
@@ -105,55 +103,11 @@ pub(crate) async fn list(c: &Client) -> Result<Vec<TaskEntry>> {
 
 /// `query`, every page, like `list`.
 pub(crate) async fn query(c: &Client, filter: TaskQuery) -> Result<Vec<TaskEntry>> {
-    Ok(pages(c, Some(filter))
+    Ok(pages(c, Some(&filter))
         .await?
         .into_iter()
         .map(|r| r.entry)
         .collect())
-}
-
-pub(crate) async fn pages(c: &Client, filter: Option<TaskQuery>) -> Result<Vec<Revised>> {
-    let mut found: Vec<Revised> = Vec::new();
-    let mut cursor: Vec<u8> = Vec::new();
-    loop {
-        let before = found.len();
-        cursor = match &filter {
-            None => {
-                let mut req = c.list_request();
-                req.get().init_cursor().set_opaque(&cursor);
-                let answer = req.send().promise.await;
-                let answer = answer.map_err(|e| error_of(&e, Subject::None))?;
-                take(answer.get().and_then(|r| r.get_page()), &mut found)?
-            }
-            Some(filter) => {
-                let mut req = c.query_request();
-                write_filter(filter, req.get().init_filter());
-                req.get().init_cursor().set_opaque(&cursor);
-                let answer = req.send().promise.await;
-                let answer = answer.map_err(|e| error_of(&e, Subject::None))?;
-                take(answer.get().and_then(|r| r.get_page()), &mut found)?
-            }
-        };
-        if cursor.is_empty() {
-            return Ok(found);
-        }
-        if found.len() == before {
-            return Err(unreadable("an empty page that names a next one"));
-        }
-    }
-}
-
-/// The entries of one page onto `found`; answers the cursor of the next page.
-fn take(page: capnp::Result<task_page::Reader<'_>>, found: &mut Vec<Revised>) -> Result<Vec<u8>> {
-    let page = page.map_err(unreadable)?;
-    for item in page.get_items().map_err(unreadable)? {
-        found.push(revised(item)?);
-    }
-    Ok(page
-        .get_next()
-        .and_then(|n| n.get_opaque())
-        .map_err(unreadable)?
-        .to_vec())
 }
 
 /// `importIcs`.
