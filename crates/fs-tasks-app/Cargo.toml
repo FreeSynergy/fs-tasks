@@ -18,7 +18,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
 
 [dev-dependencies]
 fs-tasks-server = { path = "../fs-tasks-server" }
-fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.34.0", features = ["rpc"] }
+fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.36.0", features = ["rpc"] }
 tempfile = "3"
 # provisional: becomes a tag once reviewed
 fs-components-render = { git = "https://github.com/FreeSynergy/fs-components", rev = "8c38a3b17f6b723ef625046a271c5564f5d7aa26" }

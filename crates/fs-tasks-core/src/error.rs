@@ -41,6 +41,10 @@ pub enum Error {
     /// The task would be too large to come back in one answer (`MAX_TASK_BYTES`).
     #[error("the task and its name have {0} bytes, at most {MAX_TASK_BYTES} are possible")]
     TooLarge(usize),
+    /// `edit_checked`: the task was written by someone else since the revision was read. Nothing was
+    /// written.
+    #[error("conflict: task {0} was changed since it was read; nothing was written")]
+    Changed(ObjectId),
     /// The operation conflicts with the current state (duplicate uid, ...).
     #[error("{0}")]
     Conflict(String),

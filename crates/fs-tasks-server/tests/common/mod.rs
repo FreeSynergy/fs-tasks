@@ -90,3 +90,32 @@ pub fn set_id(out: common_capnp::uuid::Builder<'_>, id: Uuid) {
 pub fn task_json(task: tasks_capnp::task::Reader<'_>) -> serde_json::Value {
     serde_json::from_str(task.get_jscalendar().unwrap().to_str().unwrap()).unwrap()
 }
+
+/// The revision of the task the server answered.
+pub fn revision_of(task: tasks_capnp::task::Reader<'_>) -> u64 {
+    task.get_revision()
+}
+
+/// `editIf` with this revision and task; the answer or the failure.
+pub async fn edit_if(
+    items: &items::Client,
+    id: Uuid,
+    revision: u64,
+    task: &str,
+) -> Result<capnp::capability::Response<items::edit_if_results::Owned>, capnp::Error> {
+    let mut req = items.edit_if_request();
+    set_id(req.get().init_id(), id);
+    req.get().set_revision(revision);
+    req.get().set_jscalendar(task);
+    req.send().promise.await
+}
+
+/// Read a task by id: the revision it has now, and its title.
+pub async fn read_now(items: &items::Client, id: Uuid) -> (u64, String) {
+    let mut get = items.get_request();
+    set_id(get.get().init_id(), id);
+    let answer = get.send().promise.await.unwrap();
+    let task = answer.get().unwrap().get_task().unwrap();
+    let title = task_json(task)["title"].as_str().unwrap().to_string();
+    (revision_of(task), title)
+}

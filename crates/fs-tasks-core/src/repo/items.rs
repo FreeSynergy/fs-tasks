@@ -10,12 +10,13 @@ use fs_interfaces::Capabilities;
 use fs_store::ObjectId;
 
 use super::handle::TaskRepo;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::interface::{
     CAPABILITIES, ImportReport, Subscription, TaskEntry, TaskFeed, TaskItems, TaskListener,
     TaskQuery,
 };
 use crate::model::{Relation, Task};
+use crate::revision::Revision;
 
 #[async_trait]
 impl TaskItems for TaskRepo {
@@ -28,6 +29,20 @@ impl TaskItems for TaskRepo {
     }
     async fn edit(&self, id: ObjectId, task: Task) -> Result<TaskEntry> {
         let _one_at_a_time = self.writes.lock().await;
+        self.edit_inner(id, task).await
+    }
+    async fn edit_checked(
+        &self,
+        id: ObjectId,
+        expected: Revision,
+        task: Task,
+    ) -> Result<TaskEntry> {
+        // The turn makes compare and write one step: nobody else writes in between.
+        let _one_at_a_time = self.writes.lock().await;
+        let current = self.entry(id).await?.ok_or(Error::NotFound(id))?;
+        if Revision::of(&current) != expected {
+            return Err(Error::Changed(id));
+        }
         self.edit_inner(id, task).await
     }
     async fn assign(&self, id: ObjectId, name: &str, email: &str) -> Result<TaskEntry> {

@@ -1,5 +1,4 @@
 //! `Items` interface: every method of the contract, each one call of the provider.
-//!
 //! Pattern: Adapter — wire request in, `TaskItems` call, wire response out. What a provider cannot
 //! do arrives as its explicit `Unsupported` and leaves as a typed problem.
 
@@ -49,6 +48,14 @@ impl items::Server for ItemsImpl {
             .map_err(rpc_error)?;
         write_task(results.get().init_task(), &entry);
         Ok(())
+    }
+
+    async fn edit_if(
+        self: Rc<Self>,
+        params: items::EditIfParams,
+        results: items::EditIfResults,
+    ) -> Done {
+        crate::edit_if::edit_if(&self.items, params, results).await
     }
 
     async fn assign(
