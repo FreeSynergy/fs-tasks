@@ -25,6 +25,8 @@ mod problems;
 mod problems_table;
 mod read;
 mod remote;
+mod revised;
 
 pub use fs_interfaces::rpc::client::{CALL_TIMEOUT, CONNECT_TIMEOUT, Timeouts};
 pub use peer::RpcTasks;
+pub use revised::{Revised, RevisedTasks};
