@@ -9,6 +9,15 @@ use fs_tasks_core::{Error, TaskItems};
 
 const ICS: &str = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\nBEGIN:VTODO\r\nUID:todo-1\r\nDTSTAMP:20261101T000000Z\r\nDUE:20261112T170000Z\r\nSUMMARY:Minutes\r\nSTATUS:NEEDS-ACTION\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
 
+/// Each export names its calendar with a fresh `UID`; the lines of the tasks are what is compared.
+fn without_calendar_uid(text: &str) -> String {
+    text.replacen(
+        &text[text.find("UID:urn:uuid:").unwrap()..text.find("PRODID").unwrap()],
+        "",
+        1,
+    )
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn an_import_reports_what_it_created_and_skipped() {
     let served = Served::start().await;
@@ -44,7 +53,11 @@ async fn an_export_is_the_text_of_the_server() {
     let a = tasks.create(task("a", "Alpha")).await.unwrap();
     let b = tasks.create(task("b", "Beta")).await.unwrap();
     let text = tasks.export_ics(&[a.id, b.id]).await.unwrap();
-    assert_eq!(text, served.repo.export_ics(&[a.id, b.id]).await.unwrap());
+    let at_server = served.repo.export_ics(&[a.id, b.id]).await.unwrap();
+    assert_eq!(
+        without_calendar_uid(&text),
+        without_calendar_uid(&at_server)
+    );
     assert!(text.contains("SUMMARY:Alpha") && text.contains("SUMMARY:Beta"));
     let only_b = tasks.export_ics(&[b.id]).await.unwrap();
     assert!(!only_b.contains("Alpha"));
@@ -55,8 +68,5 @@ async fn an_export_of_an_unknown_task_is_not_found() {
     let served = Served::start().await;
     let tasks = served.client();
     let got = tasks.export_ics(&[fs_store::ObjectId::new()]).await;
-    assert!(
-        matches!(got, Err(Error::NotFound(_)) | Err(Error::Store(_))),
-        "{got:?}"
-    );
+    assert!(matches!(got, Err(Error::NotFound(_))), "{got:?}");
 }

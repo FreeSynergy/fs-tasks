@@ -25,7 +25,20 @@ pub struct ReadOnly(pub Arc<TaskRepo>);
 #[async_trait]
 impl TaskItems for ReadOnly {
     fn capabilities(&self) -> Capabilities {
-        self.0.capabilities()
+        let mut caps = Capabilities::new("fs-tasks-read-only");
+        for id in ["task.read", "task.query"] {
+            caps.supported(id);
+        }
+        for id in [
+            "task.create",
+            "task.edit",
+            "task.delete",
+            "task.import",
+            "task.export",
+        ] {
+            caps.unsupported(id, "this provider does not offer it");
+        }
+        caps
     }
     async fn get(&self, id: ObjectId) -> Result<Option<TaskEntry>> {
         self.0.get(id).await
