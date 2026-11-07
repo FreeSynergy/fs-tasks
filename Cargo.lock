@@ -1528,6 +1528,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs-tasks-client"
+version = "0.5.3"
+dependencies = [
+ "async-trait",
+ "capnp",
+ "fs-interfaces",
+ "fs-store",
+ "fs-tasks-core",
+ "fs-tasks-server",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "fs-tasks-core"
 version = "0.5.3"
 dependencies = [

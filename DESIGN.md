@@ -84,6 +84,7 @@ A list and a view by status of one set of tasks; search; create, edit (title, de
 | `model/ops.rs` | Command | small edits of the value |
 | `validate/check.rs` | Specification | task rules; the shared rules and `Ctx` are in `fs-jscalendar` |
 | `contract/*` | Adapter | generated Cap'n Proto code and the wire <-> Rust mapping |
+| `fs-tasks-client/{peer,items_impl}.rs` | Adapter | `TaskItems` of the core in front of the Cap'n Proto client of `tasks.capnp`: the frontend keeps depending on the trait it already uses, only the provider behind it changes. Interface first: `RpcTasks::connect` was committed before the tests and the calls |
 | `fs-tasks-app/source/{adapter,provider}.rs` | Adapter | `dyn TaskItems` as the workbench's `TaskSource` |
 | `fs-tasks-app/source/{rows,sheet,draft}.rs` | Adapter, Factory | a task as a row, a sheet and a form |
 | `fs-tasks-app/source/apply.rs` | Command | only what differs from what the form started with goes onto the task |
