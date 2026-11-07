@@ -8,7 +8,9 @@ use fs_interfaces::rpc::Problem;
 use fs_store::{Error as StoreError, ObjectId};
 use fs_tasks_core::Error;
 
-use crate::problems::{BASE, Subject, error_of};
+use fs_interfaces::rpc::client::problems::PROBLEM_BASE as BASE;
+
+use crate::problems::{Subject, error_of};
 
 fn said(kind: &str, status: u16, detail: &str, subject: Subject) -> Error {
     let problem = Problem::new(format!("{BASE}{kind}"), "t", detail, status);

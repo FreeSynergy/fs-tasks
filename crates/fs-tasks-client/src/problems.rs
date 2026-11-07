@@ -3,14 +3,15 @@
 //! Pattern: Adapter — the inverse of `errors.rs` of `fs-tasks-server`: each RFC 9457 type becomes the
 //! variant of `fs_tasks_core::Error` it came from, so the frontend's own reading of an error needs no
 //! change. The wire carries a type, a status and a text, not the variant's fields; what can be read
-//! back from the text is, the rest comes from the call ([`Subject`]).
+//! back from the text is, the rest comes from the call ([`Subject`]). The generic readers (type prefix, id in a text, store prefix, `Unsupported`, the `Failure` of an RPC error) are those of `fs_interfaces::rpc::client::problems`; `too_large` stays here: its three texts are this program's.
 
 use fs_interfaces::Unsupported;
-use fs_interfaces::rpc::{Problem, is_unimplemented};
+use fs_interfaces::rpc::Problem;
+use fs_interfaces::rpc::client::problems::{
+    Failure, local_type, object_id_in, unsupported_of, without_store_prefix,
+};
 use fs_store::{Error as StoreError, ObjectId};
 use fs_tasks_core::{Error, Issue};
-
-pub(crate) const BASE: &str = "https://freesynergy.net/problems/";
 
 /// What a call was about, for the variants that name it.
 #[derive(Clone, Copy, Debug)]
@@ -23,14 +24,14 @@ pub(crate) enum Subject {
 
 /// The error of the core for what the server (or the wire) said.
 pub(crate) fn error_of(e: &capnp::Error, subject: Subject) -> Error {
-    match Problem::from_error(e) {
-        Some(problem) => from_problem(&problem, subject),
-        None if is_unimplemented(e) => Unsupported::new(
+    match Failure::of(e) {
+        Failure::Problem(problem) => from_problem(&problem, subject),
+        Failure::Unimplemented => Unsupported::new(
             "tasks",
             "the server does not know this method of the contract",
         )
         .into(),
-        None => backend(format!("tasks server: {e}")),
+        Failure::Other(text) => backend(format!("tasks server: {text}")),
     }
 }
 
@@ -41,10 +42,9 @@ fn backend(text: String) -> Error {
 fn from_problem(p: &Problem, subject: Subject) -> Error {
     let detail = p.detail.as_str();
     if p.is_unsupported() {
-        return unsupported(detail);
+        return unsupported_of(detail, "tasks").into();
     }
-    let kind = p.problem_type.strip_prefix(BASE).unwrap_or(&p.problem_type);
-    match kind {
+    match local_type(p) {
         "tasks/not-found" => not_found(detail, subject),
         "tasks/conflict" => Error::Conflict(detail.to_string()),
         "tasks/invalid" => invalid(detail),
@@ -54,17 +54,9 @@ fn from_problem(p: &Problem, subject: Subject) -> Error {
     }
 }
 
-fn unsupported(detail: &str) -> Error {
-    let (capability, reason) = detail.split_once(": ").unwrap_or(("tasks", detail));
-    Unsupported::new(capability, reason).into()
-}
-
 /// `task <id> not found` names the task; if the text does not, the call does.
 fn not_found(detail: &str, subject: Subject) -> Error {
-    let named = detail
-        .split_whitespace()
-        .find_map(|word| word.parse::<ObjectId>().ok());
-    match (named, subject) {
+    match (object_id_in(detail), subject) {
         (Some(id), _) | (None, Subject::Task(id)) => Error::NotFound(id),
         (None, Subject::None) => backend(format!("tasks server: something is missing: {detail}")),
     }
@@ -82,10 +74,9 @@ fn invalid(detail: &str) -> Error {
     if let Some(what) = detail.strip_prefix("iCalendar: ") {
         return Error::ICalendar(what.to_string());
     }
-    let inner = detail
-        .strip_prefix("object store: invalid input: ")
-        .unwrap_or(detail);
-    Error::Store(StoreError::Invalid(inner.to_string()))
+    Error::Store(StoreError::Invalid(
+        without_store_prefix(detail).to_string(),
+    ))
 }
 
 /// `/path: message; /other: message`. The core quotes the values it names (`{:?}`), so a `; ` inside a
