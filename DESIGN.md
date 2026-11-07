@@ -128,9 +128,9 @@ A list and a view by status of one set of tasks; search; create, edit (title, de
 | `fs-tasks-app/{main,args,words}.rs`, `lib.rs` | none | a thin binary (connects, imports, exports or shows), one parsing function (`--socket` required, `--store` refused with a pointer to the server's `--data`), constants of whole sentences with named placeholders (ADR 0057), a list of modules |
 | `fs-tasks-app/source/{rows,sheet,draft}.rs` | Adapter | a task as a row, a sheet and a form |
 | `fs-tasks-app/source/labels.rs` | none | two pure functions: labels as one line of text |
-| `fs-tasks-app/source/apply.rs` | none | one function and its helpers: only what differs from what the form started with goes onto the task (no list of operations, no undo: Command would be a name only) |
+| `fs-tasks-app/source/apply.rs` | none | one function and its helpers that compute the task from the form and the old task, with no state and no side effects (no list of operations, no undo: Command would be a name only) |
 | `fs-tasks-app/source/marks.rs` | Visitor + Specification | is it marked sensitive; fails closed |
-| `fs-tasks-app/{import,transfer}.rs` | none | plain functions with a fixed flow (read, import or export, report); no trait with provided methods, so Template method would be a name only |
+| `fs-tasks-app/{import,transfer}.rs` | Facade | `import_file` and `export_all` each hide the file, the runtime, the contract call and the report behind one call (they read, write and call the contract, so they name a pattern) |
 | `error.rs` | none | plain error enum; one `From` for the errors of `fs-jscalendar` |
 
 Design.md names a `Tasks` facade as the single entry point and a Command pattern with `apply` / `invert` for moves and edits

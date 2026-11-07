@@ -1,7 +1,7 @@
 //! iCalendar out: the export by a path from the command line.
 //!
-//! Pattern: none — plain functions with a fixed flow (read, choose, export, report); there is no trait
-//! with provided methods, so Template method would be a name only. Nothing is hidden: what failed or was left out is in the report.
+//! Pattern: Facade — one function hides the list, the sensitive-release rule, the contract's
+//! `export_ics` and the file write behind a single call that answers a report. Nothing is lost silently: what failed or was left out is in the report.
 
 use std::path::Path;
 
