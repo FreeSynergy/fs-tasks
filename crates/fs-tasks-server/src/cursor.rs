@@ -6,7 +6,7 @@
 //! removed, a place does not.
 
 use fs_interfaces::rpc::invalid_request;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::Place;
 
 const FORM: u8 = 2;
@@ -64,7 +64,7 @@ mod tests {
         let place = Place {
             order: "2026-12-01T09:00:00Z".into(),
             name: "Äpfel \u{0}\u{1} mixed Case".into(),
-            id: fs_store::Envelope::new("Task", "x").id,
+            id: fs_objects::Envelope::new("Task", "x").id,
         };
         let bytes = encode(&place);
         assert_eq!(decode(&bytes).unwrap(), Some(place));

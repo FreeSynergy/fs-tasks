@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fs_components_workbenches::tasks::{TaskLabels, TaskSource, TasksState, Variant};
-use fs_store::{ObjectId, Store, StoredObject, TursoStore};
+use fs_objects::{ObjectId, Store, StoredObject, TursoStore};
 use fs_tasks_app::TaskAdapter;
 use fs_tasks_core::{Task, TaskItems, TaskRepo};
 use serde_json::{Value, json};

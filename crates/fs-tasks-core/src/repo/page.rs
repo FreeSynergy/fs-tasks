@@ -8,7 +8,7 @@
 //! text, so raw and folded order agree; the name through the store's own folding; the id as text),
 //! so no task falls between two pages and none comes twice.
 
-use fs_store::{Cond, Op, Query, StoredObject};
+use fs_objects::{Cond, Op, Query, StoredObject};
 
 use super::consts::{CONTEXT, TASK_TYPE};
 

@@ -6,8 +6,8 @@
 
 use std::sync::Arc;
 
-use fs_store::traits::{ObjectQuery, ObjectRepository};
-use fs_store::{Store, StoreInfo};
+use fs_objects::traits::{ObjectQuery, ObjectRepository};
+use fs_objects::{Store, StoreInfo};
 
 use super::backend::StoreAdapter;
 use crate::interface::Registry;

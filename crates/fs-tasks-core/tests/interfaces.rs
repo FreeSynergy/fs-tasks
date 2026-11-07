@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use common::{repo, t};
 use fs_interfaces::Capabilities;
-use fs_store::{Envelope, ObjectId};
+use fs_objects::{Envelope, ObjectId};
 use fs_tasks_core::{
     ImportReport, Place, Relation, Result, Task, TaskChange, TaskEntry, TaskFeed, TaskItems,
     TaskListener, TaskPage, TaskQuery,

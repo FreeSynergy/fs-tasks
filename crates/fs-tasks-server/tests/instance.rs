@@ -7,7 +7,7 @@ use std::sync::Arc;
 use common::{ME, create, items_of, with_provider};
 use fs_interfaces::rpc::read_uuid;
 use fs_interfaces::tasks_capnp::tasks;
-use fs_store::{ActivityFilter, Store, TursoStore};
+use fs_objects::{ActivityFilter, Store, TursoStore};
 use fs_tasks_core::TaskRepo;
 use uuid::Uuid;
 

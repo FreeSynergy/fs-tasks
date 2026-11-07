@@ -7,7 +7,7 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use fs_components_app::{write_new_file, write_new_private_file};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::{TaskEntry, TaskItems};
 use tokio::runtime::Handle;
 

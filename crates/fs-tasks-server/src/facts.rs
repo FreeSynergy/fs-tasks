@@ -5,7 +5,7 @@
 //! stays as it was. The table is in `DESIGN.md`.
 
 use fs_interfaces::rpc::{Problem, problem_keys as keys};
-use fs_store::Error as StoreError;
+use fs_objects::Error as StoreError;
 use fs_tasks_core::Error;
 
 /// `kind` of a task.

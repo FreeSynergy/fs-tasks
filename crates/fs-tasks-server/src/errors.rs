@@ -16,7 +16,7 @@ const INVALID: &str = "https://freesynergy.net/problems/tasks/invalid";
 /// fault. What a client sends is read before the core sees it (`wire::read_task`).
 #[allow(clippy::needless_pass_by_value)] // used as `map_err(rpc_error)`
 pub(crate) fn rpc_error(e: Error) -> capnp::Error {
-    use fs_store::Error as Store;
+    use fs_objects::Error as Store;
     let text = e.to_string();
     let problem = |kind: &str, title: &str, status: u16| {
         with_facts(Problem::new(kind, title, text.clone(), status), &e).into_error()

@@ -5,7 +5,7 @@
 //! serves the pages (`page.rs`).
 
 use chrono::{DateTime, Datelike, Duration, Utc};
-use fs_store::{Cond, Op, Query};
+use fs_objects::{Cond, Op, Query};
 
 use super::consts::{CONTEXT, DESCRIPTION, FIRST_INDEX_TIME, NO_DUE, ORDER_KEY, TASK_TYPE};
 use super::crud::entry_of;

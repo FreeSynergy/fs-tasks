@@ -1,6 +1,6 @@
 //! `fs-tasks-core`: program core of FreeSynergy tasks (no GUI).
 //!
-//! A task is a JSCalendar 2.0 `Task` inside an AS2 `Task` envelope stored through `fs-store`
+//! A task is a JSCalendar 2.0 `Task` inside an AS2 `Task` envelope stored through `fs-objects`
 //! (ADR 0014, 0019, 0020). `fs-tasks` owns the standard (ADR 0050): other programs, e.g.
 //! `fs-calendar`, use tasks only through the [`TaskItems`] / [`TaskFeed`] traits; [`TaskRepo`]
 //! is the store-backed implementation. See `DESIGN.md` for the pattern map.
