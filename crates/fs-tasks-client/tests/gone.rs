@@ -34,7 +34,19 @@ async fn a_server_that_stopped_answers_with_an_error_every_time() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn calls_from_several_threads_overlap_and_all_arrive() {
+async fn two_calls_are_under_way_at_the_same_time() {
+    let served = Served::start_meeting().await;
+    let tasks = std::sync::Arc::new(served.client());
+    let (a, b) = (tasks.clone(), tasks.clone());
+    let both = async move { tokio::join!(a.list(), b.list()) };
+    let (first, second) = tokio::time::timeout(Duration::from_secs(10), both)
+        .await
+        .expect("the server answers only when both calls are in; one after the other never ends");
+    assert!(first.unwrap().is_empty() && second.unwrap().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn calls_from_several_tasks_all_arrive() {
     let served = Served::start().await;
     let tasks = std::sync::Arc::new(served.client());
     let mut joins = Vec::new();

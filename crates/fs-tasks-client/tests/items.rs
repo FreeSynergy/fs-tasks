@@ -105,42 +105,97 @@ async fn the_order_of_the_list_is_the_servers() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn the_capabilities_are_what_the_server_reported() {
+async fn the_capabilities_promise_no_more_than_the_client_can() {
     let served = Served::start().await;
-    let caps = served.client().capabilities();
+    let tasks = served.client();
+    let caps = tasks.capabilities();
+    let server = served.repo.capabilities();
     for id in [
         "task.create",
         "task.edit",
         "task.delete",
         "task.import",
         "task.export",
+        "task.read",
+        "task.query",
     ] {
         assert!(caps.is_supported(id), "{id}");
     }
-    let report = served.repo.capabilities();
-    assert_eq!(
-        caps.is_supported("task.assign"),
-        report.is_supported("task.assign")
+    for id in [
+        "task.assign",
+        "relation.create",
+        "label.assign",
+        "task.subscribe",
+    ] {
+        assert!(server.is_supported(id), "the server offers {id}");
+        assert!(
+            !caps.is_supported(id),
+            "the client does not, so it must not say so: {id}"
+        );
+        assert!(caps.why_not(id).is_some(), "{id} has a reason");
+    }
+    assert!(
+        caps.entries().len() >= server.entries().len(),
+        "nothing is dropped from the report"
     );
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn what_the_app_does_not_use_says_unsupported() {
+async fn a_task_is_found_by_its_uid_and_by_a_query() {
+    let served = Served::start().await;
+    let tasks = served.client();
+    let early = tasks.create(due("e", "Early", 3)).await.unwrap();
+    tasks.create(due("l", "Late", 20)).await.unwrap();
+    let by_uid = tasks.get_by_uid("e").await.unwrap().unwrap();
+    assert_eq!(by_uid.id, early.id);
+    assert!(tasks.get_by_uid("nobody").await.unwrap().is_none());
+    let utc = fs_tasks_core::utc;
+    let window = TaskQuery::new().due_between(
+        utc("2026-12-01T00:00:00Z").unwrap(),
+        utc("2026-12-10T00:00:00Z").unwrap(),
+    );
+    let found = tasks.query(&window).await.unwrap();
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].task.uid, "e");
+    let wire: Vec<_> = tasks
+        .query(&TaskQuery::new().with_progress("needs-action"))
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|e| e.id)
+        .collect();
+    let core: Vec<_> = served
+        .repo
+        .query(&TaskQuery::new().with_progress("needs-action"))
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|e| e.id)
+        .collect();
+    assert_eq!(wire, core);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn what_the_client_does_not_offer_says_unsupported() {
     let served = Served::start().await;
     let tasks = served.client();
     let made = tasks.create(task("u", "T")).await.unwrap();
-    for got in [
-        tasks.get_by_uid("u").await.map(|_| ()),
-        tasks.query(&TaskQuery::new()).await.map(|_| ()),
-        tasks.assign(made.id, "Ada", "a@x.org").await.map(|_| ()),
-        tasks.label(made.id, "x").await.map(|_| ()),
-        tasks
-            .relate(made.id, "other", fs_tasks_core::Relation::Child)
-            .await
-            .map(|_| ()),
+    for (got, id) in [
+        (
+            tasks.assign(made.id, "Ada", "a@x.org").await.map(|_| ()),
+            "task.assign",
+        ),
+        (tasks.label(made.id, "x").await.map(|_| ()), "label.assign"),
+        (
+            tasks
+                .relate(made.id, "other", fs_tasks_core::Relation::Child)
+                .await
+                .map(|_| ()),
+            "relation.create",
+        ),
     ] {
         assert!(
-            matches!(got, Err(fs_tasks_core::Error::Unsupported(_))),
+            matches!(&got, Err(fs_tasks_core::Error::Unsupported(u)) if u.capability() == id),
             "{got:?}"
         );
     }

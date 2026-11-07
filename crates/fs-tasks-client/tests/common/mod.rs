@@ -54,6 +54,37 @@ impl TaskItems for ReadOnly {
     }
 }
 
+/// A provider whose `list` answers only when two callers are in it at the same time: the proof that
+/// the client lets calls overlap. A client that took turns would wait here for ever.
+pub struct Meeting(pub Arc<TaskRepo>, pub tokio::sync::Barrier);
+
+#[async_trait]
+impl TaskItems for Meeting {
+    fn capabilities(&self) -> Capabilities {
+        self.0.capabilities()
+    }
+    async fn get(&self, id: ObjectId) -> Result<Option<TaskEntry>> {
+        self.0.get(id).await
+    }
+    async fn get_by_uid(&self, uid: &str) -> Result<Option<TaskEntry>> {
+        self.0.get_by_uid(uid).await
+    }
+    async fn list(&self) -> Result<Vec<TaskEntry>> {
+        self.1.wait().await;
+        self.0.list().await
+    }
+    async fn query(&self, query: &TaskQuery) -> Result<Vec<TaskEntry>> {
+        self.0.query(query).await
+    }
+}
+
+#[derive(Clone, Copy)]
+enum Mode {
+    Full,
+    ReadOnly,
+    Meeting,
+}
+
 /// A server running until this is dropped.
 pub struct Served {
     pub socket: PathBuf,
@@ -67,15 +98,20 @@ pub struct Served {
 impl Served {
     /// Over a fresh in-memory store, offering everything the repository does.
     pub async fn start() -> Self {
-        Self::over(false).await
+        Self::over(Mode::Full).await
+    }
+
+    /// The server's provider lets two `list` calls meet (see [`Meeting`]).
+    pub async fn start_meeting() -> Self {
+        Self::over(Mode::Meeting).await
     }
 
     /// The same, but the server's provider offers only the reads.
     pub async fn start_read_only() -> Self {
-        Self::over(true).await
+        Self::over(Mode::ReadOnly).await
     }
 
-    async fn over(read_only: bool) -> Self {
+    async fn over(mode: Mode) -> Self {
         let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
         let repo = Arc::new(TaskRepo::new(store, ME));
         let dir = tempfile::tempdir().unwrap();
@@ -90,10 +126,12 @@ impl Served {
                 .unwrap();
             tokio::task::LocalSet::new().block_on(&runtime, async move {
                 let bound = bind_socket(&path).await.unwrap();
-                let items: Arc<dyn TaskItems> = if read_only {
-                    Arc::new(ReadOnly(provider.clone()))
-                } else {
-                    provider.clone()
+                let items: Arc<dyn TaskItems> = match mode {
+                    Mode::Full => provider.clone(),
+                    Mode::ReadOnly => Arc::new(ReadOnly(provider.clone())),
+                    Mode::Meeting => {
+                        Arc::new(Meeting(provider.clone(), tokio::sync::Barrier::new(2)))
+                    }
                 };
                 let feed: Arc<dyn TaskFeed> = provider;
                 let root = TasksServer::new(items, feed);
