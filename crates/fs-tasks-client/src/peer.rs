@@ -8,7 +8,6 @@
 use std::future::Future;
 use std::io;
 use std::path::Path;
-use std::time::Duration;
 
 use fs_interfaces::Capabilities;
 use fs_store::Error as StoreError;
@@ -17,12 +16,6 @@ use fs_tasks_core::{Error, Result};
 use fs_interfaces::rpc::client::{Timeouts, Worker};
 
 use crate::remote::TasksRemote;
-
-/// Until the deadlines are taken from the caller (next commit), a connection waits as before.
-const NO_DEADLINE: Timeouts = Timeouts {
-    connect: Duration::from_secs(u32::MAX as u64),
-    call: Duration::from_secs(u32::MAX as u64),
-};
 
 /// What the server can do and this client does not call: reported as not possible, with the reason,
 /// so `capabilities()` never promises more than the methods of `RpcTasks` keep.
@@ -67,7 +60,8 @@ impl RpcTasks {
     /// from inside an async task of a single-threaded runtime.
     ///
     /// # Errors
-    /// Nothing listens there, the server runs as another user, or it does not answer the contract.
+    /// Nothing listens there, the server runs as another user, it does not answer the contract, or it
+    /// stays silent for 5 s (`Timeouts::connect`). A call waits at most 30 s (`Timeouts::call`).
     pub fn connect(socket: &Path) -> io::Result<Self> {
         Self::connect_with(socket, Timeouts::default())
     }
@@ -76,8 +70,8 @@ impl RpcTasks {
     ///
     /// # Errors
     /// As for [`connect`](Self::connect), and the server did not answer in time.
-    pub fn connect_with(socket: &Path, _timeouts: Timeouts) -> io::Result<Self> {
-        let (worker, reported) = Worker::start("tasks", socket, NO_DEADLINE)?;
+    pub fn connect_with(socket: &Path, timeouts: Timeouts) -> io::Result<Self> {
+        let (worker, reported) = Worker::start("tasks", socket, timeouts)?;
         Ok(Self {
             worker,
             capabilities: offered(&reported),
