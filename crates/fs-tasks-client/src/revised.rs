@@ -8,7 +8,7 @@
 //! It lives in the client for now and moves up to `fs-tasks-core` with a second user (`DESIGN.md`).
 
 use async_trait::async_trait;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::{Result, Revision, TaskEntry};
 
 /// A task as read, and its revision.

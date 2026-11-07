@@ -3,7 +3,7 @@
 //! Pattern: Template method — `import_ics` is the fixed flow (split, skip known uid, parse,
 //! normalise, store, report); splitting and converting are the `ical` adapters.
 
-use fs_store::{Blob, ObjectId};
+use fs_objects::{Blob, ObjectId};
 
 use super::handle::TaskRepo;
 use super::unread::unread_properties;
@@ -81,7 +81,7 @@ impl TaskRepo {
                 | Error::Time(_)
                 | Error::Conflict(_)
                 | Error::TooLarge(_)
-                | Error::Store(fs_store::Error::Invalid(_))),
+                | Error::Store(fs_objects::Error::Invalid(_))),
             ) => {
                 report.failed.push(format!("{uid}: {e}"));
             }

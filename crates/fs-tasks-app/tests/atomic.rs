@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use async_trait::async_trait;
 use common::World;
 use fs_components_workbenches::tasks::{TaskDraft, TaskSource};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_app::TaskAdapter;
 use fs_tasks_client::{Revised, RevisedTasks, RpcTasks};
 use fs_tasks_core::{Result, TaskItems};

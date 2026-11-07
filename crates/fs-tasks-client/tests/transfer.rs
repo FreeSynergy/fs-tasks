@@ -67,6 +67,6 @@ async fn an_export_is_the_text_of_the_server() {
 async fn an_export_of_an_unknown_task_is_not_found() {
     let served = Served::start().await;
     let tasks = served.client();
-    let got = tasks.export_ics(&[fs_store::ObjectId::new()]).await;
+    let got = tasks.export_ics(&[fs_objects::ObjectId::new()]).await;
     assert!(matches!(got, Err(Error::NotFound(_))), "{got:?}");
 }

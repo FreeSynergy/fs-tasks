@@ -5,7 +5,7 @@
 
 use fs_interfaces::rpc::{read_envelope, read_object_id};
 use fs_interfaces::tasks_capnp::{import_report, task};
-use fs_store::Error as StoreError;
+use fs_objects::Error as StoreError;
 use fs_tasks_core::{Error, ImportReport, Result, Revision, Task, TaskEntry};
 
 use crate::revised::Revised;

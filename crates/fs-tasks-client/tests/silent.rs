@@ -13,7 +13,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use common::Served;
 use fs_interfaces::Capabilities;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_client::{RpcTasks, Timeouts};
 use fs_tasks_core::{Error, Result, TaskEntry, TaskItems, TaskQuery};
 
@@ -79,7 +79,7 @@ async fn a_call_that_is_never_answered_ends_with_the_deadline() {
         .expect("the client's own deadline comes first");
     let said = got.unwrap_err();
     assert!(
-        matches!(said, Error::Store(fs_store::Error::Backend(_))),
+        matches!(said, Error::Store(fs_objects::Error::Backend(_))),
         "{said:?}"
     );
     assert!(

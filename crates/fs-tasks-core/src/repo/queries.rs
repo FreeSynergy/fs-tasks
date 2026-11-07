@@ -4,7 +4,7 @@
 //! store query; the store filters and orders, nothing is selected in memory.
 
 use chrono::{DateTime, Datelike, Duration, Utc};
-use fs_store::Query;
+use fs_objects::Query;
 
 use super::consts::{CONTEXT, FIRST_INDEX_TIME, TASK_TYPE};
 use super::crud::entry_of;

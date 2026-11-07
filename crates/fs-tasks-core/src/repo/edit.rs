@@ -4,7 +4,7 @@
 //! scheduling-relevant field changed, rebuild, write, announce. `assign`, `relate` and `label`
 //! are Commands (`Task::assign` ...) applied through the same flow.
 
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use super::crud::entry_of;
 use super::handle::TaskRepo;

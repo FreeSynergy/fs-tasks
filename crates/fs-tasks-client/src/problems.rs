@@ -8,7 +8,7 @@
 use fs_interfaces::Unsupported;
 use fs_interfaces::rpc::Problem;
 use fs_interfaces::rpc::client::problems::{Failure, local_type, unsupported_of};
-use fs_store::{Error as StoreError, ObjectId};
+use fs_objects::{Error as StoreError, ObjectId};
 use fs_tasks_core::Error;
 
 use crate::detail::read_detail;

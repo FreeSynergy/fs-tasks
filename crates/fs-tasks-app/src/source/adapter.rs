@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use fs_components_workbenches::SourceError;
 use fs_components_workbenches::tasks::RowQuery;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_client::{Revised, RevisedTasks, TaskPages};
 use fs_tasks_core::{Error, Revision, TaskItems};
 use tokio::runtime::Handle;
@@ -81,7 +81,7 @@ impl TaskAdapter {
 /// conflict of the core (a `uid` taken) is no revision conflict: pressing Save again would not help.
 pub(super) fn reason(error: &Error) -> SourceError {
     match error {
-        Error::Store(fs_store::Error::EncryptionRequired(_)) => SourceError::failed(fill(
+        Error::Store(fs_objects::Error::EncryptionRequired(_)) => SourceError::failed(fill(
             say::NEEDS_ENCRYPTION,
             &[("error", &error.to_string())],
         )),

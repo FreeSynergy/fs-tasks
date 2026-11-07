@@ -10,7 +10,7 @@ use std::io;
 use std::path::Path;
 
 use fs_interfaces::Capabilities;
-use fs_store::Error as StoreError;
+use fs_objects::Error as StoreError;
 use fs_tasks_core::{Error, Result};
 
 use fs_interfaces::rpc::client::{Timeouts, Worker};

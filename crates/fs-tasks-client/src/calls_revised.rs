@@ -5,7 +5,7 @@
 
 use fs_interfaces::rpc::write_object_id;
 use fs_interfaces::tasks_capnp::items::Client;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::{Result, Revision, TaskEntry};
 
 use crate::calls_page::pages;
