@@ -26,3 +26,4 @@ fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
+tempfile = "3"

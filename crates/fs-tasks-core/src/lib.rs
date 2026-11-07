@@ -41,6 +41,6 @@ pub use interface::{
     TaskFeed, TaskItems, TaskListener, TaskPage, TaskQuery,
 };
 pub use model::{Participant, RecurrenceRule, Relation, Task};
-pub use repo::{CONTENT_TYPE, CONTEXT, TASK_TYPE, TaskRepo};
+pub use repo::{CONTENT_TYPE, CONTEXT, IndexReport, TASK_TYPE, TaskRepo};
 pub use revision::Revision;
 pub use time::{Zone, parse_utc as utc};

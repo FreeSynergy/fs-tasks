@@ -27,6 +27,18 @@ fn main() {
         if let Some(instance) = instance {
             repo = repo.with_instance(instance);
         }
+        // Tasks stored before 0.7.0 get the index fields the pages need; what cannot be repaired is
+        // named, and a page says so as well.
+        let report = repo.upgrade_index().await.map_err(std::io::Error::other)?;
+        if report.rewritten > 0 {
+            eprintln!(
+                "fs-tasks-server: index completed for {} tasks",
+                report.rewritten
+            );
+        }
+        for failed in &report.failed {
+            eprintln!("fs-tasks-server: task not repaired: {failed}");
+        }
         let repo = Arc::new(repo);
         Ok(TasksServer::new(repo.clone(), repo).into_client().client)
     });

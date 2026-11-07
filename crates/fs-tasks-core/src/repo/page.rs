@@ -10,6 +10,8 @@
 
 use fs_store::{Cond, Op, Query, StoredObject};
 
+use super::consts::{CONTEXT, TASK_TYPE};
+
 use super::consts::{ID_KEY, ORDER_KEY};
 use super::crud::entry_of;
 use super::handle::TaskRepo;
@@ -54,12 +56,34 @@ fn placed(object: StoredObject) -> Result<Placed> {
 }
 
 impl TaskRepo {
+    /// The first page checks that every task has a place in the order. One that has not (written
+    /// before 0.7.0, or not repairable) would be sorted last by the store and then be skipped by every
+    /// later page; so it is said here, with the way out, and nothing is cut short unnoticed.
+    async fn check_places(&self) -> Result<()> {
+        let all = Query::new().of_type(TASK_TYPE).in_context(CONTEXT);
+        let placed = all.clone().index_op(ORDER_KEY, Op::Ge, "");
+        let (all, placed) = (
+            self.queries.count(&all).await?,
+            self.queries.count(&placed).await?,
+        );
+        if placed < all {
+            return Err(Error::Stored(format!(
+                "{} of {all} tasks have no place in the order (written before 0.7.0 or not repairable); run upgrade_index and read its report",
+                all - placed
+            )));
+        }
+        Ok(())
+    }
+
     pub(super) async fn page_inner(
         &self,
         query: &TaskQuery,
         place: Option<&Place>,
         size: usize,
     ) -> Result<TaskPage> {
+        if place.is_none() {
+            self.check_places().await?;
+        }
         // One more than asked: that is how a page knows there is a next one.
         let want = size.saturating_add(1);
         let base = base(query);

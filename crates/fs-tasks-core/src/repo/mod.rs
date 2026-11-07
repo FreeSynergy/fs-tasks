@@ -15,6 +15,8 @@ mod queries;
 mod span;
 mod transfer;
 mod unread;
+mod upgrade;
 
 pub use consts::{CONTENT_TYPE, CONTEXT, TASK_TYPE};
 pub use handle::TaskRepo;
+pub use upgrade::IndexReport;
