@@ -1,5 +1,4 @@
 //! `Items` interface: every method of the contract, each one call of the provider.
-//!
 //! Pattern: Adapter — wire request in, `TaskItems` call, wire response out. What a provider cannot
 //! do arrives as its explicit `Unsupported` and leaves as a typed problem.
 

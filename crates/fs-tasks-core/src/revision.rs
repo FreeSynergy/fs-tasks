@@ -8,7 +8,8 @@
 //!
 //! The revision is not stored: it is derived from what an answer holds, the envelope's `updated`
 //! (microseconds) and the task as JSON (FNV-1a), so two writes within one tick still differ and there is
-//! nothing to migrate.
+//! nothing to migrate. It changes at every write that changes the state; an undo in the store may bring an
+//! earlier one back, and the same state always has the same revision, so no write is lost by that.
 
 use std::fmt;
 
