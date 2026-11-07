@@ -24,6 +24,7 @@ mod problems;
 #[cfg(test)]
 mod problems_table;
 mod read;
+mod remote;
 mod worker;
 
 pub use peer::RpcTasks;
