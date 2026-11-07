@@ -2,7 +2,7 @@
 //!
 //! Pattern: Builder-like parser — plain `std::env::args`, no extra crate for a few options.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use fs_components_app::parse_size;
 use fs_components_workbenches::tasks::TaskView;
@@ -10,6 +10,8 @@ use fs_components_workbenches::tasks::TaskView;
 /// What was asked for on the command line.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Args {
+    /// Unix socket of a running `fs-tasks-server`; the app holds no store of its own.
+    pub socket: Option<PathBuf>,
     /// Store file; `None` = in memory, gone when the program ends.
     pub store: Option<PathBuf>,
     /// An iCalendar file to import before anything else.
@@ -31,6 +33,7 @@ pub struct Args {
 impl Default for Args {
     fn default() -> Self {
         Self {
+            socket: None,
             store: None,
             import: None,
             export: None,
@@ -40,6 +43,16 @@ impl Default for Args {
             view: None,
             help: false,
         }
+    }
+}
+
+impl Args {
+    /// The socket to connect to.
+    ///
+    /// # Errors
+    /// A message for the person if `--socket` was not given, saying where a socket comes from.
+    pub fn socket_path(&self) -> Result<&Path, String> {
+        Err("not written yet".into())
     }
 }
 

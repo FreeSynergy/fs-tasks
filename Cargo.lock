@@ -1521,9 +1521,13 @@ dependencies = [
  "fs-components-app",
  "fs-components-render",
  "fs-components-workbenches",
+ "fs-interfaces",
  "fs-store",
+ "fs-tasks-client",
  "fs-tasks-core",
+ "fs-tasks-server",
  "serde_json",
+ "tempfile",
  "tokio",
 ]
 
