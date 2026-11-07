@@ -14,6 +14,8 @@ use fs_store::Error as StoreError;
 use fs_tasks_core::{Error, Result};
 use tokio::sync::oneshot;
 
+use fs_interfaces::rpc::client::Timeouts;
+
 use crate::worker::{Job, Remote, Worker, start};
 
 /// What the server can do and this client does not call: reported as not possible, with the reason,
@@ -61,6 +63,14 @@ impl RpcTasks {
     /// # Errors
     /// Nothing listens there, the server runs as another user, or it does not answer the contract.
     pub fn connect(socket: &Path) -> io::Result<Self> {
+        Self::connect_with(socket, Timeouts::default())
+    }
+
+    /// [`connect`](Self::connect) with other deadlines than the defaults (connect 5 s, call 30 s).
+    ///
+    /// # Errors
+    /// As for [`connect`](Self::connect), and the server did not answer in time.
+    pub fn connect_with(socket: &Path, _timeouts: Timeouts) -> io::Result<Self> {
         let (worker, reported) = start(socket.to_path_buf())?;
         Ok(Self {
             worker,

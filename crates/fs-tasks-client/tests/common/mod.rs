@@ -114,6 +114,17 @@ impl Served {
     async fn over(mode: Mode) -> Self {
         let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
         let repo = Arc::new(TaskRepo::new(store, ME));
+        let items: Arc<dyn TaskItems> = match mode {
+            Mode::Full => repo.clone(),
+            Mode::ReadOnly => Arc::new(ReadOnly(repo.clone())),
+            Mode::Meeting => Arc::new(Meeting(repo.clone(), tokio::sync::Barrier::new(2))),
+        };
+        Self::serving(items, repo).await
+    }
+
+    /// A server whose `TaskItems` is this provider and whose feed comes from `repo`: for a provider
+    /// that does what the real one cannot show, such as never answering.
+    pub async fn serving(items: Arc<dyn TaskItems>, repo: Arc<TaskRepo>) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let socket = dir.path().join("tasks.sock");
         let (stop, stopped) = oneshot::channel::<()>();
@@ -126,13 +137,6 @@ impl Served {
                 .unwrap();
             tokio::task::LocalSet::new().block_on(&runtime, async move {
                 let bound = bind_socket(&path).await.unwrap();
-                let items: Arc<dyn TaskItems> = match mode {
-                    Mode::Full => provider.clone(),
-                    Mode::ReadOnly => Arc::new(ReadOnly(provider.clone())),
-                    Mode::Meeting => {
-                        Arc::new(Meeting(provider.clone(), tokio::sync::Barrier::new(2)))
-                    }
-                };
                 let feed: Arc<dyn TaskFeed> = provider;
                 let root = TasksServer::new(items, feed);
                 ready.send(()).unwrap();

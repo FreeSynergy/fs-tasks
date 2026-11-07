@@ -27,4 +27,5 @@ mod read;
 mod remote;
 mod worker;
 
+pub use fs_interfaces::rpc::client::{CALL_TIMEOUT, CONNECT_TIMEOUT, Timeouts};
 pub use peer::RpcTasks;
