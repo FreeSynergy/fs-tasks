@@ -1,7 +1,8 @@
 //! The table of problems, read back: every type of the server and the variant it must become.
 //!
-//! Pattern: Table of inputs and answers — for the types the real server cannot be made to send in a
-//! test (too large, a text with `; ` inside); the others are covered over the real socket.
+//! Pattern: Registry — the map of problem type to the variant it becomes is what is tested here, row
+//! by row, for the types the real server cannot be made to send (too large, a text with `; ` inside);
+//! the others are covered over the real socket.
 
 use fs_interfaces::rpc::Problem;
 use fs_store::{Error as StoreError, ObjectId};

@@ -1,6 +1,6 @@
 //! iCalendar in and out through the server.
 //!
-//! Pattern: Integration tests against the trait; no stand-ins.
+//! Integration tests against the trait; nothing stands in for the server or the store.
 
 mod common;
 

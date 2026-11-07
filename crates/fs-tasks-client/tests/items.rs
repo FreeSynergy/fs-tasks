@@ -1,7 +1,7 @@
 //! `TaskItems` over the socket: the methods the app calls, compared by value against the provider
 //! behind the real server.
 //!
-//! Pattern: Integration tests against the trait; no stand-ins.
+//! Integration tests against the trait; nothing stands in for the server or the store.
 
 mod common;
 

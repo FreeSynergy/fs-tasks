@@ -1,6 +1,6 @@
 //! The problems of the server come back as the errors of the core.
 //!
-//! Pattern: Integration tests against the trait; no stand-ins.
+//! Integration tests against the trait; nothing stands in for the server or the store.
 
 mod common;
 

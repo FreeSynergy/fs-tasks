@@ -1,6 +1,6 @@
 //! A list longer than a page is read to its end.
 //!
-//! Pattern: Integration tests against the trait; no stand-ins.
+//! Integration tests against the trait; nothing stands in for the server or the store.
 
 mod common;
 

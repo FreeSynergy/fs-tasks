@@ -1,6 +1,6 @@
 //! The command line.
 //!
-//! Pattern: Builder-like parser — plain `std::env::args`, no extra crate for a few options. The app holds no store: it needs the
+//! Pattern: Builder — plain `std::env::args`, no extra crate for a few options. The app holds no store: it needs the
 //! socket of a server.
 
 use std::path::{Path, PathBuf};

@@ -1,6 +1,6 @@
 //! A server that is not there, or goes away: an error, not a hang.
 //!
-//! Pattern: Integration tests against the trait; no stand-ins.
+//! Integration tests against the trait; nothing stands in for the server or the store.
 
 mod common;
 

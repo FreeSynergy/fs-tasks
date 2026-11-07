@@ -1,6 +1,6 @@
 //! The real binary against the real server: it connects by `--socket`, and without one it says how.
 //!
-//! Pattern: Integration tests of the process; no window is opened (export only).
+//! The tests start the process; no window is opened (export only).
 
 mod common;
 

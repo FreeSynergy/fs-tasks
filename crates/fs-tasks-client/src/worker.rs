@@ -1,9 +1,9 @@
 //! The thread that owns the Cap'n Proto connection.
 //!
-//! Pattern: Command queue (active object) — a capnp-rpc client is `!Send`, so it lives on one thread
-//! with a current-thread runtime and a `LocalSet`. Callers on any thread send a [`Job`] (a closure
-//! that gets the capability and answers through its own channel); the thread runs each as a local
-//! task, so calls overlap. Dropping the [`Worker`] ends the loop, closes the connection and joins.
+//! Pattern: Command — a [`Job`] is a call as a command: a closure that gets the capability and answers
+//! through its own channel, and runs on the connection's thread. Why: a capnp-rpc client is `!Send`,
+//! so it lives on one thread with a current-thread runtime and a `LocalSet`; callers on any thread
+//! send the command, the thread runs each as a local task, so calls overlap. Dropping the [`Worker`] ends the loop, closes the connection and joins.
 
 use std::future::Future;
 use std::io;
