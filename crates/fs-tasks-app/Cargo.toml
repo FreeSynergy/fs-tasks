@@ -30,5 +30,7 @@ fs-components-render = { git = "https://github.com/FreeSynergy/fs-components", r
 [package.metadata.generate-rpm]
 assets = [
   { source = "target/release/fs-tasks-app", dest = "/usr/bin/fs-tasks-app", mode = "755" },
-  { source = "target/release/fs-tasks-server", dest = "/usr/bin/fs-tasks-server", mode = "755" },
 ]
+
+[package.metadata.generate-rpm.requires]
+fs-tasks-server = "*"
