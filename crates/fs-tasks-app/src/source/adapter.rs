@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use fs_components_workbenches::SourceError;
 use fs_store::ObjectId;
-use fs_tasks_client::{Revised, RevisedTasks};
+use fs_tasks_client::{Revised, RevisedTasks, TaskPages};
 use fs_tasks_core::{Error, Revision, TaskItems};
 use tokio::runtime::Handle;
 
@@ -24,15 +24,23 @@ use crate::words::{fill, say};
 pub struct TaskAdapter {
     pub(super) items: Arc<dyn TaskItems>,
     pub(super) revised: Arc<dyn RevisedTasks>,
+    pub(super) _pages: Arc<dyn TaskPages>,
     pub(super) runtime: Handle,
 }
 
 impl TaskAdapter {
-    /// An adapter over a provider of the contract and of the revision, driven with `runtime`.
-    pub fn new(items: Arc<dyn TaskItems>, revised: Arc<dyn RevisedTasks>, runtime: Handle) -> Self {
+    /// An adapter over a provider of the contract, of the revision and of the pages, driven with
+    /// `runtime`.
+    pub fn new(
+        items: Arc<dyn TaskItems>,
+        revised: Arc<dyn RevisedTasks>,
+        pages: Arc<dyn TaskPages>,
+        runtime: Handle,
+    ) -> Self {
         Self {
             items,
             revised,
+            _pages: pages,
             runtime,
         }
     }

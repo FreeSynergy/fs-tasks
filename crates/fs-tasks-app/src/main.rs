@@ -13,7 +13,7 @@ use fs_tasks_app::{
     HELP, TaskAdapter, cannot_reach, export_all, import_file, labels, not_exported, screen_widget,
     wrote,
 };
-use fs_tasks_client::{RevisedTasks, RpcTasks};
+use fs_tasks_client::{RevisedTasks, RpcTasks, TaskPages};
 use fs_tasks_core::TaskItems;
 
 fn main() {
@@ -37,7 +37,8 @@ fn run() -> Result<(), String> {
             .map_err(|e| cannot_reach(&socket.display().to_string(), &e.to_string()))?,
     );
     let items: Arc<dyn TaskItems> = tasks.clone();
-    let revised: Arc<dyn RevisedTasks> = tasks;
+    let revised: Arc<dyn RevisedTasks> = tasks.clone();
+    let pages: Arc<dyn TaskPages> = tasks;
     let handle = runtime.handle().clone();
 
     let mut status = None;
@@ -60,16 +61,23 @@ fn run() -> Result<(), String> {
             return Ok(());
         }
     }
-    show(&args, (items, revised), handle, status)
+    show(&args, (items, revised, pages), handle, status)
 }
 
 fn show(
     args: &Args,
-    (items, revised): (Arc<dyn TaskItems>, Arc<dyn RevisedTasks>),
+    (items, revised, pages): (
+        Arc<dyn TaskItems>,
+        Arc<dyn RevisedTasks>,
+        Arc<dyn TaskPages>,
+    ),
     handle: tokio::runtime::Handle,
     status: Option<Status>,
 ) -> Result<(), String> {
-    let widget = TasksWidget::new(Arc::new(TaskAdapter::new(items, revised, handle)), labels());
+    let widget = TasksWidget::new(
+        Arc::new(TaskAdapter::new(items, revised, pages, handle)),
+        labels(),
+    );
     if let Some(view) = args.view {
         widget.with_state(|s| s.set_view(view));
     }

@@ -21,6 +21,8 @@ mod calls;
 mod calls_revised;
 mod detail;
 mod items_impl;
+mod pages;
+mod pages_impl;
 mod peer;
 mod problems;
 #[cfg(test)]
@@ -28,7 +30,10 @@ mod problems_table;
 mod read;
 mod remote;
 mod revised;
+mod walk;
 
 pub use fs_interfaces::rpc::client::{CALL_TIMEOUT, CONNECT_TIMEOUT, Timeouts};
+pub use pages::{Cursor, TaskPage, TaskPages};
 pub use peer::RpcTasks;
 pub use revised::{Revised, RevisedTasks};
+pub use walk::PageWalk;

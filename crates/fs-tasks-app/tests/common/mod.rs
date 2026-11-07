@@ -3,6 +3,10 @@
 //! any of them.
 #![allow(dead_code)] // each test file uses a different subset
 
+mod counting;
+
+pub use counting::Counting;
+
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -77,6 +81,8 @@ pub struct World {
     pub adapter: Arc<TaskAdapter>,
     /// The client: what the app talks to.
     pub tasks: Arc<RpcTasks>,
+    /// The same client as `TaskPages`, counting its calls (a Decorator; the server is the real one).
+    pub pages: Arc<Counting>,
     /// Where the server listens, for the binary.
     pub socket: PathBuf,
     pub store: Arc<dyn Store>,
@@ -95,14 +101,17 @@ impl World {
         let repo = Arc::new(TaskRepo::new(store.clone(), ME));
         let (served, socket) = Served::start(&repo);
         let tasks = Arc::new(RpcTasks::connect(&socket).unwrap());
+        let pages = Arc::new(Counting::over(tasks.clone()));
         let adapter = Arc::new(TaskAdapter::new(
             tasks.clone(),
             tasks.clone(),
+            pages.clone(),
             runtime.handle().clone(),
         ));
         Self {
             adapter,
             tasks,
+            pages,
             socket,
             store,
             repo,

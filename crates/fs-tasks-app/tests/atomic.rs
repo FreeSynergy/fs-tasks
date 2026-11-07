@@ -43,7 +43,12 @@ fn adapter(w: &World, active: bool) -> TaskAdapter {
         inner: w.tasks.clone(),
         active: AtomicBool::new(active),
     });
-    TaskAdapter::new(w.tasks.clone(), revised, w.runtime.handle().clone())
+    TaskAdapter::new(
+        w.tasks.clone(),
+        revised,
+        w.tasks.clone(),
+        w.runtime.handle().clone(),
+    )
 }
 
 fn retitled(draft: &mut TaskDraft) {
