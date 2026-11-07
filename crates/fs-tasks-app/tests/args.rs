@@ -18,7 +18,7 @@ fn nothing_given_means_the_defaults() {
 #[test]
 fn every_option_is_read() {
     let got = run(&[
-        "--store",
+        "--socket",
         "a",
         "--import",
         "b",
@@ -36,7 +36,7 @@ fn every_option_is_read() {
         "status",
     ])
     .unwrap();
-    assert_eq!(got.store, Some(PathBuf::from("a")));
+    assert_eq!(got.socket, Some(PathBuf::from("a")));
     assert_eq!(got.import, Some(PathBuf::from("b")));
     assert_eq!(got.export, Some(PathBuf::from("c")));
     assert_eq!(got.export_sensitive, ["d", "e"]);
@@ -57,4 +57,25 @@ fn what_cannot_be_read_is_an_error_in_words() {
     ] {
         assert!(run(bad).is_err(), "{bad:?}");
     }
+}
+
+#[test]
+fn the_socket_is_required_and_says_where_it_comes_from() {
+    let none = run(&[]).unwrap();
+    let said = none.socket_path().unwrap_err();
+    assert!(said.contains("fs-tasks-server --socket"), "{said}");
+    let given = run(&["--socket", "/run/t.sock"]).unwrap();
+    assert_eq!(
+        given.socket_path().unwrap(),
+        std::path::Path::new("/run/t.sock")
+    );
+}
+
+#[test]
+fn the_store_option_is_gone_and_points_to_the_server() {
+    let said = run(&["--store", "x.db"]).unwrap_err();
+    assert!(
+        said.contains("fs-tasks-server") && said.contains("--data"),
+        "{said}"
+    );
 }

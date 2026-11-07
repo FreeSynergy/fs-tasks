@@ -1,26 +1,92 @@
-//! Shared helpers of the tests: the real core over an in-memory store, behind the real adapter.
+//! Shared helpers of the tests: the real server on a real Unix socket over the real store (on a
+//! thread of its own), the real client, and the real adapter over it. Nothing here pretends to be
+//! any of them.
 //!
-//! Pattern: Facade over the set-up. Nothing here pretends to be the core.
+//! Pattern: Facade over the set-up.
 #![allow(dead_code)] // each test file uses a different subset
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use fs_components_workbenches::tasks::{TaskLabels, TaskSource, TasksState, Variant};
+use fs_interfaces::rpc::{bind_socket, serve};
 use fs_store::{ObjectId, Store, StoredObject, TursoStore};
 use fs_tasks_app::TaskAdapter;
+use fs_tasks_client::RpcTasks;
 use fs_tasks_core::{Task, TaskItems, TaskRepo};
+use fs_tasks_server::TasksServer;
 use serde_json::{Value, json};
 use tokio::runtime::Runtime;
+use tokio::sync::oneshot;
 
 pub const ME: &str = "https://local.invalid/users/owner";
 
-/// A runtime, a repository over a store, and the adapter over it.
+/// A server on its own thread until this is dropped.
+struct Served {
+    stop: Option<oneshot::Sender<()>>,
+    thread: Option<std::thread::JoinHandle<()>>,
+    _dir: tempfile::TempDir,
+}
+
+impl Served {
+    fn start(repo: &Arc<TaskRepo>) -> (Self, PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let socket = dir.path().join("tasks.sock");
+        let (stop, stopped) = oneshot::channel::<()>();
+        let (ready, listening) = std::sync::mpsc::channel();
+        let (path, provider) = (socket.clone(), repo.clone());
+        let thread = std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            tokio::task::LocalSet::new().block_on(&runtime, async move {
+                let bound = bind_socket(&path).await.unwrap();
+                let root = TasksServer::new(provider.clone(), provider);
+                ready.send(()).unwrap();
+                let shutdown = async {
+                    let _ = stopped.await;
+                };
+                serve(bound, root.into_client().client, shutdown)
+                    .await
+                    .unwrap();
+            });
+        });
+        listening.recv().unwrap();
+        let served = Self {
+            stop: Some(stop),
+            thread: Some(thread),
+            _dir: dir,
+        };
+        (served, socket)
+    }
+}
+
+impl Drop for Served {
+    fn drop(&mut self) {
+        if let Some(stop) = self.stop.take() {
+            let _ = stop.send(());
+        }
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
+/// A runtime, the server and its store, the client, and the adapter over the client. Dropped in the
+/// order of the fields: the adapter and the client go before the server.
 pub struct World {
-    pub runtime: Runtime,
-    pub store: Arc<dyn Store>,
-    pub repo: Arc<TaskRepo>,
     pub adapter: Arc<TaskAdapter>,
+    /// The client: what the app talks to.
+    pub tasks: Arc<RpcTasks>,
+    /// Where the server listens, for the binary.
+    pub socket: PathBuf,
+    pub store: Arc<dyn Store>,
+    /// The provider behind the server, only for what the client does not offer (importing text a
+    /// second program wrote, a change "behind the window's back"): set-up, never what is under test.
+    pub repo: Arc<TaskRepo>,
+    _served: Served,
+    pub runtime: Runtime,
 }
 
 impl World {
@@ -29,25 +95,30 @@ impl World {
         let store: Arc<dyn Store> =
             Arc::new(runtime.block_on(TursoStore::open_in_memory()).unwrap());
         let repo = Arc::new(TaskRepo::new(store.clone(), ME));
-        let adapter = Arc::new(TaskAdapter::new(repo.clone(), runtime.handle().clone()));
+        let (served, socket) = Served::start(&repo);
+        let tasks = Arc::new(RpcTasks::connect(&socket).unwrap());
+        let adapter = Arc::new(TaskAdapter::new(tasks.clone(), runtime.handle().clone()));
         Self {
-            runtime,
+            adapter,
+            tasks,
+            socket,
             store,
             repo,
-            adapter,
+            _served: served,
+            runtime,
         }
     }
 
-    /// Store `task` through the core; returns the key.
+    /// Store `task` through the client; returns the key.
     pub fn add(&self, task: Task) -> String {
         self.runtime
-            .block_on(self.repo.create(task))
+            .block_on(self.tasks.create(task))
             .unwrap()
             .id
             .to_string()
     }
 
-    /// Store JSON through the core.
+    /// Store JSON through the client.
     pub fn add_json(&self, value: Value) -> String {
         self.add(Task::from_value(value).unwrap())
     }
@@ -67,13 +138,13 @@ impl World {
         self.stored(key).content
     }
 
-    /// The state machine over the real core.
+    /// The state machine over the real client.
     pub fn state(&self) -> TasksState {
         let source: Arc<dyn TaskSource> = self.adapter.clone();
         TasksState::new(source, TaskLabels::default(), Variant::Full)
     }
 
-    /// The core edits this task behind the workbench's back.
+    /// The provider edits this task behind the workbench's back.
     pub fn other_changes(&self, key: &str, title: &str) {
         let id: ObjectId = key.parse().unwrap();
         let mut entry = self

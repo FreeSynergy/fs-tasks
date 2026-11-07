@@ -133,7 +133,7 @@ fn the_original_icalendar_stays_byte_for_byte_after_an_edit_and_a_move() {
     let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\nBEGIN:VTODO\r\nUID:todo-1\r\nDTSTAMP:20261101T000000Z\r\nDUE:20261112T170000Z\r\nSUMMARY:Minutes\r\nX-OTHER:kept\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
     let report = w
         .runtime
-        .block_on(fs_tasks_core::TaskItems::import_ics(w.repo.as_ref(), ics))
+        .block_on(fs_tasks_core::TaskItems::import_ics(w.tasks.as_ref(), ics))
         .unwrap();
     let key = report.created[0].to_string();
     let before: Blob = w.stored(&key).original.expect("the core keeps it");
