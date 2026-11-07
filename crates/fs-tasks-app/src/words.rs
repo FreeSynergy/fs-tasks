@@ -53,7 +53,7 @@ pub(crate) mod field {
     pub const DUE: &str = "Due";
     pub const PRIORITY: &str = "Priority";
     pub const STATUS: &str = "Status";
-    pub const LABELS: &str = "Labels (separated by commas)";
+    pub const LABELS: &str = "Labels (separated by commas; \"a, b\" is one label)";
     pub const LABELS_SHORT: &str = "Labels";
     pub const PERCENT: &str = "Percent done";
     pub const EXTENDED: &str = "Extended status";
@@ -71,8 +71,7 @@ pub(crate) mod say {
     pub const SERIES_REFUSED: &str = "this task repeats, and changing its due date or status here could damage the series. Nothing was changed";
     pub const SERIES_MOVE: &str =
         "This task repeats, and its status belongs to each occurrence. It cannot be moved here.";
-    pub const COMPUTED: &str =
-        "This status is worked out from the participants; the task does not state one itself.";
+    pub const COMPUTED: &str = "This status is worked out from the participants; the task does not state one itself. Moving it makes the status fixed, and it cannot go back to worked out here.";
     pub const NEEDS_TITLE: &str = "enter a title";
     pub const BAD_DUE: &str = "enter the due date with a time, like 2026-11-30 17:00";
     pub const BAD_PRIORITY: &str = "the priority is a number from 0 to 9, or empty";

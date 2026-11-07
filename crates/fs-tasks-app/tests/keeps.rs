@@ -81,7 +81,7 @@ fn emptying_a_field_removes_only_that_value() {
 }
 
 #[test]
-fn changing_labels_keeps_what_the_form_cannot_show() {
+fn changing_labels_keeps_what_the_form_cannot_show_and_a_label_with_a_comma_can_go() {
     let w = World::new();
     let key = w.add_json(rich());
     let mut s = w.state();
@@ -95,10 +95,10 @@ fn changing_labels_keeps_what_the_form_cannot_show() {
         .unwrap()
         .to_string();
     assert_eq!(
-        shown, "one, with,comma",
+        shown, "one, \"with,comma\"",
         "the one switched off is not shown"
     );
-    s.set_field("labels", "one, with,comma, two");
+    s.set_field("labels", "one, \"with,comma\", two");
     s.save();
     assert_eq!(
         w.json(&key)["keywords"],
@@ -107,8 +107,8 @@ fn changing_labels_keeps_what_the_form_cannot_show() {
     edit(&mut s, &key, &[("labels", "two")]);
     assert_eq!(
         w.json(&key)["keywords"],
-        json!({"off": false, "two": true, "with,comma": true}),
-        "a word out of a keyword with a comma does not take the keyword along"
+        json!({"off": false, "two": true}),
+        "what Saved says is true"
     );
 }
 

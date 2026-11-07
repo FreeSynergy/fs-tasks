@@ -6,8 +6,6 @@
 //! change to the due date or the status of a series, is refused rather than guessed at; nothing is
 //! changed then. An unchanged status is never written, so a status the core only computes stays that.
 
-use std::collections::BTreeSet;
-
 use fs_components_workbenches::SourceError;
 use fs_components_workbenches::tasks::{DraftField, TaskDraft};
 use fs_tasks_core::time::parse_local;
@@ -15,6 +13,7 @@ use fs_tasks_core::validate::PROGRESS;
 use fs_tasks_core::{Task, now_utc};
 
 use super::draft::{DESCRIPTION, DUE, LABELS, PRIORITY, PROGRESS_FIELD, TITLE, is_series};
+use super::labels::read_labels;
 use crate::words::say;
 
 /// Put what changed in `draft` onto `task`.
@@ -83,17 +82,9 @@ fn due(text: &str) -> Result<Option<String>, SourceError> {
     Ok(Some(full))
 }
 
-/// Only labels the person took out or put in change; a keyword the form cannot show, because it is
-/// switched off or holds a comma, stays.
+/// Only labels the person took out or put in change; a keyword switched off is not shown and stays.
 fn set_labels(task: &mut Task, field: &DraftField) {
-    let words = |text: &str| -> BTreeSet<String> {
-        text.split(',')
-            .map(str::trim)
-            .filter(|w| !w.is_empty())
-            .map(str::to_string)
-            .collect()
-    };
-    let (before, now) = (words(&field.original), words(&field.value));
+    let (before, now) = (read_labels(&field.original), read_labels(&field.value));
     for gone in before.difference(&now) {
         task.keywords.remove(gone);
     }

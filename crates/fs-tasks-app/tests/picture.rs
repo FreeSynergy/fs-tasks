@@ -163,3 +163,24 @@ fn the_views_the_form_and_a_marked_task_are_drawn() {
     let next = draw(&small, "tasks-compact.png", (420, 600)).unwrap();
     assert!(!next.is_empty());
 }
+
+#[test]
+fn the_smallest_window_is_drawn_in_every_state_with_its_actions() {
+    let _one = serial();
+    let w = world();
+    let widget = TasksWidget::new(w.adapter.clone(), labels());
+    let app = screen_widget(widget.clone()).unwrap();
+    let size = fs_components_app::MIN_WINDOW;
+    if draw(&app, "tasks-min-list.png", size).is_none() {
+        return;
+    }
+    widget.with_state(|s| s.set_view(TaskView::Status));
+    draw(&app, "tasks-min-status.png", size).unwrap();
+    widget.with_state(|s| s.ask_delete());
+    draw(&app, "tasks-min-delete.png", size).unwrap();
+    widget.with_state(|s| {
+        s.keep();
+        s.begin_edit();
+    });
+    draw(&app, "tasks-min-form.png", size).unwrap();
+}

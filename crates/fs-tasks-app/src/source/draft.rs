@@ -9,6 +9,7 @@ use fs_tasks_core::validate::PROGRESS;
 use fs_tasks_core::{Task, TaskEntry};
 
 use super::adapter::revision_of;
+use super::labels::write_labels;
 use super::marks::is_marked;
 use super::rows::{due_text, label_list, priority_text};
 use crate::words::{field, progress_title, say};
@@ -59,7 +60,7 @@ fn fields_of(task: &Task) -> Vec<DraftField> {
     fields.push(DraftField::new(
         LABELS,
         field::LABELS,
-        label_list(task).join(", "),
+        write_labels(&label_list(task)),
     ));
     fields
 }

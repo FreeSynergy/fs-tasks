@@ -6,7 +6,7 @@
 use std::fmt::Write as _;
 use std::path::Path;
 
-use fs_components_app::write_new_file;
+use fs_components_app::{write_new_file, write_new_private_file};
 use fs_store::ObjectId;
 use fs_tasks_core::{TaskEntry, TaskItems};
 use tokio::runtime::Handle;
@@ -87,11 +87,12 @@ pub fn import_file(
 pub struct ExportReport {
     /// Tasks written.
     pub written: usize,
-    /// Tasks marked sensitive and left out, with their `uid` (ADR 0029).
+    /// Tasks marked sensitive and left out, by their `uid` alone: the title may be what is sensitive,
+    /// and this goes to the terminal and its logs (ADR 0029).
     pub left_out: Vec<String>,
-    /// Tasks marked sensitive and written, because their `uid` was named.
+    /// Tasks marked sensitive and written, because their `uid` was named; by `uid` alone.
     pub released: Vec<String>,
-    /// Tasks that could not be expressed as iCalendar, with the reason.
+    /// Tasks that could not be expressed as iCalendar, by `uid`, with the reason.
     pub failed: Vec<String>,
 }
 
@@ -116,13 +117,10 @@ impl ExportReport {
     }
 }
 
-fn shown(entry: &TaskEntry) -> String {
-    format!("{} ({})", entry.task.display_title(), entry.task.uid)
-}
-
 /// Write all tasks to a new file at `path`. A file that exists is not replaced, and a failed write
 /// leaves nothing behind. Tasks marked sensitive are left out unless `released` names their `uid` (ADR
-/// 0029: they leave only by explicit release, one by one).
+/// 0029: they leave only by explicit release, one by one); a file with such a task in it is for its
+/// owner alone (mode 0600 on Unix).
 ///
 /// # Errors
 /// A message for the person if the list cannot be read, the file cannot be written, or `released` names
@@ -146,10 +144,10 @@ pub fn export_all(
         unmatched.retain(|given| !named(given));
         if is_marked(entry) {
             if !is_released {
-                report.left_out.push(shown(entry));
+                report.left_out.push(entry.task.uid.clone());
                 continue;
             }
-            report.released.push(shown(entry));
+            report.released.push(entry.task.uid.clone());
         }
         chosen.push(entry);
     }
@@ -159,7 +157,11 @@ pub fn export_all(
         ));
     }
     let text = text_of(items, runtime, &chosen, &mut report)?;
-    write_new_file(path, text.as_bytes())?;
+    if report.released.is_empty() {
+        write_new_file(path, text.as_bytes())?;
+    } else {
+        write_new_private_file(path, text.as_bytes())?;
+    }
     Ok(report)
 }
 
@@ -180,7 +182,7 @@ fn text_of(
     for entry in chosen {
         match runtime.block_on(items.export_ics(&[entry.id])) {
             Ok(_) => good.push(entry.id),
-            Err(e) => report.failed.push(format!("{}: {e}", shown(entry))),
+            Err(e) => report.failed.push(format!("{}: {e}", entry.task.uid)),
         }
     }
     report.written = good.len();
