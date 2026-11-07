@@ -12,6 +12,7 @@ use fs_store::ObjectId;
 use super::types::{ImportReport, TaskEntry, TaskQuery};
 use crate::error::Result;
 use crate::model::{Relation, Task};
+use crate::revision::Revision;
 
 /// Capability ids written in `tasks.capnp` (ADR 0021): the five that name a write.
 pub const CAPABILITIES: [&str; 5] = [
@@ -50,6 +51,17 @@ pub trait TaskItems: Send + Sync {
     }
     /// `task.edit`: replace the task (`uid` cannot change; `sequence` follows the change).
     async fn edit(&self, _id: ObjectId, _task: Task) -> Result<TaskEntry> {
+        not_possible("task.edit")
+    }
+    /// `task.edit`, compare-and-set: replace the task only if it still has `expected` (the
+    /// [`Revision`] the caller read); otherwise [`Error::Changed`](crate::Error::Changed) and nothing is
+    /// written. The check and the write are one step, atomic inside one provider process only.
+    async fn edit_checked(
+        &self,
+        _id: ObjectId,
+        _expected: Revision,
+        _task: Task,
+    ) -> Result<TaskEntry> {
         not_possible("task.edit")
     }
     /// `task.assign`: make `email` an owner of the task.

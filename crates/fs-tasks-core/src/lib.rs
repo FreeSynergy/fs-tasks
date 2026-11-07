@@ -30,6 +30,7 @@ pub mod ical;
 mod interface;
 pub mod model;
 mod repo;
+mod revision;
 pub mod validate;
 
 pub use error::{Error, MAX_TASK_BYTES, Result};
@@ -41,4 +42,5 @@ pub use interface::{
 };
 pub use model::{Participant, RecurrenceRule, Relation, Task};
 pub use repo::{CONTENT_TYPE, CONTEXT, TASK_TYPE, TaskRepo};
+pub use revision::Revision;
 pub use time::{Zone, parse_utc as utc};

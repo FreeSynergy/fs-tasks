@@ -79,6 +79,7 @@ A list and a view by status of one set of tasks; search; create, edit (title, de
 | `repo/{build,span}.rs` | Adapter | task -> AS2 envelope + index fields; time span from `start` / `due` / `estimatedDuration` |
 | `repo/transfer.rs`, `ical/*` | Template method / Adapter | fixed import flow; the conversion itself is in `fs-jscalendar` |
 | `repo/unread.rs` | Specification | one rule per property: what an import could not read, on the component's own lines |
+| `revision.rs`, `TaskItems::edit_checked` | Newtype + Repository (optimistic lock) | `Revision` has `==` and nothing else, so no code can read it as a counter or an order (the contract says: compare for equality only); the trait method is the compare-and-set, check and write one step under the write turn. Derived from the envelope's time and the task as an answer carries them, not stored; a refusal does not name the revision found |
 | `repo/items.rs` | Facade | the trait impls forward to the flows |
 | `model/task.rs`, `model/relation.rs` | Template method (`calendar_object!` of `fs-jscalendar`) / Value object | only what is specific to `Task`; `Relation` is a closed enum |
 | `model/ops.rs` | Command | small edits of the value |

@@ -20,7 +20,7 @@ pub(crate) fn rpc_error(e: Error) -> capnp::Error {
         Error::NotFound(_) | Error::Store(Store::NotFound(_)) => {
             Problem::new(NOT_FOUND, "Task not found", text, 404).into_error()
         }
-        Error::Conflict(_) | Error::Store(Store::Conflict(_)) => {
+        Error::Conflict(_) | Error::Changed(_) | Error::Store(Store::Conflict(_)) => {
             Problem::new(CONFLICT, "Conflict", text, 409).into_error()
         }
         Error::Invalid(_)
