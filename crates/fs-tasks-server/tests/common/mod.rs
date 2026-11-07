@@ -7,7 +7,7 @@ use std::sync::Arc;
 use fs_interfaces::common_capnp;
 use fs_interfaces::rpc::{bind_socket, connect, read_envelope, serve, write_uuid};
 use fs_interfaces::tasks_capnp::{self, items, tasks};
-use fs_store::{Store, TursoStore};
+use fs_objects::{Store, TursoStore};
 use fs_tasks_core::{TaskFeed, TaskItems, TaskRepo};
 use fs_tasks_server::TasksServer;
 use uuid::Uuid;

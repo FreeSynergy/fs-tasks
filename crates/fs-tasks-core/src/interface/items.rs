@@ -7,7 +7,7 @@
 
 use async_trait::async_trait;
 use fs_interfaces::{Capabilities, Unsupported};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 
 use super::types::{ImportReport, TaskEntry, TaskQuery};
 use crate::error::Result;

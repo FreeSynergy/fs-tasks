@@ -24,7 +24,7 @@ Version 0.6.0: `TaskItems::edit_checked` and `Items.editIf` (compare-and-set), `
 | RFC 10051 status as vendor property `freesynergy.net:taskStatus` (`task_status` / `set_task_status`, index `task_status`) | done (preserved, not interpreted) |
 | Interface `TaskItems` (create, edit, assign, relate, label, get, get_by_uid, delete, list, query by due range / progress / label, VTODO import/export, capabilities as `Capabilities`) | done, draft |
 | Interface `TaskFeed` (Observer: `subscribe(listener)` -> `Subscription`; `Created` / `Updated` / `Deleted`) | done, draft |
-| `TaskRepo` over fs-store 0.2 (`ObjectRepository` + `ObjectQuery` only; `TaskRepo::with_backend`) | done |
+| `TaskRepo` over fs-objects 0.2 (`ObjectRepository` + `ObjectQuery` only; `TaskRepo::with_backend`) | done |
 | Envelope: type `Task`, `name` = `title` (ADR 0032), **`context=tasks`**, IRI `https://<instance>/tasks/<id>`, `startTime` / `endTime` (due date, else start + estimate, else start) | done |
 | Index fields: `uid`, `type`, `start_utc`, `end_utc`, `due_utc`, `progress`, `task_status`, `label`, `participant_email`, `tzdb_version` (imports) | done |
 | Queries (`TaskQuery` -> one store query: due range `[from, to)` with open ends, progress, label; ordered by due, undated last) | done |
@@ -118,7 +118,7 @@ column -> status mapping and ordering arrives with boards.
 
 * `fs-interfaces` (git tag v0.4.0): contract, `Capabilities`, `Unsupported`.
 * Frontend only: `fs-components-app`, `fs-components-workbenches` (git `rev`, provisional until a tag exists).
-* `fs-store` (git tag v0.2.0), `fs-jscalendar` (git tag v0.1.0; it also holds the exact pin of `calcard`).
+* `fs-objects` (git tag v0.2.0), `fs-jscalendar` (git tag v0.1.0; it also holds the exact pin of `calcard`).
 * `chrono`, `serde`, `serde_json`, `thiserror`, `async-trait`.
 * Optional (feature `contract`): `capnp` 0.27.
 
