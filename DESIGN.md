@@ -179,3 +179,9 @@ column -> status mapping and ordering arrives with boards.
 * `description` is indexed whole for `term`, so a large description is stored twice.
 * A task without a title is found by the placeholder `(untitled task)`.
 * `TaskItems::list` and `query` still return everything (the in-process frontend uses them); only `page` is cut in the store.
+
+## After the sprint (strategy list, 2026-11-07)
+
+* `cursor.rs` is a copy of `fs-wiki-server`'s: move it to `fs-interfaces` (`rpc`).
+* `Error::Conflict(String)` carries no object: a taken `uid` names no id; give it a `Subject` like people.
+* `issue` texts that are sentences instead of identifiers break §2a: replace them by identifiers where a file is touched anyway.
