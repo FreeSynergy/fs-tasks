@@ -3,7 +3,7 @@
 mod common;
 
 use common::{repo, setup};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::{Error, Task, TaskItems};
 
 #[tokio::test]

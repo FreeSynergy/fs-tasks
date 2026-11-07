@@ -10,7 +10,7 @@ use fs_interfaces::rpc::{
     write_envelope, write_object_id,
 };
 use fs_interfaces::{common_capnp, tasks_capnp};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::{ImportReport, Revision, Task, TaskEntry};
 
 use crate::errors::invalid;

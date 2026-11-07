@@ -6,7 +6,7 @@
 use fs_interfaces::rpc::write_object_id;
 use fs_interfaces::tasks_capnp::items::Client;
 use fs_interfaces::tasks_capnp::task_page;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::contract::write_filter;
 use fs_tasks_core::{ImportReport, Result, Task, TaskEntry, TaskQuery};
 

@@ -149,9 +149,9 @@ fn one_unreadable_stored_task_is_said_plainly_and_nothing_is_written() {
     // other way to go through the tasks, so the adapter cannot keep the rest (with Thread 3).
     let w = World::new();
     w.add(Task::new("Good"));
-    let mut envelope = fs_store::Envelope::new(fs_tasks_core::TASK_TYPE, "Bad");
+    let mut envelope = fs_objects::Envelope::new(fs_tasks_core::TASK_TYPE, "Bad");
     envelope.context = Some(fs_tasks_core::CONTEXT.into());
-    let bad = fs_store::StoredObject::new(envelope, fs_tasks_core::CONTENT_TYPE, json!({"uid": 5}));
+    let bad = fs_objects::StoredObject::new(envelope, fs_tasks_core::CONTENT_TYPE, json!({"uid": 5}));
     w.runtime.block_on(w.store.put(bad, common::ME)).unwrap();
     let s = w.state();
     assert!(s.list_problem().is_some(), "not an empty list");

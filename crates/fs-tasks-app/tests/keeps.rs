@@ -7,7 +7,7 @@ mod common;
 use common::{ME, World, rich, series, without};
 use fs_components_workbenches::ErrorKind;
 use fs_components_workbenches::tasks::{TaskSource, TasksState};
-use fs_store::Blob;
+use fs_objects::Blob;
 use fs_tasks_app::apply_draft;
 use fs_tasks_core::Task;
 use serde_json::json;

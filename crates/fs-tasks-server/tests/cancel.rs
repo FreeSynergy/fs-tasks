@@ -8,8 +8,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use common::{ME, items_of, with_provider};
 use fs_interfaces::tasks_capnp::items;
-use fs_store::traits::{ObjectQuery, ObjectRepository};
-use fs_store::{Activity, LogEntry, ObjectId, Query, Result, Store, StoredObject, TursoStore};
+use fs_objects::traits::{ObjectQuery, ObjectRepository};
+use fs_objects::{Activity, LogEntry, ObjectId, Query, Result, Store, StoredObject, TursoStore};
 use fs_tasks_core::TaskRepo;
 use tokio::sync::{Notify, Semaphore};
 

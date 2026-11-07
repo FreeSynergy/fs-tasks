@@ -5,7 +5,7 @@
 mod common;
 
 use common::{Served, task};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::{Error, TaskItems};
 
 #[tokio::test(flavor = "multi_thread")]

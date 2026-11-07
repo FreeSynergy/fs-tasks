@@ -11,7 +11,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use fs_interfaces::Capabilities;
 use fs_interfaces::rpc::{bind_socket, serve};
-use fs_store::{ObjectId, Store, TursoStore};
+use fs_objects::{ObjectId, Store, TursoStore};
 use fs_tasks_client::RpcTasks;
 use fs_tasks_core::{Result, Task, TaskEntry, TaskFeed, TaskItems, TaskQuery, TaskRepo};
 use fs_tasks_server::TasksServer;

@@ -27,7 +27,7 @@ async fn a_server_that_stopped_answers_with_an_error_every_time() {
             .await
             .expect("no hang");
         assert!(
-            matches!(got, Err(Error::Store(fs_store::Error::Backend(_)))),
+            matches!(got, Err(Error::Store(fs_objects::Error::Backend(_)))),
             "{got:?}"
         );
     }

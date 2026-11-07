@@ -8,7 +8,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use common::repo;
 use fs_interfaces::Capabilities;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::{Error, Result, Task, TaskEntry, TaskItems, TaskQuery};
 
 /// A read-only provider, for example a task list it cannot write to.

@@ -10,7 +10,7 @@ use fs_interfaces::rpc::Problem;
 use fs_interfaces::rpc::client::problems::{
     Failure, local_type, object_id_in, unsupported_of, without_store_prefix,
 };
-use fs_store::{Error as StoreError, ObjectId};
+use fs_objects::{Error as StoreError, ObjectId};
 use fs_tasks_core::{Error, Issue};
 
 /// What a call was about, for the variants that name it.

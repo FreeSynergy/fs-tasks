@@ -7,7 +7,7 @@ mod common;
 
 use common::{World, without};
 use fs_components_workbenches::tasks::{Shown, TaskSource};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_app::is_marked;
 use fs_tasks_core::TaskItems;
 use serde_json::{Value, json};
