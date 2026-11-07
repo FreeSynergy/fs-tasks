@@ -12,7 +12,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use fs_components_workbenches::SourceError;
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::{Error, TaskEntry, TaskItems};
 use tokio::runtime::Handle;
 
@@ -60,7 +60,7 @@ impl TaskAdapter {
 /// conflict of the core (a `uid` taken) is no revision conflict: pressing Save again would not help.
 pub(super) fn reason(error: &Error) -> SourceError {
     match error {
-        Error::Store(fs_store::Error::EncryptionRequired(_)) => SourceError::failed(format!(
+        Error::Store(fs_objects::Error::EncryptionRequired(_)) => SourceError::failed(format!(
             "this task is marked sensitive and this store is not encrypted, so it was refused ({error})"
         )),
         Error::NotFound(_) => SourceError::not_found(error.to_string()),

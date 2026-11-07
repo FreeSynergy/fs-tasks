@@ -5,7 +5,7 @@ mod common;
 
 use common::{create, edit_if, items_of, json, json_with, read_now, set_id, with_server};
 use fs_interfaces::rpc::{Problem, TOO_LARGE, write_uuid};
-use fs_store::Envelope;
+use fs_objects::Envelope;
 use fs_tasks_core::MAX_TASK_BYTES;
 
 const INVALID: &str = "https://freesynergy.net/problems/tasks/invalid";

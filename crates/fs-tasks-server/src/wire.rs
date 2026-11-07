@@ -11,7 +11,7 @@ use fs_interfaces::rpc::{
 };
 use fs_interfaces::tasks_capnp::items;
 use fs_interfaces::{common_capnp, tasks_capnp};
-use fs_store::ObjectId;
+use fs_objects::ObjectId;
 use fs_tasks_core::contract::read_filter;
 use fs_tasks_core::{ImportReport, Revision, Task, TaskEntry, TaskQuery};
 

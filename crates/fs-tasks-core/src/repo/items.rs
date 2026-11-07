@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use fs_interfaces::Capabilities;
-use fs_store::{ObjectId, StoreId};
+use fs_objects::{ObjectId, StoreId};
 
 use super::handle::TaskRepo;
 use crate::error::{Error, Result};

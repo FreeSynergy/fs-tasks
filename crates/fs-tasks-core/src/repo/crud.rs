@@ -3,7 +3,7 @@
 //! Pattern: Repository — the CRUD side of the tasks; every change goes through the store, which
 //! logs it and makes it undoable, and is announced to the subscribers. (`edit` has its own file.)
 
-use fs_store::{Blob, ObjectId, Query, StoredObject};
+use fs_objects::{Blob, ObjectId, Query, StoredObject};
 
 use super::consts::{CONTEXT, TASK_TYPE};
 use super::handle::TaskRepo;

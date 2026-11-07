@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use fs_store::{Envelope, Store, StoredObject, TursoStore};
+use fs_objects::{Envelope, Store, StoredObject, TursoStore};
 use fs_tasks_core::{Error, TaskItems, TaskQuery, TaskRepo};
 
 const ME: &str = "https://local.invalid/users/owner";

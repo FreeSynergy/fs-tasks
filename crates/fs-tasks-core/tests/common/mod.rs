@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-use fs_store::{Store, TursoStore};
+use fs_objects::{Store, TursoStore};
 use fs_tasks_core::{TaskRepo, utc};
 
 pub mod yielding;

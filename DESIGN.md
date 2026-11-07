@@ -13,7 +13,7 @@ independent consumers have tested it, then 1.0, then only version jumps.) The co
 
 ## State
 
-Version 0.7.0: builds on `fs-interfaces` v0.44.0 and `fs-store` v0.4.0. `TaskFilter.term` and `open` are evaluated in the store; `Items.list` and `Items.query` cut their pages **in the store at a place in the sort key** (`TaskItems::page`), not from the whole list; `SupportReport.instance` is the store's identity; problems carry typed extensions (table below). Version 0.6.0: `TaskItems::edit_checked` and `Items.editIf` (compare-and-set), `revision` on every task, `fs-tasks-server` follows the contract of `fs-interfaces` v0.36.0. Version 0.5.3: builds on `fs-interfaces` v0.36.0 (git tag) and `fs-jscalendar` v0.1.3. Version 0.5.0: `fs-tasks-server`, the contract over a Unix socket; `TaskEntry` carries its envelope. Before, in 0.4.0: `TaskItems` follows the provider rule (ADR 0045): every method of `Items` in `tasks.capnp`, defaults answering `Unsupported`, `capabilities()` returns `fs_interfaces::Capabilities`; `fs-interfaces` v0.4.0 is a normal dependency (feature `contract` keeps the generated-code re-export). Before, in 0.3.0: the shared JSCalendar parts (time, rule, participants, upgrade, shared validation, iCalendar conversion) come from [`fs-jscalendar`](https://github.com/FreeSynergy/fs-jscalendar) v0.1.0 instead of being copied. `Task` itself stays here (ADR 0050).
+Version 0.7.0: builds on `fs-interfaces` v0.44.0 and `fs-objects` v0.4.0. `TaskFilter.term` and `open` are evaluated in the store; `Items.list` and `Items.query` cut their pages **in the store at a place in the sort key** (`TaskItems::page`), not from the whole list; `SupportReport.instance` is the store's identity; problems carry typed extensions (table below). Version 0.6.0: `TaskItems::edit_checked` and `Items.editIf` (compare-and-set), `revision` on every task, `fs-tasks-server` follows the contract of `fs-interfaces` v0.36.0. Version 0.5.3: builds on `fs-interfaces` v0.36.0 (git tag) and `fs-jscalendar` v0.1.3. Version 0.5.0: `fs-tasks-server`, the contract over a Unix socket; `TaskEntry` carries its envelope. Before, in 0.4.0: `TaskItems` follows the provider rule (ADR 0045): every method of `Items` in `tasks.capnp`, defaults answering `Unsupported`, `capabilities()` returns `fs_interfaces::Capabilities`; `fs-interfaces` v0.4.0 is a normal dependency (feature `contract` keeps the generated-code re-export). Before, in 0.3.0: the shared JSCalendar parts (time, rule, participants, upgrade, shared validation, iCalendar conversion) come from [`fs-jscalendar`](https://github.com/FreeSynergy/fs-jscalendar) v0.1.0 instead of being copied. `Task` itself stays here (ADR 0050).
 
 | Area | State |
 |---|---|
@@ -24,7 +24,7 @@ Version 0.7.0: builds on `fs-interfaces` v0.44.0 and `fs-store` v0.4.0. `TaskFil
 | RFC 10051 status as vendor property `freesynergy.net:taskStatus` (`task_status` / `set_task_status`, index `task_status`) | done (preserved, not interpreted) |
 | Interface `TaskItems` (create, edit, assign, relate, label, get, get_by_uid, delete, list, query by due range / progress / label, VTODO import/export, capabilities as `Capabilities`) | done, draft |
 | Interface `TaskFeed` (Observer: `subscribe(listener)` -> `Subscription`; `Created` / `Updated` / `Deleted`) | done, draft |
-| `TaskRepo` over fs-store 0.2 (`ObjectRepository` + `ObjectQuery` only; `TaskRepo::with_backend`) | done |
+| `TaskRepo` over fs-objects 0.2 (`ObjectRepository` + `ObjectQuery` only; `TaskRepo::with_backend`) | done |
 | Envelope: type `Task`, `name` = `title` (ADR 0032), **`context=tasks`**, IRI `https://<instance>/tasks/<id>`, `startTime` / `endTime` (due date, else start + estimate, else start) | done |
 | Index fields: `uid`, `type`, `start_utc`, `end_utc`, `due_utc`, `progress`, `task_status`, `label`, `participant_email`, `tzdb_version` (imports) | done |
 | Queries (`TaskQuery` -> one store query: due range `[from, to)` with open ends, progress, label; ordered by due, undated last) | done |
@@ -152,9 +152,9 @@ column -> status mapping and ordering arrives with boards.
 
 ## Crates
 
-* `fs-interfaces` (git tag v0.44.0), `fs-store` (git tag v0.4.0): contract, `Capabilities`, `Unsupported`, the store.
+* `fs-interfaces` (git tag v0.44.0), `fs-objects` (git tag v0.4.0): contract, `Capabilities`, `Unsupported`, the store.
 * Frontend only: `fs-components-app`, `fs-components-workbenches` (git `rev`, provisional until a tag exists).
-* `fs-store` (git tag v0.2.0), `fs-jscalendar` (git tag v0.1.0; it also holds the exact pin of `calcard`).
+* `fs-objects` (git tag v0.2.0), `fs-jscalendar` (git tag v0.1.0; it also holds the exact pin of `calcard`).
 * `chrono`, `serde`, `serde_json`, `thiserror`, `async-trait`.
 * Optional (feature `contract`): `capnp` 0.27.
 
@@ -175,7 +175,7 @@ column -> status mapping and ordering arrives with boards.
 * `Error::Conflict` carries text only, so a taken uid names no object (`id` is missing from that problem).
 * A task stored by 0.6.0 has no `order_key`, `id_key` or `description` in its index. `TaskRepo::upgrade_index` completes them (the server binary runs it at start and prints the count and every failure to stderr); it is idempotent, adds only index fields (content, envelope and original stay; it writes one `Update` per task to the log) and one task that cannot be repaired is named in its report and does not stop the others. Until then, and for a task that cannot be repaired, the first page fails with `stored task cannot be used: N of M tasks have no place in the order ...` (`Error::Stored`) instead of giving fewer tasks; `list` and `query` still return them, keyless ones in name order after the others. A library user that does not use the binary calls `upgrade_index` itself after opening. Tested with a store written by the code of tag v0.6.0 (`tests/fixtures/v060.db`, six tasks).
 * The cursor holds the title of the last task whole, with no limit of its own: it is as long as a title may be (up to `MAX_TASK_BYTES`, 16 MiB), and a message takes 64 MiB.
-* The store sorts all rows that match before it applies a limit (`ORDER BY` a computed key): a page costs the database O(n log n), so reading all pages is O(n² log n) there. `counting.rs` counts the rows the store *returns*, which are linear; it does not measure the work inside the database. Only the page is read, decoded and sent. A stored sort key (a real column or an index the database can walk) would remove it; that is a change in `fs-store`.
+* The store sorts all rows that match before it applies a limit (`ORDER BY` a computed key): a page costs the database O(n log n), so reading all pages is O(n² log n) there. `counting.rs` counts the rows the store *returns*, which are linear; it does not measure the work inside the database. Only the page is read, decoded and sent. A stored sort key (a real column or an index the database can walk) would remove it; that is a change in `fs-objects`.
 * `description` is indexed whole for `term`, so a large description is stored twice.
 * A task without a title is found by the placeholder `(untitled task)`.
 * `TaskItems::list` and `query` still return everything (the in-process frontend uses them); only `page` is cut in the store.

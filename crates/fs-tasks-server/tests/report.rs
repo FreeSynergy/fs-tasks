@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use common::{ME, items_of, with_provider};
 use fs_interfaces::rpc::MAX_PAGE_BYTES;
 use fs_interfaces::{Capabilities, common_capnp};
-use fs_store::{ObjectId, Store, TursoStore};
+use fs_objects::{ObjectId, Store, TursoStore};
 use fs_tasks_core::{
     ImportReport, Place, Result, TaskEntry, TaskItems, TaskPage, TaskQuery, TaskRepo,
 };
@@ -54,7 +54,7 @@ async fn a_report_too_large_is_cut_and_keeps_every_created_id() {
     let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
     let feed = Arc::new(TaskRepo::new(store, ME));
     let created: Vec<ObjectId> = (0..1000)
-        .map(|_| fs_store::Envelope::new("Task", "x").id)
+        .map(|_| fs_objects::Envelope::new("Task", "x").id)
         .collect();
     let line = "x".repeat(60 * 1024);
     let provider = Talkative(ImportReport {

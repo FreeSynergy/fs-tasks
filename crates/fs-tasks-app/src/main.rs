@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use fs_components_app::{Status, WindowOptions, launch};
 use fs_components_workbenches::tasks::TasksWidget;
-use fs_store::{Store, TursoStore};
+use fs_objects::{Store, TursoStore};
 use fs_tasks_app::args::{Args, HELP, parse};
 use fs_tasks_app::{TaskAdapter, export_all, import_file, labels, screen_widget};
 use fs_tasks_core::{TaskItems, TaskRepo};

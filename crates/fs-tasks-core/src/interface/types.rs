@@ -4,7 +4,7 @@
 //! small Builder so callers state only the filters they need.
 
 use chrono::{DateTime, Utc};
-use fs_store::{Envelope, ObjectId};
+use fs_objects::{Envelope, ObjectId};
 
 use crate::model::Task;
 

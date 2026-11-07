@@ -83,7 +83,7 @@ async fn edit_if_writes_on_the_revision_read_and_refuses_a_stale_one() {
             "nothing was written"
         );
 
-        let ghost = fs_store::Envelope::new("Task", "x").id.as_uuid();
+        let ghost = fs_objects::Envelope::new("Task", "x").id.as_uuid();
         problem(
             edit_if(&items, ghost, 1, &json("u9", "X")).await,
             NOT_FOUND,

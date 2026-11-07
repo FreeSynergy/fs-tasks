@@ -5,7 +5,7 @@ mod common;
 use common::{create, items_of, json, set_id, with_server};
 use fs_interfaces::UNSUPPORTED_PROBLEM_TYPE;
 use fs_interfaces::rpc::{INVALID_REQUEST, Problem, write_uuid};
-use fs_store::Envelope;
+use fs_objects::Envelope;
 
 const INVALID: &str = "https://freesynergy.net/problems/tasks/invalid";
 const CONFLICT: &str = "https://freesynergy.net/problems/tasks/conflict";

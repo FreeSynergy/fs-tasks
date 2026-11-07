@@ -71,7 +71,11 @@ async fn a_wrong_revision_writes_nothing_and_does_not_name_the_right_one() {
 async fn an_unknown_task_is_not_found() {
     let r = repo().await;
     let err = r
-        .edit_checked(fs_store::ObjectId::new(), Revision::from(1), Task::new("x"))
+        .edit_checked(
+            fs_objects::ObjectId::new(),
+            Revision::from(1),
+            Task::new("x"),
+        )
         .await
         .unwrap_err();
     assert!(matches!(err, Error::NotFound(_)), "{err}");

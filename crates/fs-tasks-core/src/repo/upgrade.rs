@@ -5,7 +5,7 @@
 //! `order_key`, `id_key` and `description` in its index, so no page can start after it. The flow is
 //! idempotent, and one task that cannot be repaired is named in the report and does not stop the rest.
 
-use fs_store::{Order, Query, StoredObject};
+use fs_objects::{Order, Query, StoredObject};
 
 use super::consts::{CONTEXT, DESCRIPTION, ID_KEY, ORDER_KEY, TASK_TYPE};
 use super::handle::TaskRepo;

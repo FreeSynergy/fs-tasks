@@ -20,7 +20,7 @@ fn is(error: &capnp::Error, problem_type: &str, status: u16) {
 }
 
 fn unknown_id() -> uuid::Uuid {
-    fs_store::Envelope::new("Task", "x").id.as_uuid()
+    fs_objects::Envelope::new("Task", "x").id.as_uuid()
 }
 
 async fn count(items: &items::Client) -> u32 {
