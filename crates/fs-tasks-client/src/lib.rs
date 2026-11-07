@@ -17,6 +17,13 @@
     clippy::redundant_closure_for_method_calls
 )]
 
+mod calls;
+mod items_impl;
 mod peer;
+mod problems;
+#[cfg(test)]
+mod problems_table;
+mod read;
+mod worker;
 
 pub use peer::RpcTasks;
