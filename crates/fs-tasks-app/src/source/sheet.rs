@@ -4,16 +4,17 @@
 //! too, so the person sees that it is there; it stays on the task.
 
 use fs_components_workbenches::tasks::{TaskField, TaskSection, TaskSheet};
-use fs_tasks_core::TaskEntry;
+use fs_tasks_client::Revised;
 
-use super::adapter::revision_of;
+use super::adapter::revision_text;
 use super::draft::is_series;
 use super::marks::is_marked;
 use super::rows::{due_text, label_list, priority_text};
 use crate::words::{field, progress_title, say};
 
 /// The sheet of a stored task.
-pub(super) fn sheet_of(entry: &TaskEntry) -> TaskSheet {
+pub(super) fn sheet_of(read: &Revised) -> TaskSheet {
+    let entry = &read.entry;
     let task = &entry.task;
     let mut fields = vec![TaskField::new(
         field::STATUS,
@@ -65,6 +66,6 @@ pub(super) fn sheet_of(entry: &TaskEntry) -> TaskSheet {
         sheet.note = Some(say::COMPUTED.to_string());
     }
     sheet.column = task.effective_progress().to_string();
-    sheet.revision = Some(revision_of(entry));
+    sheet.revision = Some(revision_text(read));
     sheet
 }

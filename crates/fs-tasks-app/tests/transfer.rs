@@ -1,6 +1,6 @@
 //! iCalendar in and out, through the real core. What is sensitive leaves only when named.
 //!
-//! Pattern: Round-trip tests.
+//! Round-trip tests.
 
 mod common;
 

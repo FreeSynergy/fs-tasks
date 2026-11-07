@@ -1,6 +1,6 @@
 //! Labels as one line of text in the form.
 //!
-//! Pattern: Value parser — separated by commas; a label that holds a comma or a quote stands in quotes,
+//! Pattern: none — two pure functions for one concept (labels as a line of text); separated by commas; a label that holds a comma or a quote stands in quotes,
 //! a quote in it doubled, so every label can be read back as itself and be taken out or put in.
 
 use std::collections::BTreeSet;

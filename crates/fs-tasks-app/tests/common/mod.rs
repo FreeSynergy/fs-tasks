@@ -97,7 +97,11 @@ impl World {
         let repo = Arc::new(TaskRepo::new(store.clone(), ME));
         let (served, socket) = Served::start(&repo);
         let tasks = Arc::new(RpcTasks::connect(&socket).unwrap());
-        let adapter = Arc::new(TaskAdapter::new(tasks.clone(), runtime.handle().clone()));
+        let adapter = Arc::new(TaskAdapter::new(
+            tasks.clone(),
+            tasks.clone(),
+            runtime.handle().clone(),
+        ));
         Self {
             adapter,
             tasks,

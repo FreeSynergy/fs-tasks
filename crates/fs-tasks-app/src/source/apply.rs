@@ -14,7 +14,7 @@ use fs_tasks_core::{Task, now_utc};
 
 use super::draft::{DESCRIPTION, DUE, LABELS, PRIORITY, PROGRESS_FIELD, TITLE, is_series};
 use super::labels::read_labels;
-use crate::words::say;
+use crate::words::{fill, say};
 
 /// Put what changed in `draft` onto `task`.
 ///
@@ -36,8 +36,9 @@ pub fn apply_draft(task: &mut Task, draft: &TaskDraft) -> Result<(), SourceError
             DUE => changed.due = due(text)?,
             PROGRESS_FIELD => set_progress(&mut changed, text)?,
             other => {
-                return Err(SourceError::failed(format!(
-                    "the form has an unknown field \"{other}\""
+                return Err(SourceError::failed(fill(
+                    say::UNKNOWN_FIELD,
+                    &[("field", other)],
                 )));
             }
         }

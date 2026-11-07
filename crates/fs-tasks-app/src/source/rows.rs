@@ -4,12 +4,13 @@
 //! progress as the core computes it (RFC 8984 §5.2.5), so nothing is shown that the task does not say.
 
 use fs_components_workbenches::tasks::TaskRow;
-use fs_tasks_core::{Task, TaskEntry};
+use fs_tasks_client::Revised;
+use fs_tasks_core::Task;
 
-use super::adapter::revision_of;
+use super::adapter::revision_text;
 use super::draft::is_series;
 use super::marks::is_marked;
-use crate::words::{field, progress_title, say};
+use crate::words::{field, fill, progress_title, say};
 
 /// The due date as the person reads it; seconds only when there are some.
 pub(super) fn due_text(task: &Task) -> String {
@@ -48,7 +49,8 @@ pub(super) fn is_open(task: &Task) -> bool {
 }
 
 /// The row of a stored task.
-pub(super) fn row_of(entry: &TaskEntry) -> TaskRow {
+pub(super) fn row_of(read: &Revised) -> TaskRow {
+    let entry = &read.entry;
     let task = &entry.task;
     let (title, column) = (task.display_title(), task.effective_progress());
     let (due, priority) = (due_text(task), priority_text(task));
@@ -63,15 +65,19 @@ pub(super) fn row_of(entry: &TaskEntry) -> TaskRow {
         progress_title(column).to_string(),
     ];
     if !due.is_empty() {
-        row.lines.push(format!("{}: {due}", field::DUE));
+        row.lines
+            .push(fill(say::LINE, &[("label", field::DUE), ("value", &due)]));
     }
     if !priority.is_empty() {
-        row.lines.push(format!("{}: {priority}", field::PRIORITY));
+        row.lines.push(fill(
+            say::LINE,
+            &[("label", field::PRIORITY), ("value", &priority)],
+        ));
     }
     row.tags = label_list(task);
     if is_series(task) {
         row.move_refusal = Some(say::SERIES_MOVE.to_string());
     }
-    row.revision = Some(revision_of(entry));
+    row.revision = Some(revision_text(read));
     row
 }

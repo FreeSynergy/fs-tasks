@@ -1,14 +1,15 @@
 //! A task as a form.
 //!
-//! Pattern: Factory — the fields the first version can change, each holding what the task says now, so
+//! Pattern: Adapter — a task as the workbench's neutral form: the fields the first version can change, each holding what the task says now, so
 //! a save writes only what the person changed. A task that repeats has no due date and no status in its
 //! form: those belong to its occurrences.
 
 use fs_components_workbenches::tasks::{DraftField, FieldKind, FieldOption, TaskDraft};
+use fs_tasks_client::Revised;
+use fs_tasks_core::Task;
 use fs_tasks_core::validate::PROGRESS;
-use fs_tasks_core::{Task, TaskEntry};
 
-use super::adapter::revision_of;
+use super::adapter::revision_text;
 use super::labels::write_labels;
 use super::marks::is_marked;
 use super::rows::{due_text, label_list, priority_text};
@@ -66,9 +67,10 @@ fn fields_of(task: &Task) -> Vec<DraftField> {
 }
 
 /// The form of a stored task.
-pub(super) fn draft_of(entry: &TaskEntry) -> TaskDraft {
+pub(super) fn draft_of(read: &Revised) -> TaskDraft {
+    let entry = &read.entry;
     let task = &entry.task;
-    let mut draft = TaskDraft::new(Some(revision_of(entry)), fields_of(task));
+    let mut draft = TaskDraft::new(Some(revision_text(read)), fields_of(task));
     if is_marked(entry) {
         draft.marks.push(field::SENSITIVE.to_string());
     }

@@ -1,6 +1,6 @@
 //! The whole program as a picture, through the shell's real path. No window is opened.
 //!
-//! Pattern: Pixel tests — skipped with a message where there is no graphics adapter. Pictures are kept
+//! Skipped with a message where there is no graphics adapter. Pictures are kept
 //! where `FS_COMP_SHOTS` says. A hang here is a deadlock.
 
 mod common;

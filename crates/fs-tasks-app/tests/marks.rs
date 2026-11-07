@@ -1,7 +1,7 @@
 //! A marked task is marked wherever it appears, is not opened on its own, and a save never reduces the
 //! marking (ADR 0029).
 //!
-//! Pattern: Specification tests over the real core.
+//! Tests over the real core.
 
 mod common;
 

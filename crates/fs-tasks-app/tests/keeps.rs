@@ -1,6 +1,6 @@
 //! An edit keeps everything else on the task: the whole task compared as JSON around it.
 //!
-//! Pattern: Round-trip tests through the real form, the real adapter and the real core.
+//! Round-trip tests through the real form, the real adapter and the real core.
 
 mod common;
 

@@ -1,6 +1,6 @@
 //! Moving a card is an edit of the task's own status, and of nothing else.
 //!
-//! Pattern: Round-trip tests through the real adapter and the real core.
+//! Round-trip tests through the real adapter and the real core.
 
 mod common;
 

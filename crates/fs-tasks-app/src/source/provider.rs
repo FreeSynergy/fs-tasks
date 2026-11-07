@@ -12,7 +12,7 @@ use fs_components_workbenches::tasks::{
 use fs_tasks_core::Task;
 use fs_tasks_core::validate::PROGRESS;
 
-use super::adapter::{TaskAdapter, reason};
+use super::adapter::{TaskAdapter, reason, revision_in};
 use super::apply::{apply_draft, set_progress};
 use super::draft::{blank_draft, draft_of, is_series};
 use super::rows::{is_open, matches, row_of};
@@ -46,13 +46,13 @@ impl TaskSource for TaskAdapter {
     ) -> Result<Vec<TaskRow>, SourceError> {
         let all = self
             .runtime
-            .block_on(self.items.list())
+            .block_on(self.revised.list_revised())
             .map_err(|e| reason(&e))?;
         let term = query.term.to_lowercase();
         Ok(all
             .iter()
-            .filter(|e| matches(&e.task, &term))
-            .filter(|e| !query.open_only || is_open(&e.task))
+            .filter(|r| matches(&r.entry.task, &term))
+            .filter(|r| !query.open_only || is_open(&r.entry.task))
             .skip(offset)
             .take(limit)
             .map(row_of)
@@ -72,11 +72,12 @@ impl TaskSource for TaskAdapter {
     }
 
     fn save(&self, key: &str, draft: &TaskDraft) -> Result<(), SourceError> {
-        let entry = self.entry_at(key, draft.revision.as_deref())?;
+        let expected = revision_in(draft.revision.as_deref())?;
+        let entry = self.entry(key)?.entry;
         let mut task = entry.task;
         apply_draft(&mut task, draft)?;
         self.runtime
-            .block_on(self.items.edit(entry.id, task))
+            .block_on(self.items.edit_checked(entry.id, expected, task))
             .map(|_| ())
             .map_err(|e| reason(&e))
     }
@@ -95,14 +96,15 @@ impl TaskSource for TaskAdapter {
     }
 
     fn delete(&self, key: &str) -> Result<(), SourceError> {
-        let entry = self.entry(key)?;
+        let entry = self.entry(key)?.entry;
         self.runtime
             .block_on(self.items.delete(entry.id))
             .map_err(|e| reason(&e))
     }
 
     fn move_to(&self, key: &str, column: &str, revision: Option<&str>) -> Result<(), SourceError> {
-        let entry = self.entry_at(key, revision)?;
+        let expected = revision_in(revision)?;
+        let entry = self.entry(key)?.entry;
         if is_series(&entry.task) {
             return Err(SourceError::failed(say::SERIES_MOVE));
         }
@@ -112,7 +114,7 @@ impl TaskSource for TaskAdapter {
         let mut task = entry.task;
         set_progress(&mut task, column)?;
         self.runtime
-            .block_on(self.items.edit(entry.id, task))
+            .block_on(self.items.edit_checked(entry.id, expected, task))
             .map(|_| ())
             .map_err(|e| reason(&e))
     }

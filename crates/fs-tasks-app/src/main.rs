@@ -1,6 +1,7 @@
 //! The binary: wiring only.
 //!
-//! Pattern: Facade consumer — parse arguments, connect to the server, import, then export or show. The
+//! Pattern: none — a thin binary: parse arguments, connect to the server, import, then export or show;
+//! everything with behaviour is in the library. The
 //! runtime lives as long as the window; the workbench's calls wait on it.
 
 use std::sync::Arc;
@@ -8,8 +9,10 @@ use std::sync::Arc;
 use fs_components_app::{Status, WindowOptions, launch};
 use fs_components_workbenches::tasks::TasksWidget;
 use fs_tasks_app::args::{Args, HELP, parse};
-use fs_tasks_app::{TaskAdapter, export_all, import_file, labels, screen_widget};
-use fs_tasks_client::RpcTasks;
+use fs_tasks_app::{
+    TaskAdapter, cannot_reach, export_all, import_file, labels, not_exported, screen_widget, wrote,
+};
+use fs_tasks_client::{RevisedTasks, RpcTasks};
 use fs_tasks_core::TaskItems;
 
 fn main() {
@@ -28,10 +31,12 @@ fn run() -> Result<(), String> {
     }
     let runtime = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     let socket = args.socket_path()?;
-    let items: Arc<dyn TaskItems> = Arc::new(
+    let tasks = Arc::new(
         RpcTasks::connect(socket)
-            .map_err(|e| format!("cannot reach the tasks server at {}: {e}", socket.display()))?,
+            .map_err(|e| cannot_reach(&socket.display().to_string(), &e.to_string()))?,
     );
+    let items: Arc<dyn TaskItems> = tasks.clone();
+    let revised: Arc<dyn RevisedTasks> = tasks;
     let handle = runtime.handle().clone();
 
     let mut status = None;
@@ -48,22 +53,22 @@ fn run() -> Result<(), String> {
         let report = export_all(items.as_ref(), &handle, file, &args.export_sensitive)?;
         eprintln!("{}", report.message(file));
         if !report.failed.is_empty() {
-            return Err(format!("{} could not be exported", report.failed.len()));
+            return Err(not_exported(report.failed.len()));
         }
         if args.snapshot.is_none() {
             return Ok(());
         }
     }
-    show(&args, items, handle, status)
+    show(&args, (items, revised), handle, status)
 }
 
 fn show(
     args: &Args,
-    items: Arc<dyn TaskItems>,
+    (items, revised): (Arc<dyn TaskItems>, Arc<dyn RevisedTasks>),
     handle: tokio::runtime::Handle,
     status: Option<Status>,
 ) -> Result<(), String> {
-    let widget = TasksWidget::new(Arc::new(TaskAdapter::new(items, handle)), labels());
+    let widget = TasksWidget::new(Arc::new(TaskAdapter::new(items, revised, handle)), labels());
     if let Some(view) = args.view {
         widget.with_state(|s| s.set_view(view));
     }
@@ -73,7 +78,7 @@ fn show(
     if let Some(file) = &args.snapshot {
         app.picture(width, height, file)
             .map_err(|e| e.to_string())?;
-        eprintln!("wrote {}", file.display());
+        eprintln!("{}", wrote(&file.display().to_string()));
         return Ok(());
     }
     let mut options = WindowOptions::default();

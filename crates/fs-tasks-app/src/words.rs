@@ -1,9 +1,56 @@
 //! The words of the program.
 //!
-//! Pattern: Value objects — all English text of this frontend in one place; translation (ADR 0053)
-//! will replace this file's content, not its users.
+//! Pattern: none — constants (whole sentences with named placeholders, `{name}`) and one pure
+//! function that fills them. All English text of this frontend is in this file; translation
+//! (ADR 0053) will replace its content, not its users.
 
 use fs_components_workbenches::tasks::TaskLabels;
+
+/// A sentence with its named placeholders (`{name}`) filled from `values`; the sentence stays whole,
+/// so a language may put the parts in another order.
+pub(crate) fn fill(sentence: &str, values: &[(&str, &str)]) -> String {
+    values
+        .iter()
+        .fold(sentence.to_string(), |text, (name, value)| {
+            text.replace(&format!("{{{name}}}"), value)
+        })
+}
+
+/// Two sentences after one another.
+pub(crate) fn sentences(first: &str, next: &str) -> String {
+    format!("{first}. {next}")
+}
+
+/// What the command line says to a person.
+pub(crate) mod cli {
+    pub const NO_SOCKET: &str = "no --socket given: the app talks to a running tasks server; start one with `fs-tasks-server --socket <path>` and pass the same path here";
+    pub const STORE_GONE: &str = "--store is gone: the store belongs to the server, start it with `fs-tasks-server --data <dir>` and give the app its --socket";
+    pub const NEEDS_VALUE: &str = "{option} needs a value";
+    pub const UNKNOWN_OPTION: &str = "unknown option {option}";
+    pub const SENSITIVE_NEEDS_EXPORT: &str = "--export-sensitive needs --export";
+    pub const BAD_VIEW: &str = "--view wants list or status, not {given}";
+    pub const CANNOT_REACH: &str = "cannot reach the tasks server at {socket}: {error}";
+    pub const NOT_EXPORTED: &str = "{count} could not be exported";
+    pub const WROTE: &str = "wrote {file}";
+}
+
+/// What an import or an export says in the status line and on the terminal.
+pub(crate) mod transfer {
+    pub const CANNOT_READ: &str = "cannot read {file}: {error}";
+    pub const NO_CALENDAR: &str = "{file} holds no calendar";
+    pub const IMPORTED: &str = "Imported {created}, {skipped} already known";
+    pub const IMPORTED_FAILED: &str =
+        "Imported {created}, {skipped} already known, {count} failed: {list}";
+    pub const NOTES: &str = "Notes: {notes}";
+    pub const STOPPED: &str = "The import stopped: {why}";
+    pub const WROTE: &str = "Wrote {written} to {file}";
+    pub const RELEASED: &str = "Released by you: {list}";
+    pub const LEFT_OUT: &str =
+        "Left out as sensitive (name one with --export-sensitive <uid>): {list}";
+    pub const FAILED: &str = "Failed: {list}";
+    pub const FAILED_ONE: &str = "{uid}: {error}";
+    pub const NAMES_NO_TASK: &str = "--export-sensitive {name} names no task; nothing was written";
+}
 
 /// The title of the window.
 pub const TITLE: &str = "FreeSynergy Tasks";
@@ -77,4 +124,28 @@ pub(crate) mod say {
     pub const BAD_PRIORITY: &str = "the priority is a number from 0 to 9, or empty";
     pub const CHANGED_SINCE: &str = "Someone else changed this task in the meantime.";
     pub const NO_COLUMN: &str = "there is no such status";
+    pub const GONE: &str = "This task no longer exists.";
+    pub const UNKNOWN_FIELD: &str = "the form has an unknown field \"{field}\"";
+    pub const NEEDS_ENCRYPTION: &str = "this task is marked sensitive and this store is not encrypted, so it was refused ({error})";
+    pub const LINE: &str = "{label}: {value}";
+}
+
+/// `--socket` was not given.
+pub fn no_socket() -> String {
+    cli::NO_SOCKET.to_string()
+}
+
+/// The app could not connect to the server.
+pub fn cannot_reach(socket: &str, error: &str) -> String {
+    fill(cli::CANNOT_REACH, &[("socket", socket), ("error", error)])
+}
+
+/// Some tasks could not be exported.
+pub fn not_exported(count: usize) -> String {
+    fill(cli::NOT_EXPORTED, &[("count", &count.to_string())])
+}
+
+/// A picture was written.
+pub fn wrote(file: &str) -> String {
+    fill(cli::WROTE, &[("file", file)])
 }
