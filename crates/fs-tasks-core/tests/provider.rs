@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use common::repo;
 use fs_interfaces::Capabilities;
 use fs_store::ObjectId;
-use fs_tasks_core::{Error, Result, Task, TaskEntry, TaskItems, TaskQuery};
+use fs_tasks_core::{Error, Place, Result, Task, TaskEntry, TaskItems, TaskPage, TaskQuery};
 
 /// A read-only provider, for example a task list it cannot write to.
 struct ReadOnly;
@@ -33,6 +33,9 @@ impl TaskItems for ReadOnly {
     }
     async fn query(&self, _: &TaskQuery) -> Result<Vec<TaskEntry>> {
         Ok(vec![])
+    }
+    async fn page(&self, _: &TaskQuery, _: Option<&Place>, _: usize) -> Result<TaskPage> {
+        Ok(TaskPage::default())
     }
 }
 

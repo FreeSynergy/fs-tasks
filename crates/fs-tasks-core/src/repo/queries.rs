@@ -1,21 +1,18 @@
 //! Listing and filtered queries.
 //!
 //! Pattern: Repository (read side) + Builder consumer — a [`TaskQuery`] is translated into one
-//! store query; the store filters and orders, nothing is selected in memory.
+//! store query; the store filters and orders, nothing is selected in memory. The same translation
+//! serves the pages (`page.rs`).
 
 use chrono::{DateTime, Datelike, Duration, Utc};
-use fs_store::Query;
+use fs_store::{Cond, Op, Query};
 
-use super::consts::{CONTEXT, FIRST_INDEX_TIME, TASK_TYPE};
+use super::consts::{CONTEXT, DESCRIPTION, FIRST_INDEX_TIME, NO_DUE, ORDER_KEY, TASK_TYPE};
 use super::crud::entry_of;
 use super::handle::TaskRepo;
 use crate::error::Result;
 use crate::interface::{TaskEntry, TaskQuery};
 use crate::time::fmt_utc;
-
-/// Sorts after every index value: the range is half-open, so a task due at the last second counts. No
-/// task can be due at this very text, as date-times refuse second 60.
-const OPEN_END: &str = "9999-12-31T23:59:60Z";
 
 /// A bound of a half-open range. The index holds whole seconds, so a bound with a fraction rounds up:
 /// a task due at second `s` is at or after `from` exactly if `s >= ceil(from)`, likewise before `to`.
@@ -29,32 +26,56 @@ fn bound(t: DateTime<Utc>) -> String {
     match ceil {
         Some(c) if (0..10_000).contains(&c.year()) => fmt_utc(c),
         Some(c) if c.year() < 0 => FIRST_INDEX_TIME.into(),
-        _ => OPEN_END.into(),
+        _ => NO_DUE.into(),
+    }
+}
+
+/// The first value of `progress` that is open: the values are a closed list (`validate`), and by
+/// text `cancelled < completed < failed < in-process < needs-action`, so open is "from here on".
+const FIRST_OPEN: &str = "in-process";
+
+/// The store query for `query`, in the order of the list: due date (undated last), title, id. A
+/// task without a due date has the sort position `NO_DUE`, so a place in this order always exists.
+pub(super) fn base(query: &TaskQuery) -> Query {
+    let mut q = Query::new()
+        .of_type(TASK_TYPE)
+        .in_context(CONTEXT)
+        .order_by_index(ORDER_KEY);
+    if query.due_from.is_some() || query.due_to.is_some() {
+        let from = query
+            .due_from
+            .map_or_else(|| FIRST_INDEX_TIME.into(), bound);
+        let to = query.due_to.map_or_else(|| NO_DUE.into(), bound);
+        q = q.index_between("due_utc", from, to);
+    }
+    if let Some(p) = &query.progress {
+        q = q.with_index("progress", p);
+    }
+    if let Some(l) = &query.label {
+        q = q.with_index("label", l);
+    }
+    if query.open {
+        q = q.index_op("progress", Op::Ge, FIRST_OPEN);
+    }
+    match query.term.as_deref().map(str::trim) {
+        Some(term) if !term.is_empty() => q
+            .or(Cond::Name {
+                op: Op::Contains,
+                value: term.into(),
+            })
+            .or(Cond::Index {
+                key: DESCRIPTION.into(),
+                op: Op::Contains,
+                value: term.into(),
+            }),
+        _ => q,
     }
 }
 
 impl TaskRepo {
     pub(super) async fn query_inner(&self, query: &TaskQuery) -> Result<Vec<TaskEntry>> {
-        let mut q = Query::new().of_type(TASK_TYPE).in_context(CONTEXT);
-        q = if query.due_from.is_some() || query.due_to.is_some() {
-            let from = query
-                .due_from
-                .map_or_else(|| FIRST_INDEX_TIME.into(), bound);
-            let to = query.due_to.map_or_else(|| OPEN_END.into(), bound);
-            q.index_between("due_utc", from, to)
-                .order_by_index("due_utc")
-        } else {
-            // by due date (undated last), by the store; the same order as a range
-            q.order_by_index("due_utc")
-        };
-        if let Some(p) = &query.progress {
-            q = q.with_index("progress", p);
-        }
-        if let Some(l) = &query.label {
-            q = q.with_index("label", l);
-        }
         self.queries
-            .query(&q)
+            .query(&base(query))
             .await?
             .into_iter()
             .map(entry_of)

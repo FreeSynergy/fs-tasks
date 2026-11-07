@@ -48,6 +48,10 @@ pub enum Error {
     /// The operation conflicts with the current state (duplicate uid, ...).
     #[error("{0}")]
     Conflict(String),
+    /// A stored task lacks something this program wrote itself (written by an older version or
+    /// by another writer): not the caller's fault.
+    #[error("stored task cannot be used: {0}")]
+    Stored(String),
 }
 
 impl From<fs_jscalendar::Error> for Error {

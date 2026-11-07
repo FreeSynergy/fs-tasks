@@ -10,8 +10,8 @@ use common::{repo, t};
 use fs_interfaces::Capabilities;
 use fs_store::{Envelope, ObjectId};
 use fs_tasks_core::{
-    ImportReport, Relation, Result, Task, TaskChange, TaskEntry, TaskFeed, TaskItems, TaskListener,
-    TaskQuery,
+    ImportReport, Place, Relation, Result, Task, TaskChange, TaskEntry, TaskFeed, TaskItems,
+    TaskListener, TaskPage, TaskQuery,
 };
 
 #[tokio::test]
@@ -79,6 +79,9 @@ impl TaskItems for Nothing {
     }
     async fn query(&self, _: &TaskQuery) -> Result<Vec<TaskEntry>> {
         Ok(vec![])
+    }
+    async fn page(&self, _: &TaskQuery, _: Option<&Place>, _: usize) -> Result<TaskPage> {
+        Ok(TaskPage::default())
     }
     async fn import_ics(&self, _: &str) -> Result<ImportReport> {
         Ok(ImportReport::default())

@@ -30,6 +30,11 @@ pub struct TaskQuery {
     pub progress: Option<String>,
     /// Carries this label (JSCalendar keyword).
     pub label: Option<String>,
+    /// Substring of the title or the description, any case (trimmed; empty = no restriction).
+    pub term: Option<String>,
+    /// Only tasks that are not finished: `progress` `needs-action` or `in-process` (a task without
+    /// `progress` counts as `needs-action`).
+    pub open: bool,
 }
 
 impl TaskQuery {
@@ -57,6 +62,20 @@ impl TaskQuery {
     #[must_use]
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    /// Only tasks with `term` in the title or the description.
+    #[must_use]
+    pub fn matching(mut self, term: impl Into<String>) -> Self {
+        self.term = Some(term.into());
+        self
+    }
+
+    /// Only tasks that are not finished.
+    #[must_use]
+    pub fn only_open(mut self) -> Self {
+        self.open = true;
         self
     }
 }

@@ -5,7 +5,7 @@
 
 use fs_store::{Blob, Envelope, ObjectId, StoredObject};
 
-use super::consts::{CONTENT_TYPE, CONTEXT, TASK_TYPE};
+use super::consts::{CONTENT_TYPE, CONTEXT, DESCRIPTION, ID_KEY, NO_DUE, ORDER_KEY, TASK_TYPE};
 use super::handle::TaskRepo;
 use super::span::index_time;
 use crate::error::{Error, MAX_TASK_BYTES, Result};
@@ -33,6 +33,7 @@ impl TaskRepo {
         let span = self.time_index(task)?;
         env.start_time = span.start;
         env.end_time = span.end;
+        let env_id = env.id;
         let mut o = StoredObject::new(env, CONTENT_TYPE, task.to_value());
         o.original = original;
         // The store refuses empty index values, and an empty one says nothing anyway.
@@ -49,8 +50,16 @@ impl TaskRepo {
         if let Some(e) = span.end {
             put("end_utc", index_time(e));
         }
+        put(
+            ORDER_KEY,
+            span.due.map_or_else(|| NO_DUE.into(), index_time),
+        );
         if let Some(d) = span.due {
             put("due_utc", index_time(d));
+        }
+        put(ID_KEY, env_id.to_string());
+        if let Some(text) = &task.description {
+            put(DESCRIPTION, text.clone());
         }
         put("progress", task.effective_progress().to_string());
         if let Some(s) = task.task_status() {

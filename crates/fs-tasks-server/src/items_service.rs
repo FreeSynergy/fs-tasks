@@ -5,16 +5,18 @@
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{check_answer, check_intake, invalid_request, read_object_id, run_to_end};
+use fs_interfaces::rpc::{check_answer, check_intake, read_object_id, run_to_end};
 use fs_interfaces::tasks_capnp::items;
-use fs_tasks_core::contract::{read_filter, relation_from_wire};
+use fs_tasks_core::contract::relation_from_wire;
 use fs_tasks_core::{TaskItems, TaskQuery};
 
 use crate::errors::rpc_error;
-use crate::wire::{read_ids, read_task, required, write_page, write_report, write_task};
+use crate::paging::{read_page, write_page};
+use crate::wire::{filter_of, read_ids, read_task, required, write_report, write_task};
 
 pub(crate) struct ItemsImpl {
     pub(crate) items: Arc<dyn TaskItems>,
+    pub(crate) page_size: usize,
 }
 
 type Done = Result<(), capnp::Error>;
@@ -152,8 +154,9 @@ impl items::Server for ItemsImpl {
         params: items::ListParams,
         mut results: items::ListResults,
     ) -> Done {
-        let all = self.items.list().await.map_err(rpc_error)?;
-        write_page(results.get().init_page(), all, params.get()?.get_cursor())
+        let cursor = params.get()?.get_cursor()?.get_opaque()?;
+        let page = read_page(&*self.items, &TaskQuery::new(), cursor, self.page_size).await?;
+        write_page(results.get().init_page(), &page)
     }
 
     async fn query(
@@ -162,13 +165,10 @@ impl items::Server for ItemsImpl {
         mut results: items::QueryResults,
     ) -> Done {
         let p = params.get()?;
-        let filter = if p.has_filter() {
-            read_filter(p.get_filter()?).map_err(|e| invalid_request(e.extra))?
-        } else {
-            TaskQuery::new()
-        };
-        let all = self.items.query(&filter).await.map_err(rpc_error)?;
-        write_page(results.get().init_page(), all, p.get_cursor())
+        let filter = filter_of(&p)?;
+        let cursor = p.get_cursor()?.get_opaque()?;
+        let page = read_page(&*self.items, &filter, cursor, self.page_size).await?;
+        write_page(results.get().init_page(), &page)
     }
 
     async fn import_ics(

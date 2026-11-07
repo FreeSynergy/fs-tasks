@@ -54,7 +54,9 @@ pub fn write_filter(q: &TaskQuery, mut out: task_filter::Builder<'_>) {
     }
     out.reborrow()
         .set_progress(q.progress.as_deref().unwrap_or(""));
-    out.set_label(q.label.as_deref().unwrap_or(""));
+    out.reborrow().set_label(q.label.as_deref().unwrap_or(""));
+    out.reborrow().set_term(q.term.as_deref().unwrap_or(""));
+    out.set_open(q.open);
 }
 
 /// Read a `TaskFilter` into a [`TaskQuery`] (empty text = unset).
@@ -77,5 +79,7 @@ pub fn read_filter(f: task_filter::Reader<'_>) -> Result<TaskQuery> {
         due_to: millis(f.has_due_to(), f.get_due_to())?,
         progress: text(f.get_progress()?)?,
         label: text(f.get_label()?)?,
+        term: text(f.get_term()?)?,
+        open: f.get_open(),
     })
 }

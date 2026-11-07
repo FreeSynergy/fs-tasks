@@ -217,8 +217,8 @@ async fn ics_reports_every_field_and_comes_back_out() {
 async fn a_large_page_is_cut_by_weight_and_stays_reachable() {
     with_server(|root| async move {
         let items = items_of(&root).await;
-        let big = "x".repeat(6 * 1024 * 1024);
-        for i in 0..8 {
+        let big = "x".repeat(7 * 1024 * 1024);
+        for i in 0..4 {
             create(&items, &format!("big-{i}"), &big).await;
         }
         let (mut total, mut pages, mut cursor) = (0, 0, Vec::new());
@@ -234,8 +234,8 @@ async fn a_large_page_is_cut_by_weight_and_stays_reachable() {
                 break;
             }
         }
-        assert_eq!(total, 8);
-        assert!(pages > 1, "8 tasks of 12 MiB answer cannot be one page");
+        assert_eq!(total, 4);
+        assert!(pages > 1, "4 tasks of 14 MiB answer cannot be one page");
     })
     .await;
 }

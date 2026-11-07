@@ -37,12 +37,21 @@ where
     F: FnOnce(tasks::Client) -> Fut,
     Fut: Future<Output = ()>,
 {
+    with_tasks_server(TasksServer::new(items, feed), test).await;
+}
+
+/// A real server on a real socket in front of this root, as configured by the test.
+pub async fn with_tasks_server<F, Fut>(server: TasksServer, test: F)
+where
+    F: FnOnce(tasks::Client) -> Fut,
+    Fut: Future<Output = ()>,
+{
     let local = tokio::task::LocalSet::new();
     local
         .run_until(async {
             let dir = tempfile::tempdir().unwrap();
             let path = dir.path().join("tasks.sock");
-            let root = TasksServer::new(items, feed).into_client();
+            let root = server.into_client();
             let bound = bind_socket(&path).await.unwrap();
             let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
             let serving = tokio::task::spawn_local(serve(bound, root.client, async {
@@ -119,3 +128,7 @@ pub async fn read_now(items: &items::Client, id: Uuid) -> (u64, String) {
     let title = task_json(task)["title"].as_str().unwrap().to_string();
     (revision_of(task), title)
 }
+
+mod pages;
+#[allow(unused_imports)] // each test file uses a different subset
+pub use pages::*;

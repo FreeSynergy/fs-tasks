@@ -6,14 +6,16 @@
 use std::borrow::Cow;
 
 use fs_interfaces::rpc::{
-    DEFAULT_PAGE_SIZE, MAX_PAGE_BYTES, Page, capped, check_intake, envelope_weight, read_object_id,
-    write_envelope, write_object_id,
+    MAX_PAGE_BYTES, capped, check_intake, invalid_request, read_object_id, write_envelope,
+    write_object_id,
 };
+use fs_interfaces::tasks_capnp::items;
 use fs_interfaces::{common_capnp, tasks_capnp};
 use fs_store::ObjectId;
-use fs_tasks_core::{ImportReport, Revision, Task, TaskEntry};
+use fs_tasks_core::contract::read_filter;
+use fs_tasks_core::{ImportReport, Revision, Task, TaskEntry, TaskQuery};
 
-use crate::errors::invalid;
+use crate::errors::{invalid, rpc_error};
 
 fn count(n: usize) -> capnp::Result<u32> {
     u32::try_from(n).map_err(|_| capnp::Error::failed("list too long".into()))
@@ -31,36 +33,30 @@ pub(crate) fn read_task(text: capnp::text::Reader<'_>) -> capnp::Result<Task> {
     let text = text.to_str()?;
     check_intake(text.len())?;
     let value: serde_json::Value =
-        serde_json::from_str(text).map_err(|e| invalid(e.to_string()))?;
-    Task::from_value(value).map_err(|e| invalid(e.to_string()))
+        serde_json::from_str(text).map_err(|e| invalid(e.to_string(), &e.to_string()))?;
+    // The core says what is wrong, issue by issue; a text that is no task at all is one issue.
+    Task::from_value(value).map_err(|e| match fs_tasks_core::Error::from(e) {
+        fs_tasks_core::Error::Json(inner) => invalid(inner.to_string(), &inner.to_string()),
+        other => rpc_error(other),
+    })
+}
+
+/// The filter of a `query` request; none given = no restriction.
+pub(crate) fn filter_of(p: &items::query_params::Reader<'_>) -> capnp::Result<TaskQuery> {
+    if !p.has_filter() {
+        return Ok(TaskQuery::new());
+    }
+    read_filter(p.get_filter()?).map_err(|e| invalid_request(e.extra))
 }
 
 /// A required text of a request; empty is refused here, so it never reaches the store as an index.
 pub(crate) fn required<'a>(text: capnp::text::Reader<'a>, what: &str) -> capnp::Result<&'a str> {
     let text = text.to_str()?;
     if text.is_empty() {
-        return Err(invalid(format!("{what} must not be empty")));
+        return Err(invalid(format!("{what} must not be empty"), what));
     }
     check_intake(text.len())?;
     Ok(text)
-}
-
-/// Cut the page at `cursor` and write it.
-pub(crate) fn write_page(
-    mut out: tasks_capnp::task_page::Builder<'_>,
-    all: Vec<TaskEntry>,
-    cursor: capnp::Result<common_capnp::cursor::Reader<'_>>,
-) -> capnp::Result<()> {
-    let opaque = cursor?.get_opaque()?;
-    let page = Page::of_weighted(all, opaque, DEFAULT_PAGE_SIZE, |e: &TaskEntry| {
-        e.task.to_value().to_string().len() + envelope_weight(&e.envelope)
-    })?;
-    let mut items = out.reborrow().init_items(count(page.items.len())?);
-    for (i, entry) in (0u32..).zip(&page.items) {
-        write_task(items.reborrow().get(i), entry);
-    }
-    out.init_next().set_opaque(&page.next);
-    Ok(())
 }
 
 /// What one id of a report weighs, and one text beyond its own bytes.

@@ -6,8 +6,8 @@
 
 use std::sync::Arc;
 
-use fs_store::Store;
 use fs_store::traits::{ObjectQuery, ObjectRepository};
+use fs_store::{Store, StoreInfo};
 
 use super::backend::StoreAdapter;
 use crate::interface::Registry;
@@ -18,6 +18,7 @@ use crate::time::Zone;
 pub struct TaskRepo {
     pub(crate) objects: Arc<dyn ObjectRepository>,
     pub(crate) queries: Arc<dyn ObjectQuery>,
+    pub(crate) info: Option<Arc<dyn StoreInfo>>,
     pub(crate) feed: Arc<Registry>,
     pub(crate) actor: String,
     pub(crate) instance: String,
@@ -31,7 +32,7 @@ impl TaskRepo {
     /// (written to the log).
     pub fn new(store: Arc<dyn Store>, actor: impl Into<String>) -> Self {
         let adapter = Arc::new(StoreAdapter(store));
-        Self::with_backend(adapter.clone(), adapter, actor)
+        Self::with_backend(adapter.clone(), adapter.clone(), actor).with_info(adapter)
     }
 
     /// Tasks over the narrow store traits only (a remote or fake backend can supply them).
@@ -43,12 +44,20 @@ impl TaskRepo {
         Self {
             objects,
             queries,
+            info: None,
             feed: Arc::default(),
             actor: actor.into(),
             instance: "local.invalid".into(),
             floating: Zone::Utc,
             writes: Arc::default(),
         }
+    }
+
+    /// Say whose store this is: [`TaskItems::identity`](crate::TaskItems::identity) answers from it.
+    #[must_use]
+    pub fn with_info(mut self, info: Arc<dyn StoreInfo>) -> Self {
+        self.info = Some(info);
+        self
     }
 
     /// Instance domain for IRIs `https://<instance>/tasks/<id>` (ADR 0027).

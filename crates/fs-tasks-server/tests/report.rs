@@ -9,7 +9,9 @@ use common::{ME, items_of, with_provider};
 use fs_interfaces::rpc::MAX_PAGE_BYTES;
 use fs_interfaces::{Capabilities, common_capnp};
 use fs_store::{ObjectId, Store, TursoStore};
-use fs_tasks_core::{ImportReport, Result, TaskEntry, TaskItems, TaskQuery, TaskRepo};
+use fs_tasks_core::{
+    ImportReport, Place, Result, TaskEntry, TaskItems, TaskPage, TaskQuery, TaskRepo,
+};
 
 const MIB: usize = 1024 * 1024;
 
@@ -32,6 +34,9 @@ impl TaskItems for Talkative {
     }
     async fn query(&self, _: &TaskQuery) -> Result<Vec<TaskEntry>> {
         Ok(vec![])
+    }
+    async fn page(&self, _: &TaskQuery, _: Option<&Place>, _: usize) -> Result<TaskPage> {
+        Ok(TaskPage::default())
     }
     async fn import_ics(&self, _: &str) -> Result<ImportReport> {
         Ok(self.0.clone())
@@ -114,5 +119,24 @@ async fn a_report_that_fits_is_untouched_and_one_long_text_is_cut() {
         assert_eq!(notes.len(), 1);
         assert!(notes[0].len() <= 64 * 1024 && notes[0].len() > 60 * 1024);
     })
+    .await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn a_provider_without_a_store_names_no_instance() {
+    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let feed = Arc::new(TaskRepo::new(store, ME));
+    with_provider(
+        Arc::new(Talkative(ImportReport::default())),
+        feed,
+        |root| async move {
+            let answer = root.support_report_request().send().promise.await.unwrap();
+            let report = answer.get().unwrap().get_report().unwrap();
+            assert_eq!(
+                fs_interfaces::rpc::read_uuid(report.get_instance().unwrap()),
+                None
+            );
+        },
+    )
     .await;
 }

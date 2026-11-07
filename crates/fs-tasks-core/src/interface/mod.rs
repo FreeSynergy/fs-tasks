@@ -6,8 +6,10 @@
 
 mod feed;
 mod items;
+mod page;
 mod types;
 
 pub use feed::{Registry, Subscription, TaskChange, TaskFeed, TaskListener};
 pub use items::{CAPABILITIES, TaskItems};
+pub use page::{Place, Placed, TaskPage};
 pub use types::{ImportReport, TaskEntry, TaskQuery};

@@ -7,13 +7,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use fs_interfaces::Capabilities;
-use fs_store::ObjectId;
+use fs_store::{ObjectId, StoreId};
 
 use super::handle::TaskRepo;
 use crate::error::{Error, Result};
 use crate::interface::{
-    CAPABILITIES, ImportReport, Subscription, TaskEntry, TaskFeed, TaskItems, TaskListener,
-    TaskQuery,
+    CAPABILITIES, ImportReport, Place, Subscription, TaskEntry, TaskFeed, TaskItems, TaskListener,
+    TaskPage, TaskQuery,
 };
 use crate::model::{Relation, Task};
 use crate::revision::Revision;
@@ -22,6 +22,9 @@ use crate::revision::Revision;
 impl TaskItems for TaskRepo {
     fn capabilities(&self) -> Capabilities {
         capabilities()
+    }
+    fn identity(&self) -> Option<StoreId> {
+        self.info.as_ref().map(|info| info.identity())
     }
     async fn create(&self, task: Task) -> Result<TaskEntry> {
         let _one_at_a_time = self.writes.lock().await;
@@ -81,6 +84,14 @@ impl TaskItems for TaskRepo {
     }
     async fn query(&self, query: &TaskQuery) -> Result<Vec<TaskEntry>> {
         self.query_inner(query).await
+    }
+    async fn page(
+        &self,
+        query: &TaskQuery,
+        after: Option<&Place>,
+        size: usize,
+    ) -> Result<TaskPage> {
+        self.page_inner(query, after, size).await
     }
     async fn import_ics(&self, text: &str) -> Result<ImportReport> {
         let _one_at_a_time = self.writes.lock().await;

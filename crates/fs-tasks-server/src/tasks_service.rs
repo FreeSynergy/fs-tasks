@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use capnp_rpc::new_client;
 use fs_interfaces::Unsupported;
-use fs_interfaces::rpc::unsupported;
+use fs_interfaces::rpc::{DEFAULT_PAGE_SIZE, unsupported, write_uuid};
 use fs_interfaces::tasks_capnp::tasks;
 use fs_tasks_core::contract::CONTRACT_VERSION;
 use fs_tasks_core::{TaskFeed, TaskItems};
@@ -20,12 +20,24 @@ use crate::items_service::ItemsImpl;
 pub struct TasksServer {
     items: Arc<dyn TaskItems>,
     feed: Arc<dyn TaskFeed>,
+    page_size: usize,
 }
 
 impl TasksServer {
     /// Serve this provider.
     pub fn new(items: Arc<dyn TaskItems>, feed: Arc<dyn TaskFeed>) -> Self {
-        Self { items, feed }
+        Self {
+            items,
+            feed,
+            page_size: DEFAULT_PAGE_SIZE,
+        }
+    }
+
+    /// Cut pages at `size` items instead of the default (a test, or a small device).
+    #[must_use]
+    pub fn with_page_size(mut self, size: usize) -> Self {
+        self.page_size = size.max(1);
+        self
     }
 
     /// The capability to hand to `fs_interfaces::rpc::serve`.
@@ -55,6 +67,7 @@ impl tasks::Server for TasksServer {
     ) -> Done {
         let items = ItemsImpl {
             items: self.items.clone(),
+            page_size: self.page_size,
         };
         results.get().set_items(new_client(items));
         Ok(())
@@ -85,7 +98,13 @@ impl tasks::Server for TasksServer {
         mut results: tasks::SupportReportResults,
     ) -> Done {
         let report = self.items.capabilities();
-        report.write(CONTRACT_VERSION, results.get().init_report());
+        let mut out = results.get().init_report();
+        report.write(CONTRACT_VERSION, out.reborrow());
+        // The store's id, as the store says it: empty where the provider has no store.
+        write_uuid(
+            out.init_instance(),
+            self.items.identity().map(|id| id.as_uuid()),
+        );
         Ok(())
     }
 }
