@@ -1,16 +1,17 @@
 //! `TaskItems` over the socket: the methods the app uses.
 //!
-//! Pattern: Adapter — each method is one call of `Items`. `assign`, `relate` and `label` are not
+//! Pattern: Adapter — each method is one call of `Items` (`edit_checked` is `editIf`). `assign`, `relate` and `label` are not
 //! overridden, so they answer the `Unsupported` of the trait's defaults (ADR 0045); `capabilities()`
 //! says the same (`peer.rs`), and `DESIGN.md` lists them.
 
 use async_trait::async_trait;
 use fs_interfaces::Capabilities;
 use fs_store::ObjectId;
-use fs_tasks_core::{ImportReport, Result, Task, TaskEntry, TaskItems, TaskQuery};
+use fs_tasks_core::{ImportReport, Result, Revision, Task, TaskEntry, TaskItems, TaskQuery};
 
 use crate::RpcTasks;
-use crate::calls;
+use crate::revised::{Revised, RevisedTasks};
+use crate::{calls, calls_revised};
 
 #[async_trait]
 impl TaskItems for RpcTasks {
@@ -52,6 +53,19 @@ impl TaskItems for RpcTasks {
             .await
     }
 
+    async fn edit_checked(
+        &self,
+        id: ObjectId,
+        expected: Revision,
+        task: Task,
+    ) -> Result<TaskEntry> {
+        let task = calls::task_text(&task);
+        self.call(
+            move |r| async move { calls_revised::edit_if(&r.items, id, expected, task).await },
+        )
+        .await
+    }
+
     async fn delete(&self, id: ObjectId) -> Result<()> {
         self.call(move |r| async move { calls::delete(&r.items, id).await })
             .await
@@ -66,6 +80,19 @@ impl TaskItems for RpcTasks {
     async fn export_ics(&self, ids: &[ObjectId]) -> Result<String> {
         let ids = ids.to_vec();
         self.call(move |r| async move { calls::export(&r.items, ids).await })
+            .await
+    }
+}
+
+#[async_trait]
+impl RevisedTasks for RpcTasks {
+    async fn get_revised(&self, id: ObjectId) -> Result<Option<Revised>> {
+        self.call(move |r| async move { calls_revised::get_revised(&r.items, id).await })
+            .await
+    }
+
+    async fn list_revised(&self) -> Result<Vec<Revised>> {
+        self.call(move |r| async move { calls_revised::list_revised(&r.items).await })
             .await
     }
 }

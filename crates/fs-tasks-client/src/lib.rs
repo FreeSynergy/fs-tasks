@@ -7,7 +7,7 @@
 //!
 //! Interface status: draft (ADR 0045), as the contract.
 //!
-//! Pattern: Facade — this file only declares modules and re-exports the public API.
+//! Pattern: none — this file only declares modules and re-exports the public API (no behaviour).
 
 #![deny(missing_docs)]
 #![warn(clippy::pedantic)]
@@ -18,6 +18,8 @@
 )]
 
 mod calls;
+mod calls_revised;
+mod detail;
 mod items_impl;
 mod peer;
 mod problems;

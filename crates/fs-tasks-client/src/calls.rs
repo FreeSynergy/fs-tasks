@@ -11,7 +11,8 @@ use fs_tasks_core::contract::write_filter;
 use fs_tasks_core::{ImportReport, Result, Task, TaskEntry, TaskQuery};
 
 use crate::problems::{Subject, error_of};
-use crate::read::{entry, report, unreadable};
+use crate::read::{entry, report, revised, unreadable};
+use crate::revised::Revised;
 
 /// The JSON text of a task, as the server reads it.
 pub(crate) fn task_text(task: &Task) -> String {
@@ -99,16 +100,20 @@ pub(crate) async fn get_by_uid(c: &Client, uid: String) -> Result<Option<TaskEnt
 /// `list`, every page until the cursor is empty. A page that is empty but names a next one cannot
 /// be followed to an end, so it is an error instead of a silently short list.
 pub(crate) async fn list(c: &Client) -> Result<Vec<TaskEntry>> {
-    pages(c, None).await
+    Ok(pages(c, None).await?.into_iter().map(|r| r.entry).collect())
 }
 
 /// `query`, every page, like `list`.
 pub(crate) async fn query(c: &Client, filter: TaskQuery) -> Result<Vec<TaskEntry>> {
-    pages(c, Some(filter)).await
+    Ok(pages(c, Some(filter))
+        .await?
+        .into_iter()
+        .map(|r| r.entry)
+        .collect())
 }
 
-async fn pages(c: &Client, filter: Option<TaskQuery>) -> Result<Vec<TaskEntry>> {
-    let mut found: Vec<TaskEntry> = Vec::new();
+pub(crate) async fn pages(c: &Client, filter: Option<TaskQuery>) -> Result<Vec<Revised>> {
+    let mut found: Vec<Revised> = Vec::new();
     let mut cursor: Vec<u8> = Vec::new();
     loop {
         let before = found.len();
@@ -139,10 +144,10 @@ async fn pages(c: &Client, filter: Option<TaskQuery>) -> Result<Vec<TaskEntry>> 
 }
 
 /// The entries of one page onto `found`; answers the cursor of the next page.
-fn take(page: capnp::Result<task_page::Reader<'_>>, found: &mut Vec<TaskEntry>) -> Result<Vec<u8>> {
+fn take(page: capnp::Result<task_page::Reader<'_>>, found: &mut Vec<Revised>) -> Result<Vec<u8>> {
     let page = page.map_err(unreadable)?;
     for item in page.get_items().map_err(unreadable)? {
-        found.push(entry(item)?);
+        found.push(revised(item)?);
     }
     Ok(page
         .get_next()

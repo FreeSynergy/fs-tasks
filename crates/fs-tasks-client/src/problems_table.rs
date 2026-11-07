@@ -1,8 +1,8 @@
 //! The table of problems, read back: every type of the server and the variant it must become.
 //!
-//! Pattern: Registry — the map of problem type to the variant it becomes is what is tested here, row
-//! by row, for the types the real server cannot be made to send (too large, a text with `; ` inside);
-//! the others are covered over the real socket.
+//! Pattern: none — a test table: the map of problem type to the variant it becomes, row by row, for the
+//! types the real server cannot be made to send (too large, a text with `; ` inside); the others are
+//! covered over the real socket.
 
 use fs_interfaces::rpc::Problem;
 use fs_store::{Error as StoreError, ObjectId};
@@ -30,6 +30,8 @@ fn the_table_of_the_server_comes_back() {
         matches!(&e, Error::Conflict(t) if t == "uid taken"),
         "{e:?}"
     );
+    let e = said("tasks/conflict", 409, "conflict: stale", Subject::Task(id));
+    assert!(matches!(e, Error::Changed(i) if i == id), "{e:?}");
     let e = said("tasks/not-found", 404, "something", Subject::Task(id));
     assert!(matches!(e, Error::NotFound(i) if i == id), "{e:?}");
     let e = said(

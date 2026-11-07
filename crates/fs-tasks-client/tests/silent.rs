@@ -1,6 +1,6 @@
 //! A server that says nothing: the wait ends, with an error that names the deadline.
 //!
-//! Pattern: Integration tests against the trait; the silent listener and the provider that never
+//! Integration tests against the trait; the silent listener and the provider that never
 //! answers are the only things here that are not the real server, because the real one answers.
 
 mod common;

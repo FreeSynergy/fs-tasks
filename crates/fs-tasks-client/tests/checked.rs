@@ -52,7 +52,11 @@ async fn two_writers_with_the_same_revision_have_one_winner() {
         one.edit_checked(id, revision, a),
         two.edit_checked(id, revision, b)
     );
-    assert_eq!(u8::from(ra.is_ok()) + u8::from(rb.is_ok()), 1, "{ra:?} {rb:?}");
+    assert_eq!(
+        u8::from(ra.is_ok()) + u8::from(rb.is_ok()),
+        1,
+        "{ra:?} {rb:?}"
+    );
     let loser = if ra.is_ok() { rb } else { ra };
     assert!(matches!(loser, Err(Error::Changed(_))), "{loser:?}");
 }

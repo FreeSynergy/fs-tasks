@@ -6,7 +6,9 @@
 use fs_interfaces::rpc::{read_envelope, read_object_id};
 use fs_interfaces::tasks_capnp::{import_report, task};
 use fs_store::Error as StoreError;
-use fs_tasks_core::{Error, ImportReport, Result, Task, TaskEntry};
+use fs_tasks_core::{Error, ImportReport, Result, Revision, Task, TaskEntry};
+
+use crate::revised::Revised;
 
 /// A reply that does not read.
 pub(crate) fn unreadable(e: impl std::fmt::Display) -> Error {
@@ -25,13 +27,21 @@ fn text(t: capnp::Result<capnp::text::Reader<'_>>) -> Result<String> {
 
 /// A task: the envelope as sent, the JSCalendar text parsed as the task. The id is the envelope's.
 pub(crate) fn entry(r: task::Reader<'_>) -> Result<TaskEntry> {
+    revised(r).map(|read| read.entry)
+}
+
+/// A task and the revision the server gave it (`Task.revision`), handed on as it came.
+pub(crate) fn revised(r: task::Reader<'_>) -> Result<Revised> {
     let envelope = wire(r.get_envelope().and_then(read_envelope))?;
     let value = serde_json::from_str(&text(r.get_jscalendar())?).map_err(unreadable)?;
     let task = Task::from_value(value).map_err(unreadable)?;
-    Ok(TaskEntry {
-        id: envelope.id,
-        task,
-        envelope,
+    Ok(Revised {
+        revision: Revision::from(r.get_revision()),
+        entry: TaskEntry {
+            id: envelope.id,
+            task,
+            envelope,
+        },
     })
 }
 
