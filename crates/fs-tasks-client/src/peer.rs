@@ -2,21 +2,27 @@
 //!
 //! Pattern: Adapter — `TaskItems` of the core in front of the Cap'n Proto client of `tasks.capnp`.
 //! Why: the frontend keeps depending on the trait it already uses, and only the provider behind it
-//! changes. The thread of the connection is in `worker.rs`; the calls in `calls.rs`; the trait in
+//! changes. The thread of the connection is the shared `Worker` of `fs-interfaces` (`remote.rs` says what it fetches at connect); the calls in `calls.rs`; the trait in
 //! `items_impl.rs`. Interface first (ADR 0043): `connect` was written down before the tests.
 
 use std::future::Future;
 use std::io;
 use std::path::Path;
+use std::time::Duration;
 
 use fs_interfaces::Capabilities;
 use fs_store::Error as StoreError;
 use fs_tasks_core::{Error, Result};
-use tokio::sync::oneshot;
 
-use fs_interfaces::rpc::client::Timeouts;
+use fs_interfaces::rpc::client::{Timeouts, Worker};
 
-use crate::worker::{Job, Remote, Worker, start};
+use crate::remote::TasksRemote;
+
+/// Until the deadlines are taken from the caller (next commit), a connection waits as before.
+const NO_DEADLINE: Timeouts = Timeouts {
+    connect: Duration::from_secs(u32::MAX as u64),
+    call: Duration::from_secs(u32::MAX as u64),
+};
 
 /// What the server can do and this client does not call: reported as not possible, with the reason,
 /// so `capabilities()` never promises more than the methods of `RpcTasks` keep.
@@ -50,7 +56,7 @@ fn offered(reported: &Capabilities) -> Capabilities {
 /// Calls from any thread are fine; they queue for the one thread that owns the connection and
 /// overlap there. Dropping it closes the connection.
 pub struct RpcTasks {
-    worker: Worker,
+    worker: Worker<TasksRemote>,
     capabilities: Capabilities,
 }
 
@@ -71,7 +77,7 @@ impl RpcTasks {
     /// # Errors
     /// As for [`connect`](Self::connect), and the server did not answer in time.
     pub fn connect_with(socket: &Path, _timeouts: Timeouts) -> io::Result<Self> {
-        let (worker, reported) = start(socket.to_path_buf())?;
+        let (worker, reported) = Worker::start("tasks", socket, NO_DEADLINE)?;
         Ok(Self {
             worker,
             capabilities: offered(&reported),
@@ -88,21 +94,12 @@ impl RpcTasks {
     pub(crate) async fn call<T, F, Fut>(&self, work: F) -> Result<T>
     where
         T: Send + 'static,
-        F: FnOnce(Remote) -> Fut + Send + 'static,
+        F: FnOnce(TasksRemote) -> Fut + Send + 'static,
         Fut: Future<Output = Result<T>> + 'static,
     {
-        let gone = || {
-            Error::Store(StoreError::Backend(
-                "tasks server: the connection is gone".into(),
-            ))
-        };
-        let (reply, answer) = oneshot::channel();
-        let job: Job = Box::new(move |remote| {
-            Box::pin(async move {
-                let _ = reply.send(work(remote).await);
-            })
-        });
-        self.worker.jobs.send(job).map_err(|_| gone())?;
-        answer.await.map_err(|_| gone())?
+        self.worker
+            .call(work)
+            .await
+            .map_err(|fault| Error::Store(StoreError::Backend(fault.to_string())))?
     }
 }
