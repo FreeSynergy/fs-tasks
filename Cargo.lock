@@ -1468,8 +1468,8 @@ dependencies = [
 
 [[package]]
 name = "fs-interfaces"
-version = "0.32.0"
-source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.32.0#7561c557a45185b9edbc4ccc098c7f84ff58b5d6"
+version = "0.34.0"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.34.0#a6607cf864b4604483a7b8cde39f896367e81272"
 dependencies = [
  "capnp",
  "capnp-rpc",

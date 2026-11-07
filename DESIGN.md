@@ -13,7 +13,7 @@ independent consumers have tested it, then 1.0, then only version jumps.) The co
 
 ## State
 
-Version 0.5.3 (not tagged); the client `fs-tasks-client` and the app over the socket are new on branch `gui` (unreleased). Built against `fs-interfaces` v0.32.0, `fs-store` v0.2.0 and `fs-jscalendar` v0.1.3 by git tag; there is no `[patch]` in this workspace. Version 0.5.0: `fs-tasks-server`, the contract over a Unix socket; `TaskEntry` carries its envelope. Before, in 0.4.0: `TaskItems` follows the provider rule (ADR 0045): every method of `Items` in `tasks.capnp`, defaults answering `Unsupported`, `capabilities()` returns `fs_interfaces::Capabilities`; `fs-interfaces` v0.4.0 is a normal dependency (feature `contract` keeps the generated-code re-export). Before, in 0.3.0: the shared JSCalendar parts (time, rule, participants, upgrade, shared validation, iCalendar conversion) come from [`fs-jscalendar`](https://github.com/FreeSynergy/fs-jscalendar) v0.1.0 instead of being copied. `Task` itself stays here (ADR 0050).
+Version 0.5.3 (not tagged); the client `fs-tasks-client` and the app over the socket are new on branch `gui` (unreleased). Built against `fs-interfaces` v0.34.0, `fs-store` v0.2.0 and `fs-jscalendar` v0.1.3 by git tag; there is no `[patch]` in this workspace. Version 0.5.0: `fs-tasks-server`, the contract over a Unix socket; `TaskEntry` carries its envelope. Before, in 0.4.0: `TaskItems` follows the provider rule (ADR 0045): every method of `Items` in `tasks.capnp`, defaults answering `Unsupported`, `capabilities()` returns `fs_interfaces::Capabilities`; `fs-interfaces` v0.4.0 is a normal dependency (feature `contract` keeps the generated-code re-export). Before, in 0.3.0: the shared JSCalendar parts (time, rule, participants, upgrade, shared validation, iCalendar conversion) come from [`fs-jscalendar`](https://github.com/FreeSynergy/fs-jscalendar) v0.1.0 instead of being copied. `Task` itself stays here (ADR 0050).
 
 | Area | State |
 |---|---|
@@ -147,7 +147,7 @@ column -> status mapping and ordering arrives with boards.
 
 ## Crates
 
-* `fs-interfaces` (git tag v0.32.0; feature `rpc` in server, client and the app's tests): contract, `Capabilities`, `Unsupported`, `rpc`.
+* `fs-interfaces` (git tag v0.34.0; feature `rpc` in server, client and the app's tests): contract, `Capabilities`, `Unsupported`, `rpc`.
 * `fs-tasks-client` (this repo): used by `fs-tasks-app`; `fs-tasks-server` only in the tests of both.
 * Frontend only: `fs-components-app`, `fs-components-workbenches` (git `rev`, provisional until a tag exists).
 * `fs-store` (git tag v0.2.0), `fs-jscalendar` (git tag v0.1.0; it also holds the exact pin of `calcard`).
