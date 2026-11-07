@@ -10,6 +10,7 @@
 // The generated `Server` traits are async for every method, also those that never wait.
 #![allow(clippy::missing_errors_doc, clippy::unused_async_trait_impl)]
 
+mod edit_if;
 mod errors;
 mod feed;
 mod items_service;

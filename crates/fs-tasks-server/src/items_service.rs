@@ -51,6 +51,14 @@ impl items::Server for ItemsImpl {
         Ok(())
     }
 
+    async fn edit_if(
+        self: Rc<Self>,
+        params: items::EditIfParams,
+        results: items::EditIfResults,
+    ) -> Done {
+        crate::edit_if::edit_if(&self.items, params, results).await
+    }
+
     async fn assign(
         self: Rc<Self>,
         params: items::AssignParams,

@@ -11,7 +11,7 @@ use fs_interfaces::rpc::{
 };
 use fs_interfaces::{common_capnp, tasks_capnp};
 use fs_store::ObjectId;
-use fs_tasks_core::{ImportReport, Task, TaskEntry};
+use fs_tasks_core::{ImportReport, Revision, Task, TaskEntry};
 
 use crate::errors::invalid;
 
@@ -23,6 +23,7 @@ fn count(n: usize) -> capnp::Result<u32> {
 pub(crate) fn write_task(mut out: tasks_capnp::task::Builder<'_>, entry: &TaskEntry) {
     write_envelope(out.reborrow().init_envelope(), &entry.envelope);
     out.set_jscalendar(entry.task.to_value().to_string().as_str());
+    out.set_revision(Revision::of(entry).get());
 }
 
 /// Read the JSCalendar text of a request.

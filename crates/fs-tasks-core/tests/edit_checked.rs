@@ -26,7 +26,11 @@ async fn the_revision_read_writes_and_the_next_one_differs() {
         .await
         .unwrap();
     assert_eq!(second.envelope.name, "Plan more");
-    assert_ne!(Revision::of(&second), seen, "every write changes the revision");
+    assert_ne!(
+        Revision::of(&second),
+        seen,
+        "every write changes the revision"
+    );
     let read = r.get(first.id).await.unwrap().unwrap();
     assert_eq!(Revision::of(&read), Revision::of(&second));
 }
@@ -36,7 +40,10 @@ async fn a_wrong_revision_writes_nothing_and_does_not_name_the_right_one() {
     let (r, store) = setup().await;
     let first = r.create(Task::new("Plan")).await.unwrap();
     let stale = Revision::of(&first);
-    let current = r.edit(first.id, titled(&first.task, "Plan B")).await.unwrap();
+    let current = r
+        .edit(first.id, titled(&first.task, "Plan B"))
+        .await
+        .unwrap();
     let before = store.get(first.id).await.unwrap().unwrap();
 
     let err = r
@@ -46,12 +53,18 @@ async fn a_wrong_revision_writes_nothing_and_does_not_name_the_right_one() {
     assert!(matches!(err, Error::Changed(id) if id == first.id), "{err}");
     let text = err.to_string();
     assert!(text.starts_with("conflict:"), "{text}");
-    assert!(!text.contains(&Revision::of(&current).to_string()), "{text}");
+    assert!(
+        !text.contains(&Revision::of(&current).to_string()),
+        "{text}"
+    );
 
     let after = store.get(first.id).await.unwrap().unwrap();
     assert_eq!(after.content, before.content, "nothing was written");
     assert_eq!(after.envelope.updated, before.envelope.updated);
-    assert_eq!(Revision::of(&r.get(first.id).await.unwrap().unwrap()), Revision::of(&current));
+    assert_eq!(
+        Revision::of(&r.get(first.id).await.unwrap().unwrap()),
+        Revision::of(&current)
+    );
 }
 
 #[tokio::test]
