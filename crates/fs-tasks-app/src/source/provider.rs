@@ -73,7 +73,11 @@ impl TaskSource for TaskAdapter {
 
     fn save(&self, key: &str, draft: &TaskDraft) -> Result<(), SourceError> {
         let expected = revision_in(draft.revision.as_deref())?;
-        let entry = self.entry(key)?.entry;
+        let read = self.entry(key)?;
+        if read.revision != expected {
+            return Err(SourceError::conflict(say::CHANGED_SINCE));
+        }
+        let entry = read.entry;
         let mut task = entry.task;
         apply_draft(&mut task, draft)?;
         self.runtime
@@ -104,7 +108,11 @@ impl TaskSource for TaskAdapter {
 
     fn move_to(&self, key: &str, column: &str, revision: Option<&str>) -> Result<(), SourceError> {
         let expected = revision_in(revision)?;
-        let entry = self.entry(key)?.entry;
+        let read = self.entry(key)?;
+        if read.revision != expected {
+            return Err(SourceError::conflict(say::CHANGED_SINCE));
+        }
+        let entry = read.entry;
         if is_series(&entry.task) {
             return Err(SourceError::failed(say::SERIES_MOVE));
         }

@@ -1,7 +1,8 @@
 //! A form written back onto a task.
 //!
-//! Pattern: Command — only the fields that differ from what the form started with are applied.
-//! Everything else on the task stays untouched: properties the form does not show, `extra`,
+//! Pattern: none — one function and its helpers for one concept; there is no list of operations and no
+//! undo here, so Command would be a name only. Only the fields that differ from what the form started
+//! with are applied. Everything else on the task stays untouched: properties the form does not show, `extra`,
 //! participants, relations, the recurrence rule and its overrides. A field the form does not know, or a
 //! change to the due date or the status of a series, is refused rather than guessed at; nothing is
 //! changed then. An unchanged status is never written, so a status the core only computes stays that.

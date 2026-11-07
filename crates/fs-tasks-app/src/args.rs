@@ -98,17 +98,3 @@ fn view(text: &str) -> Result<TaskView, String> {
         other => Err(fill(cli::BAD_VIEW, &[("given", other)])),
     }
 }
-
-/// The help text.
-pub const HELP: &str = "fs-tasks-app: the tasks program
-
-  --socket <path>    Unix socket of a running `fs-tasks-server --socket <path>` (required)
-  --import <file>    import an iCalendar file first; tasks already known are skipped, never replaced
-  --export <file>    write all tasks to a new iCalendar file and stop; an existing file is not
-                     replaced, tasks marked sensitive are left out and named
-  --export-sensitive <uid>
-                     release this task marked sensitive for --export; repeat for each task
-  --snapshot <png>   draw a picture instead of opening a window
-  --size <WxH>       window or picture size (default 1300x800)
-  --view <list|status>
-                     the view to start with (default list)";

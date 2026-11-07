@@ -2,8 +2,6 @@
 //! write is not overwritten. The server, store and client are the real ones; only
 //! `RevisedTasks::get_revised` is decorated, to let someone else write at the moment between read and
 //! write. The control run has the same decorator with nobody interfering and must save.
-//!
-//! Pattern: Decorator over the real client, in an integration test.
 
 mod common;
 
@@ -107,4 +105,20 @@ fn control_without_the_second_writer_the_same_move_is_written() {
     let revision = w.adapter.read(&key).unwrap().revision;
     run(|| source.move_to(&key, "in-process", revision.as_deref())).unwrap();
     assert_eq!(w.json(&key)["progress"], "in-process");
+}
+
+#[test]
+fn a_task_changed_since_the_draft_is_a_conflict_before_the_form_is_applied() {
+    let w = World::new();
+    let key = w.plain("Ada");
+    let mut draft = w.adapter.draft(&key).unwrap();
+    let title = draft.fields.iter_mut().find(|f| f.key == "title").unwrap();
+    title.value = String::new();
+    let id: ObjectId = key.parse().unwrap();
+    let mut theirs = w.json(&key);
+    theirs["description"] = "theirs".into();
+    let theirs = fs_tasks_core::Task::from_value(theirs).unwrap();
+    w.runtime.block_on(w.tasks.edit(id, theirs)).unwrap();
+    let error = run(|| w.adapter.save(&key, &draft)).expect_err("the task has changed");
+    assert!(error.message.contains("Someone else"), "{}", error.message);
 }

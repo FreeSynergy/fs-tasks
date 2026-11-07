@@ -22,4 +22,4 @@ pub use import::{ImportSummary, import_file};
 pub use source::{TaskAdapter, apply_draft, is_marked, is_series};
 pub use surface::{TasksScreen, app_widget, screen_widget};
 pub use transfer::{ExportReport, export_all};
-pub use words::{cannot_reach, labels, no_socket, not_exported, wrote};
+pub use words::{HELP, cannot_reach, labels, no_socket, not_exported, wrote};

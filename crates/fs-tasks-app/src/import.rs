@@ -1,7 +1,7 @@
 //! iCalendar in: the import by a path from the command line.
 //!
-//! Pattern: Template method over the contract — fixed flow: read the file, import, report. Nothing is
-//! hidden: what failed or was skipped is in the summary.
+//! Pattern: none — plain functions with a fixed flow (read the file, import, report); there is no trait
+//! with provided methods, so Template method would be a name only. Nothing is hidden: what failed or was skipped is in the summary.
 
 use std::path::Path;
 

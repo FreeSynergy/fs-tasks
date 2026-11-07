@@ -1,8 +1,8 @@
 //! Shared set-up of the tests: the real server on a real Unix socket over the real store, on a
 //! thread of its own, and the client connected to it. Nothing here stands in for either.
 //!
-//! Pattern: Facade over the set-up; `ReadOnly` is a Decorator over the real repository that offers
-//! only the reads, so the real server answers `Unsupported` for every write from the provider rule.
+//! `ReadOnly` wraps the real repository and offers only the reads, so the real server answers
+//! `Unsupported` for every write from the provider rule.
 #![allow(dead_code)] // each test file uses a different subset
 
 use std::path::PathBuf;

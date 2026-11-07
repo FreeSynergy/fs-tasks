@@ -1,7 +1,7 @@
 //! iCalendar out: the export by a path from the command line.
 //!
-//! Pattern: Template method over the contract — fixed flow: read, choose, export, report. Nothing is
-//! hidden: what failed or was left out is in the report.
+//! Pattern: none — plain functions with a fixed flow (read, choose, export, report); there is no trait
+//! with provided methods, so Template method would be a name only. Nothing is hidden: what failed or was left out is in the report.
 
 use std::path::Path;
 

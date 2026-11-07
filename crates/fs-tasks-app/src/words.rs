@@ -9,11 +9,26 @@ use fs_components_workbenches::tasks::TaskLabels;
 /// A sentence with its named placeholders (`{name}`) filled from `values`; the sentence stays whole,
 /// so a language may put the parts in another order.
 pub(crate) fn fill(sentence: &str, values: &[(&str, &str)]) -> String {
-    values
-        .iter()
-        .fold(sentence.to_string(), |text, (name, value)| {
-            text.replace(&format!("{{{name}}}"), value)
-        })
+    let mut out = String::with_capacity(sentence.len());
+    let mut rest = sentence;
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let named = rest[open + 1..].split_once('}').and_then(|(name, _)| {
+            values
+                .iter()
+                .find(|(given, _)| *given == name)
+                .map(|(_, value)| (name.len(), *value))
+        });
+        if let Some((len, value)) = named {
+            out.push_str(value);
+            rest = &rest[open + len + 2..];
+        } else {
+            out.push('{');
+            rest = &rest[open + 1..];
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Two sentences after one another.
@@ -148,4 +163,31 @@ pub fn not_exported(count: usize) -> String {
 /// A picture was written.
 pub fn wrote(file: &str) -> String {
     fill(cli::WROTE, &[("file", file)])
+}
+
+/// The help text.
+pub const HELP: &str = "fs-tasks-app: the tasks program
+
+  --socket <path>    Unix socket of a running `fs-tasks-server --socket <path>` (required)
+  --import <file>    import an iCalendar file first; tasks already known are skipped, never replaced
+  --export <file>    write all tasks to a new iCalendar file and stop; an existing file is not
+                     replaced, tasks marked sensitive are left out and named
+  --export-sensitive <uid>
+                     release this task marked sensitive for --export; repeat for each task
+  --snapshot <png>   draw a picture instead of opening a window
+  --size <WxH>       window or picture size (default 1300x800)
+  --view <list|status>
+                     the view to start with (default list)";
+
+#[cfg(test)]
+mod tests {
+    use super::fill;
+
+    #[test]
+    fn a_value_that_looks_like_a_placeholder_is_shown_as_it_is() {
+        let said = fill("{uid}: {error}", &[("uid", "{error}"), ("error", "boom")]);
+        assert_eq!(said, "{error}: boom");
+        let same = fill("{a} {b}", &[("a", "{b}"), ("b", "x")]);
+        assert_eq!(same, "{b} x");
+    }
 }

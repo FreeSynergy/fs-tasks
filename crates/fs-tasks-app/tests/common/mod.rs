@@ -1,8 +1,6 @@
 //! Shared helpers of the tests: the real server on a real Unix socket over the real store (on a
 //! thread of its own), the real client, and the real adapter over it. Nothing here pretends to be
 //! any of them.
-//!
-//! Pattern: Facade over the set-up.
 #![allow(dead_code)] // each test file uses a different subset
 
 use std::path::PathBuf;
