@@ -8,6 +8,8 @@ use chrono::{DateTime, Utc};
 use fs_store::{Store, TursoStore};
 use fs_tasks_core::{TaskRepo, utc};
 
+pub mod yielding;
+
 pub const ME: &str = "https://local.invalid/users/owner";
 
 pub const ICS: &str = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\nBEGIN:VEVENT\r\nUID:ev-1\r\nDTSTAMP:20261101T000000Z\r\nDTSTART:20261130T090000Z\r\nDURATION:PT2H\r\nSUMMARY:An event\r\nEND:VEVENT\r\nBEGIN:VTODO\r\nUID:todo-1\r\nDTSTAMP:20261101T000000Z\r\nDUE:20261112T170000Z\r\nSUMMARY:Minutes\r\nSTATUS:NEEDS-ACTION\r\nPERCENT-COMPLETE:10\r\nEND:VTODO\r\nBEGIN:VTODO\r\nUID:todo-2\r\nDTSTAMP:20261101T000000Z\r\nDUE;TZID=Europe/Berlin:20261120T120000\r\nSUMMARY:Invoice\\, paid\r\nSTATUS:COMPLETED\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
