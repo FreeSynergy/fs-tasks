@@ -5,8 +5,10 @@
 
 use fs_interfaces::rpc::write_object_id;
 use fs_interfaces::tasks_capnp::items::Client;
+use fs_interfaces::tasks_capnp::task_page;
 use fs_store::ObjectId;
-use fs_tasks_core::{ImportReport, Result, Task, TaskEntry};
+use fs_tasks_core::contract::write_filter;
+use fs_tasks_core::{ImportReport, Result, Task, TaskEntry, TaskQuery};
 
 use crate::problems::{Subject, error_of};
 use crate::read::{entry, report, unreadable};
@@ -78,32 +80,55 @@ pub(crate) async fn get(c: &Client, id: ObjectId) -> Result<Option<TaskEntry>> {
     entry(r.get_task().map_err(unreadable)?).map(Some)
 }
 
+/// `getByUid`: `None` when the server says `found = false`.
+pub(crate) async fn get_by_uid(c: &Client, uid: String) -> Result<Option<TaskEntry>> {
+    let mut req = c.get_by_uid_request();
+    req.get().set_uid(uid.as_str());
+    let answer = req
+        .send()
+        .promise
+        .await
+        .map_err(|e| error_of(&e, Subject::None))?;
+    let r = answer.get().map_err(unreadable)?;
+    if !r.get_found() {
+        return Ok(None);
+    }
+    entry(r.get_task().map_err(unreadable)?).map(Some)
+}
+
 /// `list`, every page until the cursor is empty. A page that is empty but names a next one cannot
 /// be followed to an end, so it is an error instead of a silently short list.
 pub(crate) async fn list(c: &Client) -> Result<Vec<TaskEntry>> {
+    pages(c, None).await
+}
+
+/// `query`, every page, like `list`.
+pub(crate) async fn query(c: &Client, filter: TaskQuery) -> Result<Vec<TaskEntry>> {
+    pages(c, Some(filter)).await
+}
+
+async fn pages(c: &Client, filter: Option<TaskQuery>) -> Result<Vec<TaskEntry>> {
     let mut found: Vec<TaskEntry> = Vec::new();
     let mut cursor: Vec<u8> = Vec::new();
     loop {
-        let mut req = c.list_request();
-        req.get().init_cursor().set_opaque(&cursor);
-        let answer = req
-            .send()
-            .promise
-            .await
-            .map_err(|e| error_of(&e, Subject::None))?;
-        let page = answer
-            .get()
-            .and_then(|r| r.get_page())
-            .map_err(unreadable)?;
         let before = found.len();
-        for item in page.get_items().map_err(unreadable)? {
-            found.push(entry(item)?);
-        }
-        cursor = page
-            .get_next()
-            .and_then(|n| n.get_opaque())
-            .map_err(unreadable)?
-            .to_vec();
+        cursor = match &filter {
+            None => {
+                let mut req = c.list_request();
+                req.get().init_cursor().set_opaque(&cursor);
+                let answer = req.send().promise.await;
+                let answer = answer.map_err(|e| error_of(&e, Subject::None))?;
+                take(answer.get().and_then(|r| r.get_page()), &mut found)?
+            }
+            Some(filter) => {
+                let mut req = c.query_request();
+                write_filter(filter, req.get().init_filter());
+                req.get().init_cursor().set_opaque(&cursor);
+                let answer = req.send().promise.await;
+                let answer = answer.map_err(|e| error_of(&e, Subject::None))?;
+                take(answer.get().and_then(|r| r.get_page()), &mut found)?
+            }
+        };
         if cursor.is_empty() {
             return Ok(found);
         }
@@ -111,6 +136,19 @@ pub(crate) async fn list(c: &Client) -> Result<Vec<TaskEntry>> {
             return Err(unreadable("an empty page that names a next one"));
         }
     }
+}
+
+/// The entries of one page onto `found`; answers the cursor of the next page.
+fn take(page: capnp::Result<task_page::Reader<'_>>, found: &mut Vec<TaskEntry>) -> Result<Vec<u8>> {
+    let page = page.map_err(unreadable)?;
+    for item in page.get_items().map_err(unreadable)? {
+        found.push(entry(item)?);
+    }
+    Ok(page
+        .get_next()
+        .and_then(|n| n.get_opaque())
+        .map_err(unreadable)?
+        .to_vec())
 }
 
 /// `importIcs`.

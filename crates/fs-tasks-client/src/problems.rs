@@ -48,7 +48,7 @@ fn from_problem(p: &Problem, subject: Subject) -> Error {
         "tasks/not-found" => not_found(detail, subject),
         "tasks/conflict" => Error::Conflict(detail.to_string()),
         "tasks/invalid" => invalid(detail),
-        "too-large" => Error::TooLarge(first_number(detail)),
+        "too-large" => too_large(detail),
         "invalid-request" => Error::Store(StoreError::Invalid(detail.to_string())),
         _ => backend(format!("tasks server ({}): {detail}", p.status)),
     }
@@ -82,14 +82,19 @@ fn invalid(detail: &str) -> Error {
     if let Some(what) = detail.strip_prefix("iCalendar: ") {
         return Error::ICalendar(what.to_string());
     }
-    Error::Store(StoreError::Invalid(detail.to_string()))
+    let inner = detail
+        .strip_prefix("object store: invalid input: ")
+        .unwrap_or(detail);
+    Error::Store(StoreError::Invalid(inner.to_string()))
 }
 
-/// `/path: message; /other: message`. A piece that does not start a new `/path: ` belongs to the
-/// message before it, which had a `; ` of its own.
+/// `/path: message; /other: message`. The core quotes the values it names (`{:?}`), so a `; ` inside a
+/// quoted value does not end an issue; a piece that does not start with `/path: ` belongs to the
+/// message before it. A key of an id map with `; /` in it (not quoted in the path) cannot be told
+/// apart and splits.
 fn issues(list: &str) -> Vec<Issue> {
     let mut out: Vec<Issue> = Vec::new();
-    for piece in list.split("; ") {
+    for piece in pieces(list) {
         match piece.split_once(": ") {
             Some((path, message)) if path.starts_with('/') || out.is_empty() => {
                 out.push(Issue {
@@ -108,12 +113,39 @@ fn issues(list: &str) -> Vec<Issue> {
     out
 }
 
-/// The first run of digits, 0 if there is none.
-fn first_number(text: &str) -> usize {
-    let digits: String = text
-        .chars()
-        .skip_while(|c| !c.is_ascii_digit())
-        .take_while(char::is_ascii_digit)
-        .collect();
-    digits.parse().unwrap_or(0)
+/// `list` cut at every `; ` outside a double-quoted (and backslash-escaped) value.
+fn pieces(list: &str) -> Vec<&str> {
+    let (mut out, mut start) = (Vec::new(), 0);
+    let (mut quoted, mut escaped) = (false, false);
+    for (at, c) in list.char_indices() {
+        match c {
+            _ if escaped => escaped = false,
+            '\\' if quoted => escaped = true,
+            '"' => quoted = !quoted,
+            ';' if !quoted && list[at..].starts_with("; ") => {
+                out.push(&list[start..at]);
+                start = at + 2;
+            }
+            _ => {}
+        }
+    }
+    out.push(&list[start..]);
+    out
+}
+
+/// What was too large, by the three texts the server has: the core's task (`the task and its name have
+/// N bytes`) and a request (`N bytes, at most M fit`) are `TooLarge(N)`; an answer
+/// (`the answer has N bytes`) is no task of this call, and a text with no number is not guessed at:
+/// both stay a store error with the server's words.
+fn too_large(detail: &str) -> Error {
+    let task = detail.strip_prefix("the task and its name have ");
+    let request = detail.split_once(" bytes, at most ").map(|(n, _)| n);
+    let number = task
+        .and_then(|rest| rest.split_whitespace().next())
+        .or(request.filter(|_| !detail.starts_with("the answer")))
+        .and_then(|n| n.parse::<usize>().ok());
+    match number {
+        Some(n) => Error::TooLarge(n),
+        None => backend(format!("tasks server: too large: {detail}")),
+    }
 }

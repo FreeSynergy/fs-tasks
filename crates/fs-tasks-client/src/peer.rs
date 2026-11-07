@@ -16,6 +16,33 @@ use tokio::sync::oneshot;
 
 use crate::worker::{Job, Remote, Worker, start};
 
+/// What the server can do and this client does not call: reported as not possible, with the reason,
+/// so `capabilities()` never promises more than the methods of `RpcTasks` keep.
+const NOT_OFFERED: [&str; 4] = [
+    "task.assign",
+    "relation.create",
+    "label.assign",
+    "task.subscribe",
+];
+
+/// The report of the server, cut to what this client implements.
+fn offered(reported: &Capabilities) -> Capabilities {
+    let mut caps = Capabilities::new(reported.provider());
+    for entry in reported.entries() {
+        if entry.supported && NOT_OFFERED.contains(&entry.capability.as_str()) {
+            caps.unsupported(
+                entry.capability.as_str(),
+                "the server offers it, the client of the tasks program does not yet",
+            );
+        } else if entry.supported {
+            caps.supported(entry.capability.as_str());
+        } else {
+            caps.unsupported(entry.capability.as_str(), entry.reason.as_str());
+        }
+    }
+    caps
+}
+
 /// The tasks program as seen over its socket. Implements `TaskItems`.
 ///
 /// Calls from any thread are fine; they queue for the one thread that owns the connection and
@@ -34,10 +61,10 @@ impl RpcTasks {
     /// # Errors
     /// Nothing listens there, the server runs as another user, or it does not answer the contract.
     pub fn connect(socket: &Path) -> io::Result<Self> {
-        let (worker, capabilities) = start(socket.to_path_buf())?;
+        let (worker, reported) = start(socket.to_path_buf())?;
         Ok(Self {
             worker,
-            capabilities,
+            capabilities: offered(&reported),
         })
     }
 
