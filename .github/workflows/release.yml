@@ -1,0 +1,28 @@
+name: release
+on:
+  push:
+    tags: ["v*-rc.*"]   # pre-release tags only; normal tags do not start a release run
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  packages: write   # required by the optional container job (GitHub checks it even when skipped)
+
+jobs:
+  release:
+    uses: FreeSynergy/fs-release/.github/workflows/release.yml@main
+    with:
+      # first binary names the owner package (metadata, rpm); the workspace builds both
+      binaries: fs-tasks-app,fs-tasks-server
+      kind: app
+      app-id: net.freesynergy.Tasks
+      description: FreeSynergy tasks, the window and the server
+      linux-targets: x86_64
+      linux-formats: rpm,tar.gz
+      windows-targets: ""
+      macos: false
+      apt-packages: pkg-config libwayland-dev libxkbcommon-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev libvulkan-dev libfontconfig1-dev libssl-dev cmake
+    secrets:
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

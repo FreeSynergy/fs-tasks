@@ -4,6 +4,8 @@ description = "Program core of FreeSynergy tasks: JSCalendar 2.0 Task over fs-st
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+authors.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 
 [features]

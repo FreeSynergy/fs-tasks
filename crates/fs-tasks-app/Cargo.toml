@@ -4,6 +4,9 @@ description = "The tasks program of FreeSynergy, first window: list and status v
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
 
 [dependencies]
 fs-tasks-core = { path = "../fs-tasks-core" }
@@ -23,3 +26,9 @@ tempfile = "3"
 async-trait = "0.1"
 # provisional: becomes a tag once reviewed
 fs-components-render = { git = "https://github.com/FreeSynergy/fs-components", rev = "8c38a3b17f6b723ef625046a271c5564f5d7aa26" }
+
+[package.metadata.generate-rpm]
+assets = [
+  { source = "target/release/fs-tasks-app", dest = "/usr/bin/fs-tasks-app", mode = "755" },
+  { source = "target/release/fs-tasks-server", dest = "/usr/bin/fs-tasks-server", mode = "755" },
+]
