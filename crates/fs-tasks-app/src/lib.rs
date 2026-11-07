@@ -1,8 +1,9 @@
 //! `fs-tasks-app`: the frontend of the tasks program (ADR 0005, 0009, 0037).
 //!
-//! Arguments, opening the core, the words, and an adapter from the program's contract to the
+//! Arguments, the words, and an adapter from the program's contract to the
 //! workbench's `TaskSource`. It imports no `blinc_*` crate: the window and the work surface come from
-//! `fs-components`. The core is called in process for now, not over RPC (see `DESIGN.md`).
+//! `fs-components`. The data comes from a running `fs-tasks-server` over its Unix socket
+//! (`fs-tasks-client`); the app holds no store (see `DESIGN.md`).
 //!
 //! Pattern: Facade — this file only declares modules and re-exports the public API.
 

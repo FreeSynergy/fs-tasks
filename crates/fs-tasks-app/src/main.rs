@@ -1,19 +1,16 @@
 //! The binary: wiring only.
 //!
-//! Pattern: Facade consumer — parse arguments, open the store, import, then export or show. The runtime
-//! lives as long as the window: the workbench's calls run on it.
+//! Pattern: Facade consumer — parse arguments, connect to the server, import, then export or show. The
+//! runtime lives as long as the window; the workbench's calls wait on it.
 
 use std::sync::Arc;
 
 use fs_components_app::{Status, WindowOptions, launch};
 use fs_components_workbenches::tasks::TasksWidget;
-use fs_store::{Store, TursoStore};
 use fs_tasks_app::args::{Args, HELP, parse};
 use fs_tasks_app::{TaskAdapter, export_all, import_file, labels, screen_widget};
-use fs_tasks_core::{TaskItems, TaskRepo};
-
-/// Who acts on this store. Provisional: there is no sign-in yet.
-const ACTOR: &str = "https://localhost/actors/owner";
+use fs_tasks_client::RpcTasks;
+use fs_tasks_core::TaskItems;
 
 fn main() {
     if let Err(message) = run() {
@@ -30,16 +27,11 @@ fn run() -> Result<(), String> {
         return Ok(());
     }
     let runtime = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    let store: Arc<dyn Store> = runtime
-        .block_on(async {
-            match &args.store {
-                Some(file) => TursoStore::open(file).await,
-                None => TursoStore::open_in_memory().await,
-            }
-        })
-        .map(|s| Arc::new(s) as Arc<dyn Store>)
-        .map_err(|e| format!("cannot open the store: {e}"))?;
-    let items: Arc<dyn TaskItems> = Arc::new(TaskRepo::new(store, ACTOR));
+    let socket = args.socket_path()?;
+    let items: Arc<dyn TaskItems> = Arc::new(
+        RpcTasks::connect(socket)
+            .map_err(|e| format!("cannot reach the tasks server at {}: {e}", socket.display()))?,
+    );
     let handle = runtime.handle().clone();
 
     let mut status = None;

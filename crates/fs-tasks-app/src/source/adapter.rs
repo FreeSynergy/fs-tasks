@@ -1,7 +1,8 @@
 //! `TaskAdapter`: `dyn TaskItems` as a `TaskSource`.
 //!
-//! Pattern: Adapter over the program's contract, driven with a tokio handle from the interface thread.
-//! Provisional: in process, not RPC, until the client of `fs-tasks-server` exists (`DESIGN.md`).
+//! Pattern: Adapter over the program's contract (`TaskItems`, in practice the client of `tasks.capnp`),
+//! driven with a tokio handle from the interface thread: every call blocks that thread until the
+//! server has answered (`DESIGN.md`).
 //!
 //! Revision: the store's `updated` time and a fingerprint of the content. `TaskItems::edit` takes no
 //! revision, so a write compares and then writes; this is **not atomic** (another writer can slip in
@@ -19,7 +20,7 @@ use tokio::runtime::Handle;
 use crate::words::say;
 
 /// The contract of the tasks program, for the workbench. Do not call it from inside the runtime: it
-/// blocks the calling thread until the core has answered.
+/// blocks the calling thread until the provider has answered.
 pub struct TaskAdapter {
     pub(super) items: Arc<dyn TaskItems>,
     pub(super) runtime: Handle,

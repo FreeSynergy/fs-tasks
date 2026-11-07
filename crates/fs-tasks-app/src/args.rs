@@ -1,6 +1,7 @@
 //! The command line.
 //!
-//! Pattern: Builder-like parser — plain `std::env::args`, no extra crate for a few options.
+//! Pattern: Builder-like parser — plain `std::env::args`, no extra crate for a few options. The app holds no store: it needs the
+//! socket of a server.
 
 use std::path::{Path, PathBuf};
 
@@ -12,8 +13,6 @@ use fs_components_workbenches::tasks::TaskView;
 pub struct Args {
     /// Unix socket of a running `fs-tasks-server`; the app holds no store of its own.
     pub socket: Option<PathBuf>,
-    /// Store file; `None` = in memory, gone when the program ends.
-    pub store: Option<PathBuf>,
     /// An iCalendar file to import before anything else.
     pub import: Option<PathBuf>,
     /// Write all tasks to this iCalendar file; no window opens then.
@@ -34,7 +33,6 @@ impl Default for Args {
     fn default() -> Self {
         Self {
             socket: None,
-            store: None,
             import: None,
             export: None,
             export_sensitive: Vec::new(),
@@ -52,7 +50,11 @@ impl Args {
     /// # Errors
     /// A message for the person if `--socket` was not given, saying where a socket comes from.
     pub fn socket_path(&self) -> Result<&Path, String> {
-        Err("not written yet".into())
+        self.socket.as_deref().ok_or_else(|| {
+            "no --socket given: the app talks to a running tasks server; start one with \
+             `fs-tasks-server --socket <path>` and pass the same path here"
+                .to_string()
+        })
     }
 }
 
@@ -70,7 +72,14 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
                 .ok_or_else(|| format!("{name} needs a value"))
         };
         match arg.as_str() {
-            "--store" => out.store = Some(PathBuf::from(value("--store")?)),
+            "--socket" => out.socket = Some(PathBuf::from(value("--socket")?)),
+            "--store" => {
+                return Err(
+                    "--store is gone: the store belongs to the server, start it with \
+                     `fs-tasks-server --data <dir>` and give the app its --socket"
+                        .into(),
+                );
+            }
             "--import" => out.import = Some(PathBuf::from(value("--import")?)),
             "--export" => out.export = Some(PathBuf::from(value("--export")?)),
             "--export-sensitive" => out.export_sensitive.push(value("--export-sensitive")?),
@@ -98,7 +107,7 @@ fn view(text: &str) -> Result<TaskView, String> {
 /// The help text.
 pub const HELP: &str = "fs-tasks-app: the tasks program
 
-  --store <file>     keep the tasks in this store file (default: in memory, gone at the end)
+  --socket <path>    Unix socket of a running `fs-tasks-server --socket <path>` (required)
   --import <file>    import an iCalendar file first; tasks already known are skipped, never replaced
   --export <file>    write all tasks to a new iCalendar file and stop; an existing file is not
                      replaced, tasks marked sensitive are left out and named
