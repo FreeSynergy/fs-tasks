@@ -10,7 +10,7 @@ jobs:
   release:
     uses: FreeSynergy/fs-release/.github/workflows/release.yml@main
     with:
-      binaries: fs-tasks-server,fs-tasks-app
+      binaries: fs-tasks
       name: fs-tasks
       kind: app
       app-id: net.freesynergy.Tasks

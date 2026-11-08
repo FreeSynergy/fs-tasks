@@ -35,7 +35,10 @@ pub enum Command {
 }
 
 /// The help text.
-pub const HELP: &str = "fs-tasks [--socket PATH] <command>
+pub const HELP: &str = "fs-tasks                    the window (needs the gui feature)
+fs-tasks app [OPTIONS]     the window with options
+fs-tasks serve [OPTIONS]   the server (--socket, --data, --actor, --instance)
+fs-tasks [--socket PATH] <command>
 
 Commands:
   capabilities               what the server offers

@@ -7,8 +7,10 @@
 //! the contract shows here too.
 
 pub mod args;
+mod program;
 mod run;
 mod show;
 
 pub use args::{Command, HELP, parse};
+pub use program::cli_command;
 pub use run::run;

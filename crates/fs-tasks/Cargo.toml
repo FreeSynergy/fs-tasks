@@ -1,0 +1,28 @@
+[package]
+name = "fs-tasks"
+description = "FreeSynergy.Tasks: one program, one command (ADR 0063): the window, `serve`, and the command line"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "fs-tasks"
+path = "src/main.rs"
+
+[features]
+default = ["gui"]
+# The window. Servers and machines without a screen build with --no-default-features.
+gui = ["dep:fs-tasks-app"]
+
+[dependencies]
+fs-tasks-server = { path = "../fs-tasks-server" }
+fs-tasks-cli = { path = "../fs-tasks-cli" }
+fs-tasks-app = { path = "../fs-tasks-app", optional = true }
+
+[dev-dependencies]
+fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.49.1", features = ["rpc"] }
+tokio = { version = "1", features = ["full"] }
+tempfile = "3"

@@ -83,7 +83,7 @@ fn view(text: &str) -> Result<TaskView, String> {
 }
 
 /// The help text.
-pub const HELP: &str = "fs-tasks-app: the tasks program
+pub const HELP: &str = "fs-tasks app: the window of the tasks program (options of the window)
 
   --store <file>     keep the tasks in this store file (default: in memory, gone at the end)
   --import <file>    import an iCalendar file first; tasks already known are skipped, never replaced

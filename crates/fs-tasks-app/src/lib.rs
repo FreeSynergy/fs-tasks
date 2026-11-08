@@ -11,11 +11,13 @@
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
 pub mod args;
+mod program;
 mod source;
 mod surface;
 mod transfer;
 mod words;
 
+pub use program::app_command;
 pub use source::{TaskAdapter, apply_draft, is_marked, is_series};
 pub use surface::{TasksScreen, app_widget, screen_widget};
 pub use transfer::{ExportReport, ImportSummary, export_all, import_file};

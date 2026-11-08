@@ -9,7 +9,8 @@ use fs_interfaces::rpc::{connect, read_envelope};
 use fs_interfaces::tasks_capnp::tasks;
 
 fn start(socket: &Path, data: &Path) -> Child {
-    Command::new(env!("CARGO_BIN_EXE_fs-tasks-server"))
+    Command::new(env!("CARGO_BIN_EXE_fs-tasks"))
+        .arg("serve")
         .arg("--socket")
         .arg(socket)
         .arg("--data")
@@ -117,7 +118,8 @@ async fn the_instance_names_the_iri_of_a_new_task() {
         .run_until(async {
             let dir = tempfile::tempdir().unwrap();
             let socket = dir.path().join("tasks.sock");
-            let server = Command::new(env!("CARGO_BIN_EXE_fs-tasks-server"))
+            let server = Command::new(env!("CARGO_BIN_EXE_fs-tasks"))
+                .arg("serve")
                 .arg("--socket")
                 .arg(&socket)
                 .arg("--data")
@@ -164,7 +166,8 @@ fn it_refuses_an_instance_that_is_no_domain() {
         "example.org:80",
         "-a.example",
     ] {
-        let code = Command::new(env!("CARGO_BIN_EXE_fs-tasks-server"))
+        let code = Command::new(env!("CARGO_BIN_EXE_fs-tasks"))
+            .arg("serve")
             .arg("--socket")
             .arg(dir.path().join("x.sock"))
             .arg("--data")
@@ -182,7 +185,8 @@ fn it_refuses_an_instance_that_is_no_domain() {
 #[test]
 fn it_refuses_bad_arguments_and_a_data_directory_others_can_read() {
     let run = |args: &[&str]| {
-        Command::new(env!("CARGO_BIN_EXE_fs-tasks-server"))
+        Command::new(env!("CARGO_BIN_EXE_fs-tasks"))
+            .arg("serve")
             .args(args)
             .stderr(Stdio::null())
             .stdout(Stdio::null())

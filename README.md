@@ -34,7 +34,8 @@ Tasks is the "what next" of the project-management suite, together with history,
 
 ## For developers
 
-- Workspace crates: `fs-tasks-core` (core, no GUI), `fs-tasks-server` (contract over a Unix socket), `fs-tasks-app` (provisional window).
+- One program, one command (ADR 0063): `fs-tasks` opens the window, `fs-tasks serve` serves the contract over a Unix socket, `fs-tasks list|show|add|done|delete|export|import` is the command line. Build without the window: `--no-default-features`.
+- Workspace crates: `fs-tasks` (the binary), `fs-tasks-core` (core, no GUI), `fs-tasks-server`, `fs-tasks-cli` and `fs-tasks-app` (libraries behind the subcommands).
 - The contract is `tasks.capnp` in [fs-interfaces](https://github.com/FreeSynergy/fs-interfaces) (draft). Tasks owns it. Shared JSCalendar parts come from [fs-jscalendar](https://github.com/FreeSynergy/fs-jscalendar).
 - Build and test: `cargo build --workspace` and `cargo test --workspace`.
 - Design and the full state table: [DESIGN.md](DESIGN.md).

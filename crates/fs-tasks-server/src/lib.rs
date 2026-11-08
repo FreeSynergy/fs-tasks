@@ -17,7 +17,9 @@ mod facts;
 mod feed;
 mod items_service;
 mod paging;
+mod program;
 mod tasks_service;
 mod wire;
 
+pub use program::serve_command;
 pub use tasks_service::TasksServer;

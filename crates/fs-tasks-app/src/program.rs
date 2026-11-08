@@ -1,30 +1,34 @@
-//! The binary: wiring only.
+//! The window as a command: what `fs-tasks` and `fs-tasks app` run (ADR 0063).
 //!
 //! Pattern: Facade consumer — parse arguments, open the store, import, then export or show. The runtime
 //! lives as long as the window: the workbench's calls run on it.
 
 use std::sync::Arc;
 
+use crate::args::{Args, HELP, parse};
+use crate::{TaskAdapter, export_all, import_file, labels, screen_widget};
 use fs_components_app::{Status, WindowOptions, launch};
 use fs_components_workbenches::tasks::TasksWidget;
 use fs_objects::{Store, TursoStore};
-use fs_tasks_app::args::{Args, HELP, parse};
-use fs_tasks_app::{TaskAdapter, export_all, import_file, labels, screen_widget};
 use fs_tasks_core::{TaskItems, TaskRepo};
 
 /// Who acts on this store. Provisional: there is no sign-in yet.
 const ACTOR: &str = "https://localhost/actors/owner";
 
-fn main() {
-    if let Err(message) = run() {
-        eprintln!("fs-tasks-app: {message}");
-        std::process::exit(1);
+/// Open the window (or import, export, take a picture) with `argv`, the words after `app`; the exit code.
+#[must_use]
+pub fn app_command(argv: &[String]) -> i32 {
+    match run(argv) {
+        Ok(()) => 0,
+        Err(message) => {
+            eprintln!("fs-tasks: {message}");
+            1
+        }
     }
 }
 
-fn run() -> Result<(), String> {
-    let argv: Vec<String> = std::env::args().skip(1).collect();
-    let args = parse(&argv)?;
+fn run(argv: &[String]) -> Result<(), String> {
+    let args = parse(argv)?;
     if args.help {
         println!("{HELP}");
         return Ok(());
