@@ -20,11 +20,8 @@ impl TaskRepo {
         original: Option<Blob>,
     ) -> Result<TaskEntry> {
         task.normalise();
-        if self.stored_by_uid(&task.uid).await?.is_some() {
-            return Err(Error::Conflict(format!(
-                "a task with uid {} exists",
-                task.uid
-            )));
+        if let Some(existing) = self.stored_by_uid(&task.uid).await? {
+            return Err(Error::Exists(existing.envelope.id));
         }
         self.store_new(task, original).await
     }

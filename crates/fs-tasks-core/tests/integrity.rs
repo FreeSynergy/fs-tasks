@@ -23,7 +23,10 @@ async fn the_same_uuid_in_another_form_does_not_overwrite() {
         .await
         .unwrap();
     let second = r.create(task(UUID, None)).await;
-    assert!(matches!(second, Err(Error::Conflict(_))), "{second:?}");
+    assert!(
+        matches!(second, Err(ref e) if e.is_conflict()),
+        "{second:?}"
+    );
     assert_eq!(r.list().await.unwrap().len(), 1);
 }
 
@@ -32,7 +35,10 @@ async fn the_id_of_another_task_as_uid_does_not_overwrite() {
     let r = repo().await;
     let first = r.create(task("plain-uid", None)).await.unwrap();
     let second = r.create(task(&first.id.to_string(), None)).await;
-    assert!(matches!(second, Err(Error::Conflict(_))), "{second:?}");
+    assert!(
+        matches!(second, Err(ref e) if e.is_conflict()),
+        "{second:?}"
+    );
     assert!(r.get_by_uid("plain-uid").await.unwrap().is_some());
 }
 

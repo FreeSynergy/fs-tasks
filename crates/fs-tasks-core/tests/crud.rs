@@ -22,7 +22,7 @@ async fn create_get_edit_delete() {
     assert_eq!(r.get_by_uid(&e.task.uid).await.unwrap().unwrap().id, e.id);
     // a duplicate uid is refused
     let dup = r.create(e.task.clone()).await;
-    assert!(matches!(dup, Err(Error::Conflict(_))));
+    assert!(matches!(dup, Err(ref e) if e.is_conflict()));
     // sequence follows due changes, not title changes
     let mut t = e.task.clone();
     t.title = Some("Plan more".into());
@@ -84,4 +84,15 @@ async fn capabilities_are_listed() {
     ] {
         assert!(caps.is_supported(id), "{id}");
     }
+}
+
+#[tokio::test]
+async fn a_taken_uid_names_the_existing_task() {
+    let r = repo().await;
+    let first = r.create(Task::new("One")).await.unwrap();
+    let got = r.create(first.task.clone()).await;
+    assert!(
+        matches!(got, Err(Error::Exists(id)) if id == first.id),
+        "{got:?}"
+    );
 }
