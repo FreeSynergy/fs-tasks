@@ -11,6 +11,7 @@ jobs:
     uses: FreeSynergy/fs-release/.github/workflows/release.yml@main
     with:
       binaries: fs-tasks
+      cargo-package: fs-tasks
       name: fs-tasks
       kind: app
       app-id: net.freesynergy.Tasks
