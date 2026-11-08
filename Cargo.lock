@@ -1523,7 +1523,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "fs-interfaces",
  "fs-tasks-app",
@@ -1535,7 +1535,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-app"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "fs-components-app",
  "fs-components-render",
@@ -1548,7 +1548,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-cli"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "capnp",
  "fs-interfaces",
@@ -1562,7 +1562,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-core"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "async-trait",
  "capnp",
@@ -1579,7 +1579,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-server"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "async-trait",
  "capnp",
