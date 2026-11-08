@@ -19,16 +19,26 @@ impl TaskRepo {
         mut task: Task,
         original: Option<Blob>,
     ) -> Result<TaskEntry> {
-        let now = now_utc();
         task.normalise();
-        task.created.get_or_insert_with(|| now.clone());
-        task.updated.get_or_insert(now);
         if self.stored_by_uid(&task.uid).await?.is_some() {
             return Err(Error::Conflict(format!(
                 "a task with uid {} exists",
                 task.uid
             )));
         }
+        self.store_new(task, original).await
+    }
+
+    /// Store a task whose `uid` the caller has found free (`create_inner` asked the store; an import
+    /// asked its list of known `uid`s). Only the object id is checked here, which is a lookup by key.
+    pub(super) async fn store_new(
+        &self,
+        mut task: Task,
+        original: Option<Blob>,
+    ) -> Result<TaskEntry> {
+        let now = now_utc();
+        task.created.get_or_insert_with(|| now.clone());
+        task.updated.get_or_insert(now);
         let mut o = self.build(&task, None, original.clone())?;
         if original.is_some() {
             o.index
