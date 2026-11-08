@@ -3,7 +3,7 @@
 mod common;
 
 use common::repo;
-use fs_tasks_core::{Error, Task, TaskItems};
+use fs_tasks_core::{Task, TaskItems};
 
 const UUID: &str = "019a0000-0000-7000-8000-000000000001";
 
