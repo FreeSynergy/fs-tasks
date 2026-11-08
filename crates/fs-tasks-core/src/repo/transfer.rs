@@ -80,6 +80,7 @@ impl TaskRepo {
                 e @ (Error::Invalid(_)
                 | Error::Time(_)
                 | Error::Conflict(_)
+                | Error::Exists(_)
                 | Error::TooLarge(_)
                 | Error::Store(fs_objects::Error::Invalid(_))),
             ) => {

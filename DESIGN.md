@@ -172,7 +172,7 @@ column -> status mapping and ordering arrives with boards.
 
 ## Open points (0.7.0)
 
-* `Error::Conflict` carries text only, so a taken uid names no object (`id` is missing from that problem).
+* A taken uid is `Error::Exists(id)`: the problem carries `id` and `kind` of the task that holds it. `Error::is_conflict` is true for it and for `Conflict`; other conflicts (the uid of a task cannot change) name no object.
 * A task stored by 0.6.0 has no `order_key`, `id_key` or `description` in its index. `TaskRepo::upgrade_index` completes them (the server binary runs it at start and prints the count and every failure to stderr); it is idempotent, adds only index fields (content, envelope and original stay; it writes one `Update` per task to the log) and one task that cannot be repaired is named in its report and does not stop the others. Until then, and for a task that cannot be repaired, the first page fails with `stored task cannot be used: N of M tasks have no place in the order ...` (`Error::Stored`) instead of giving fewer tasks; `list` and `query` still return them, keyless ones in name order after the others. A library user that does not use the binary calls `upgrade_index` itself after opening. Tested with a store written by the code of tag v0.6.0 (`tests/fixtures/v060.db`, six tasks).
 * The cursor holds the title of the last task whole, with no limit of its own: it is as long as a title may be (up to `MAX_TASK_BYTES`, 16 MiB), and a message takes 64 MiB.
 * The store sorts all rows that match before it applies a limit (`ORDER BY` a computed key): a page costs the database O(n log n), so reading all pages is O(n² log n) there. `counting.rs` counts the rows the store *returns*, which are linear; it does not measure the work inside the database. Only the page is read, decoded and sent. A stored sort key (a real column or an index the database can walk) would remove it; that is a change in `fs-objects`.
@@ -183,5 +183,4 @@ column -> status mapping and ordering arrives with boards.
 ## After the sprint (strategy list, 2026-11-07)
 
 * `cursor.rs` is a copy of `fs-wiki-server`'s: move it to `fs-interfaces` (`rpc`).
-* `Error::Conflict(String)` carries no object: a taken `uid` names no id; give it a `Subject` like people.
 * `issue` texts that are sentences instead of identifiers break §2a: replace them by identifiers where a file is touched anyway.

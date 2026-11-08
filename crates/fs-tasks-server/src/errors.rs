@@ -26,9 +26,10 @@ pub(crate) fn rpc_error(e: Error) -> capnp::Error {
         Error::NotFound(_) | Error::Store(Store::NotFound(_)) => {
             problem(NOT_FOUND, "Task not found", 404)
         }
-        Error::Conflict(_) | Error::Changed(_) | Error::Store(Store::Conflict(_)) => {
-            problem(CONFLICT, "Conflict", 409)
-        }
+        Error::Conflict(_)
+        | Error::Exists(_)
+        | Error::Changed(_)
+        | Error::Store(Store::Conflict(_)) => problem(CONFLICT, "Conflict", 409),
         Error::Invalid(_)
         | Error::Time(_)
         | Error::ICalendar(_)

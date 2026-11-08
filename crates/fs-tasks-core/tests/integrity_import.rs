@@ -53,7 +53,10 @@ async fn create_refuses_an_uppercase_form_of_a_uuid_too() {
     let r = repo().await;
     r.create(task(UUID)).await.unwrap();
     let second = r.create(task(&UUID.to_uppercase())).await;
-    assert!(matches!(second, Err(Error::Conflict(_))), "{second:?}");
+    assert!(
+        matches!(second, Err(ref e) if e.is_conflict()),
+        "{second:?}"
+    );
 }
 
 #[tokio::test]

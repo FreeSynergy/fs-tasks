@@ -33,7 +33,7 @@ async fn not_found_names_the_task_and_its_kind() {
 }
 
 #[tokio::test(flavor = "current_thread")]
-async fn a_changed_task_is_a_conflict_about_that_task_and_a_taken_uid_has_no_object_yet() {
+async fn a_changed_task_and_a_taken_uid_are_conflicts_about_that_task() {
     with_server(|root| async move {
         let items = items_of(&root).await;
         let id = create(&items, "uid-1", "First").await;
@@ -49,13 +49,13 @@ async fn a_changed_task_is_a_conflict_about_that_task_and_a_taken_uid_has_no_obj
         assert_eq!(p.ext("kind"), Some("task"));
         assert!(p.detail.starts_with("conflict:"), "{}", p.detail);
 
-        // Open point (DESIGN.md): a taken uid is a conflict whose text names the uid, no object.
+        // A taken uid is a conflict about the task that holds it (`Error::Exists`).
         let mut again = items.create_request();
         again.get().set_jscalendar(json("uid-1", "Again").as_str());
         let p = problem_of(again.send().promise.await);
         assert_eq!(p.problem_type, CONFLICT);
-        assert_eq!(p.ext("id"), None);
-        assert_eq!(p.detail, "a task with uid uid-1 exists");
+        assert_eq!(p.ext("id"), Some(id.to_string().as_str()));
+        assert_eq!(p.ext("kind"), Some("task"));
     })
     .await;
 }

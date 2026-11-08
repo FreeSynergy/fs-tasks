@@ -18,7 +18,7 @@ pub(crate) const ICALENDAR: &str = "icalendar";
 /// `problem` with every fact the core error `e` knows.
 pub(crate) fn with_facts(problem: Problem, e: &Error) -> Problem {
     match e {
-        Error::NotFound(id) | Error::Changed(id) => problem
+        Error::NotFound(id) | Error::Changed(id) | Error::Exists(id) => problem
             .with_ext(keys::ID, &id.to_string())
             .with_ext(keys::KIND, TASK),
         Error::Store(StoreError::NotFound(id)) => problem.with_ext(keys::ID, &id.to_string()),

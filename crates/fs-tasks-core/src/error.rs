@@ -45,13 +45,25 @@ pub enum Error {
     /// written.
     #[error("conflict: task {0} was changed since it was read; nothing was written")]
     Changed(ObjectId),
-    /// The operation conflicts with the current state (duplicate uid, ...).
+    /// The operation conflicts with the current state (the uid of a task cannot change, ...).
     #[error("{0}")]
     Conflict(String),
+    /// A task with this uid exists already; the id is the existing task's, so a caller can open it
+    /// instead of parsing a sentence. Counts as a conflict ([`Error::is_conflict`]).
+    #[error("a task with this uid exists: {0}")]
+    Exists(ObjectId),
     /// A stored task lacks something this program wrote itself (written by an older version or
     /// by another writer): not the caller's fault.
     #[error("stored task cannot be used: {0}")]
     Stored(String),
+}
+
+impl Error {
+    /// Whether the operation clashes with what is stored: `Conflict` or `Exists`.
+    #[must_use]
+    pub fn is_conflict(&self) -> bool {
+        matches!(self, Self::Conflict(_) | Self::Exists(_))
+    }
 }
 
 impl From<fs_jscalendar::Error> for Error {

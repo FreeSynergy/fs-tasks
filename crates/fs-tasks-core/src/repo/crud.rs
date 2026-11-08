@@ -23,11 +23,8 @@ impl TaskRepo {
         task.normalise();
         task.created.get_or_insert_with(|| now.clone());
         task.updated.get_or_insert(now);
-        if self.stored_by_uid(&task.uid).await?.is_some() {
-            return Err(Error::Conflict(format!(
-                "a task with uid {} exists",
-                task.uid
-            )));
+        if let Some(existing) = self.stored_by_uid(&task.uid).await? {
+            return Err(Error::Exists(existing.envelope.id));
         }
         let mut o = self.build(&task, None, original.clone())?;
         if original.is_some() {
