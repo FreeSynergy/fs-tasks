@@ -10,6 +10,7 @@ mod crud;
 mod edit;
 mod handle;
 mod items;
+mod known;
 mod page;
 mod queries;
 mod span;
