@@ -39,7 +39,9 @@ fn store_file(args: &crate::args::Args) -> Result<Option<std::path::PathBuf>, St
     }
     let base = std::env::var_os("XDG_DATA_HOME")
         .map(std::path::PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".local/share")))
+        .or_else(|| {
+            std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".local/share"))
+        })
         .ok_or("cannot find a data folder (HOME is not set); give --store <file>")?;
     let dir = base.join("freesynergy").join("tasks");
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
