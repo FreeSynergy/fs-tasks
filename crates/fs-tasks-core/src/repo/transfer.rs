@@ -24,7 +24,11 @@ impl TaskRepo {
         }
         let parts = split_ics(text);
         // Asked once: a lookup by `uid` for each part would look at every stored task each time.
-        let mut known = self.known_uids().await?;
+        let mut known = if parts.is_empty() {
+            KnownUids::default()
+        } else {
+            self.known_uids().await?
+        };
         // Whole unfolded lines only: a description may quote the words, also on a continuation line.
         let found = |t: &str| {
             unfolded_lines(t)
