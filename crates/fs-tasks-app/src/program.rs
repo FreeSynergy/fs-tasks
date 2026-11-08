@@ -27,16 +27,36 @@ pub fn app_command(argv: &[String]) -> i32 {
     }
 }
 
+/// Where the tasks are kept. `--store` wins. A window that is really used (no picture, no export) keeps them in the
+/// data folder (`$XDG_DATA_HOME/freesynergy/tasks/app.db`): a program started from the store never loses data by default.
+/// Pictures and exports use memory, as before, so they touch nothing.
+fn store_file(args: &crate::args::Args) -> Result<Option<std::path::PathBuf>, String> {
+    if let Some(file) = &args.store {
+        return Ok(Some(file.clone()));
+    }
+    if args.snapshot.is_some() || args.export.is_some() {
+        return Ok(None);
+    }
+    let base = std::env::var_os("XDG_DATA_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".local/share")))
+        .ok_or("cannot find a data folder (HOME is not set); give --store <file>")?;
+    let dir = base.join("freesynergy").join("tasks");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    Ok(Some(dir.join("app.db")))
+}
+
 fn run(argv: &[String]) -> Result<(), String> {
     let args = parse(argv)?;
     if args.help {
         println!("{HELP}");
         return Ok(());
     }
+    let store_file = store_file(&args)?;
     let runtime = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     let store: Arc<dyn Store> = runtime
         .block_on(async {
-            match &args.store {
+            match &store_file {
                 Some(file) => TursoStore::open(file).await,
                 None => TursoStore::open_in_memory().await,
             }

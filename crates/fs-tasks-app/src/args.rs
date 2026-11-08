@@ -10,7 +10,7 @@ use fs_components_workbenches::tasks::TaskView;
 /// What was asked for on the command line.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Args {
-    /// Store file; `None` = in memory, gone when the program ends.
+    /// Store file; `None` = the data folder for a window, memory for a picture or an export.
     pub store: Option<PathBuf>,
     /// An iCalendar file to import before anything else.
     pub import: Option<PathBuf>,
@@ -85,7 +85,7 @@ fn view(text: &str) -> Result<TaskView, String> {
 /// The help text.
 pub const HELP: &str = "fs-tasks app: the window of the tasks program (options of the window)
 
-  --store <file>     keep the tasks in this store file (default: in memory, gone at the end)
+  --store <file>     keep the tasks in this store file (default: the data folder, $XDG_DATA_HOME/freesynergy/tasks/app.db; a picture or an export uses memory)
   --import <file>    import an iCalendar file first; tasks already known are skipped, never replaced
   --export <file>    write all tasks to a new iCalendar file and stop; an existing file is not
                      replaced, tasks marked sensitive are left out and named
