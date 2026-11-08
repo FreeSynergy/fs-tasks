@@ -1532,6 +1532,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs-tasks-cli"
+version = "0.8.2-rc.2"
+dependencies = [
+ "capnp",
+ "fs-interfaces",
+ "fs-objects",
+ "fs-tasks-core",
+ "fs-tasks-server",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "fs-tasks-core"
 version = "0.8.2-rc.2"
 dependencies = [
