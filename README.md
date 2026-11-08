@@ -1,3 +1,41 @@
-# fs-tasks (FreeSynergy.Tasks)
+# FreeSynergy Tasks — know what to do next
 
-Owner of the JSCalendar `Task` standard (ADR 0050: one standard, one program, one interface). Other programs, e.g. fs-calendar, use tasks only through this interface. Licence: MIT OR Apache-2.0.
+**Nobody wants a Kanban board. People want to know what to do next.**
+
+FreeSynergy Tasks keeps what you or your group have to do, with a due date, a status, labels and links between tasks. Lists, status views and, later, boards and timelines are just different ways of looking at the same tasks.
+
+What is different here: a task follows the open JSCalendar standard (RFC 8984), and this program is its owner, so the calendar and every other program reach tasks only through one interface instead of keeping their own idea of a task. Your tasks import and export as iCalendar (VTODO), and the original text is kept. A task can start with you alone and be shared later.
+
+## What it can do today
+
+Latest tag: `v0.8.0`.
+
+- Create, edit, assign, label, relate, list and delete tasks. Find them by due date range, progress, label, or a word in the title or description.
+- Import and export iCalendar tasks (VTODO). Events in the same file are left for the calendar.
+- Tell other programs when a task is created, changed or deleted.
+- Refuse an overwrite when someone else changed the task meanwhile (compare-and-set).
+- Tasks marked sensitive are left out of exports unless you release them by name.
+- A small server that offers all of this over a local socket.
+- A first, provisional window: a list and a status view of your tasks, search, create, edit, delete, import and export.
+- The calendar already shows tasks through this interface.
+
+## What is not there yet
+
+- No real boards. The status view in the window is not a board: moving a card changes the task's status for everyone, and the window says so. Columns of your own, swimlanes and limits are not built.
+- No repeating-task engine. Repeating tasks are kept but not expanded, and the window cannot edit one occurrence.
+- The window cannot assign people, show relations, checklists, comments, attachments or reminders, and it has no undo.
+- The window reads the data directly instead of talking to the server (a version over the server is on branch `gui`), and "my next tasks" shows every open task because there is no sign-in yet.
+- The interface is a draft with one user (the calendar); it needs a second before it can be called stable.
+
+## Part of FreeSynergy
+
+Tasks is the "what next" of the project-management suite, together with history, resources, surveys and groups. FreeSynergy is a family of programs that are free for everyone, forever, and that keep your data yours. The documentation, the manifesto and the overall plan live in [fs-documentation](https://github.com/FreeSynergy/fs-documentation); the reading version is at <https://freesynergy.github.io/fs-documentation/>. Start with the [manifesto](https://freesynergy.github.io/fs-documentation/manifesto/) if you want to know why we do this.
+
+
+## For developers
+
+- Workspace crates: `fs-tasks-core` (core, no GUI), `fs-tasks-server` (contract over a Unix socket), `fs-tasks-app` (provisional window).
+- The contract is `tasks.capnp` in [fs-interfaces](https://github.com/FreeSynergy/fs-interfaces) (draft). Tasks owns it. Shared JSCalendar parts come from [fs-jscalendar](https://github.com/FreeSynergy/fs-jscalendar).
+- Build and test: `cargo build --workspace` and `cargo test --workspace`.
+- Design and the full state table: [DESIGN.md](DESIGN.md).
+- Licence: MIT OR Apache-2.0.
