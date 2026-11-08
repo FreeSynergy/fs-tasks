@@ -62,26 +62,31 @@ pub struct Args {
     pub command: Option<Command>,
 }
 
-/// Parse the words after the program name.
+/// Parse the words after the program name: options (`--socket PATH`, `--help`) first, then the command.
 ///
 /// # Errors
 /// An unknown word, a missing value, a missing id. The message says what is wrong.
 pub fn parse(words: &[String]) -> Result<Args, String> {
+    // Options come before the command word. After it every word is the command's own, so a title or
+    // a value that looks like an option (`-h`, `--socket`) stays what the user typed.
     let mut socket = None;
-    let mut rest: Vec<&str> = vec![];
-    let mut it = words.iter().map(String::as_str);
-    while let Some(w) = it.next() {
-        match w {
+    let mut at = 0;
+    while let Some(word) = words.get(at) {
+        match word.as_str() {
             "--help" | "-h" => {
                 return Ok(Args {
                     socket,
                     command: None,
                 });
             }
-            "--socket" => socket = Some(it.next().ok_or("--socket needs a path")?.into()),
-            other => rest.push(other),
+            "--socket" => {
+                socket = Some(words.get(at + 1).ok_or("--socket needs a path")?.into());
+                at += 2;
+            }
+            _ => break,
         }
     }
+    let rest: Vec<&str> = words[at..].iter().map(String::as_str).collect();
     let (name, tail) = rest.split_first().ok_or("no command; try --help")?;
     let one = |what: &str| -> Result<String, String> {
         match tail {
@@ -121,6 +126,9 @@ fn add(tail: &[&str]) -> Result<Command, String> {
         };
         *slot = Some((*it.next().ok_or(format!("{flag} needs a value"))?).to_string());
     }
+    if zone.is_some() && due.is_none() {
+        return Err("--zone only goes with --due".into());
+    }
     Ok(Command::Add {
         title: title.into(),
         due,
@@ -138,12 +146,12 @@ mod tests {
     }
 
     #[test]
-    fn commands_and_the_socket_option_in_any_place() {
+    fn the_socket_option_comes_before_the_command() {
         let a = parse(&words("--socket /x/y list")).unwrap();
         assert_eq!(a.socket, Some("/x/y".into()));
         assert_eq!(a.command, Some(Command::List));
         assert_eq!(
-            parse(&words("show abc --socket /s")).unwrap().command,
+            parse(&words("--socket /s show abc")).unwrap().command,
             Some(Command::Show("abc".into()))
         );
         assert_eq!(parse(&words("-h")).unwrap().command, None);
@@ -164,6 +172,20 @@ mod tests {
                 zone: Some("Europe/Berlin".into()),
                 label: Some("work".into()),
             })
+        );
+    }
+
+    #[test]
+    fn after_the_command_every_word_is_the_commands_own() {
+        // `-h` and `--socket` are values here, not options.
+        let c = parse(&words("add -h")).unwrap().command;
+        assert!(
+            matches!(c, Some(Command::Add { ref title, .. }) if title == "-h"),
+            "{c:?}"
+        );
+        assert_eq!(
+            parse(&words("show --socket")).unwrap().command,
+            Some(Command::Show("--socket".into()))
         );
     }
 
