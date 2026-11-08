@@ -3,7 +3,9 @@ resolver = "2"
 members = ["crates/fs-tasks-core", "crates/fs-tasks-server", "crates/fs-tasks-app"]
 
 [workspace.package]
-version = "0.8.1"
+version = "0.8.2-rc.1"
+authors = ["FreeSynergy <support@freesynergy.net>"]
+repository = "https://github.com/FreeSynergy/fs-tasks"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.89"

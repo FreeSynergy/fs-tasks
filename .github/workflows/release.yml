@@ -1,0 +1,20 @@
+name: release
+on:
+  push: { tags: ["v*"] }
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  packages: write
+jobs:
+  release:
+    uses: FreeSynergy/fs-release/.github/workflows/release.yml@main
+    with:
+      binaries: fs-tasks-server,fs-tasks-app
+      name: fs-tasks
+      kind: app
+      app-id: net.freesynergy.Tasks
+      windows-targets: ""   # Unix sockets and Unix paths for now
+    secrets:
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
