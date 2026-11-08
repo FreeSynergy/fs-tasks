@@ -74,5 +74,5 @@ fn the_entries_are_new_list_and_status_and_nothing_else() {
 fn the_compact_variant_has_no_menu_that_could_do_nothing() {
     let w = World::new();
     let app = screen_widget(TasksWidget::compact(w.adapter.clone(), labels())).unwrap();
-    assert!(labels_of(&app).is_empty());
+    assert_eq!(labels_of(&app), [] as [std::string::String; 0]);
 }

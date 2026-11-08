@@ -89,6 +89,9 @@ async fn query_uids(
         .collect()
 }
 
+const NOV: i64 = 1_793_491_200_000; // 2026-11-01
+const DEC_DUE: i64 = 1_796_115_600_000; // 2026-12-01T09:00:00Z
+
 #[tokio::test(flavor = "current_thread")]
 async fn filters_exclude_what_they_must() {
     with_server(|root| async move {
@@ -111,8 +114,6 @@ async fn filters_exclude_what_they_must() {
         let open = query_uids(&items, |q| q.reborrow().init_filter().set_progress("needs-action")).await;
         assert_eq!(open, ["dec"]);
 
-        const NOV: i64 = 1_793_491_200_000; // 2026-11-01
-        const DEC_DUE: i64 = 1_796_115_600_000; // 2026-12-01T09:00:00Z
         let by_range = query_uids(&items, |q| {
             let mut f = q.reborrow().init_filter();
             f.reborrow().init_due_from().set_unix_millis(NOV);

@@ -89,5 +89,5 @@ async fn an_import_says_what_it_lost() {
     let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\nBEGIN:VTODO\r\nDTSTAMP:20261101T000000Z\r\nSUMMARY:no uid\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
     let report = r.import_ics(ics).await.unwrap();
     assert_eq!(report.failed, ["VTODO without a UID"]);
-    assert!(report.created.is_empty());
+    assert_eq!(report.created, [] as [fs_objects::ObjectId; 0]);
 }

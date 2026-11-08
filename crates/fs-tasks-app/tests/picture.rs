@@ -142,7 +142,7 @@ fn the_views_the_form_and_a_marked_task_are_drawn() {
     widget.with_state(|s| s.select(&clinic));
     let marked = draw(&app, "tasks-marked.png", (1300, 800)).unwrap();
     assert_ne!(status, marked);
-    widget.with_state(|s| s.begin_edit());
+    widget.with_state(fs_components_workbenches::tasks::TasksState::begin_edit);
     let form = draw(&app, "tasks-form.png", (1300, 800)).unwrap();
     assert_ne!(marked, form);
     widget.with_state(|s| {
@@ -157,11 +157,11 @@ fn the_views_the_form_and_a_marked_task_are_drawn() {
         s.set_view(TaskView::Status);
     });
     let narrow = draw(&app, "tasks-status-narrow.png", (420, 800)).unwrap();
-    assert!(!narrow.is_empty());
+    assert_ne!(narrow, [] as [u8; 0]);
     let compact = TasksWidget::compact(w.adapter.clone(), labels());
     let small = screen_widget(compact).unwrap();
     let next = draw(&small, "tasks-compact.png", (420, 600)).unwrap();
-    assert!(!next.is_empty());
+    assert_ne!(next, [] as [u8; 0]);
 }
 
 #[test]
@@ -176,7 +176,7 @@ fn the_smallest_window_is_drawn_in_every_state_with_its_actions() {
     }
     widget.with_state(|s| s.set_view(TaskView::Status));
     draw(&app, "tasks-min-status.png", size).unwrap();
-    widget.with_state(|s| s.ask_delete());
+    widget.with_state(fs_components_workbenches::tasks::TasksState::ask_delete);
     draw(&app, "tasks-min-delete.png", size).unwrap();
     widget.with_state(|s| {
         s.keep();

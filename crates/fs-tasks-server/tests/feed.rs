@@ -14,6 +14,8 @@ use fs_interfaces::rpc::{read_envelope, write_uuid};
 struct Seen(Rc<RefCell<Vec<String>>>);
 
 impl change_listener::Server for Seen {
+    // the trait method is async; this impl has nothing to await
+    #[allow(clippy::unused_async_trait_impl)]
     async fn change(
         self: Rc<Self>,
         params: change_listener::ChangeParams,

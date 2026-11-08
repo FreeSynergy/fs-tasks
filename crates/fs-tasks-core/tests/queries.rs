@@ -91,5 +91,8 @@ async fn query_by_status_and_label() {
         .with_label("urgent");
     assert_eq!(names(r.query(&q).await.unwrap()), ["open"]);
     let q = TaskQuery::new().with_label("other");
-    assert!(r.query(&q).await.unwrap().is_empty());
+    assert_eq!(
+        r.query(&q).await.unwrap(),
+        [] as [fs_tasks_core::TaskEntry; 0]
+    );
 }

@@ -72,10 +72,13 @@ impl ObjectQuery for Charging {
     }
 }
 
+use std::fmt::Write as _;
+
 fn ics(first: usize, n: usize) -> String {
     let mut s = String::from("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\n");
     for i in first..first + n {
-        s += &format!(
+        let _ = write!(
+            s,
             "BEGIN:VTODO\r\nUID:todo-{i:05}\r\nDTSTAMP:20261101T000000Z\r\nDUE:20261112T170000Z\r\nSUMMARY:T{i}\r\nEND:VTODO\r\n"
         );
     }

@@ -95,6 +95,8 @@ async fn open_means_needs_action_or_in_process_and_no_progress_counts_as_needs_a
     .await;
 }
 
+const DEC_1: i64 = 1_796_083_200_000; // 2026-12-01T00:00:00Z
+
 #[tokio::test(flavor = "current_thread")]
 async fn term_open_and_the_older_filters_combine_by_and() {
     with_server(|root| async move {
@@ -129,7 +131,6 @@ async fn term_open_and_the_older_filters_combine_by_and() {
             .await,
             ["a", "d"]
         );
-        const DEC_1: i64 = 1_796_083_200_000; // 2026-12-01T00:00:00Z
         assert_eq!(
             found(&items, |mut f| {
                 f.set_term("report");

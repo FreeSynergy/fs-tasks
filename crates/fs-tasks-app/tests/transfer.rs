@@ -100,7 +100,7 @@ fn naming_a_task_that_does_not_exist_writes_nothing() {
     let file = dir.file("out.ics");
     let handle = w.runtime.handle().clone();
     assert!(export_all(w.repo.as_ref(), &handle, &file, &["typo".into()]).is_err());
-    assert!(dir.names().is_empty());
+    assert_eq!(dir.names(), [] as [std::string::String; 0]);
 }
 
 #[test]
@@ -159,5 +159,5 @@ fn one_unreadable_stored_task_is_said_plainly_and_nothing_is_written() {
     let dir = Scratch::new();
     let handle = w.runtime.handle().clone();
     assert!(export_all(w.repo.as_ref(), &handle, &dir.file("out.ics"), &[]).is_err());
-    assert!(dir.names().is_empty());
+    assert_eq!(dir.names(), [] as [std::string::String; 0]);
 }

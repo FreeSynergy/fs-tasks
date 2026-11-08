@@ -14,8 +14,11 @@ use serde_json::{Value, json};
 
 fn task(uid: &str, extra: Value) -> Value {
     let mut value = json!({"@type": "Task", "version": "2.0", "uid": uid, "title": uid});
-    for (k, v) in extra.as_object().unwrap() {
-        value[k] = v.clone();
+    let Value::Object(extra) = extra else {
+        panic!("extra must be an object");
+    };
+    for (k, v) in extra {
+        value[k] = v;
     }
     value
 }
@@ -68,9 +71,11 @@ fn every_form_of_a_marking_counts_and_a_mention_does_not() {
 }
 
 fn repeating(patch: Value) -> Value {
-    json!({"start": "2026-11-02T09:00:00",
+    let mut value = json!({"start": "2026-11-02T09:00:00",
         "recurrenceRule": {"@type": "RecurrenceRule", "frequency": "weekly"},
-        "recurrenceOverrides": {"2026-11-09T09:00:00": patch}})
+        "recurrenceOverrides": {}});
+    value["recurrenceOverrides"]["2026-11-09T09:00:00"] = patch;
+    value
 }
 
 #[test]
@@ -208,7 +213,7 @@ fn the_adapter_reads_marks_from_what_is_stored_now_not_from_what_a_draft_says() 
     let w = World::new();
     let key = w.plain("Plain");
     let mut draft = w.adapter.draft(&key).unwrap();
-    assert!(draft.marks.is_empty());
+    assert_eq!(draft.marks, [] as [std::string::String; 0]);
     w.mark_envelope(&key);
     draft.revision = w.adapter.draft(&key).unwrap().revision;
     draft.fields[0].value = "Other".into();

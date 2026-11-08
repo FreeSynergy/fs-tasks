@@ -18,13 +18,13 @@ fn unknown_and_vendor_properties_survive() {
     // already 2.0: the upgrade changes nothing
     let up = upgrade(v.clone());
     assert_eq!(up.value, v);
-    assert!(up.notes.is_empty());
+    assert_eq!(up.notes, [] as [std::string::String; 0]);
 }
 
 #[test]
 fn validation_rules() {
     let ok = Task::new("T");
-    assert!(issues(&ok).is_empty());
+    assert_eq!(issues(&ok), [] as [fs_tasks_core::Issue; 0]);
     let mut bad = ok.clone();
     bad.version = Some("1.0".into());
     bad.percent_complete = Some(101);

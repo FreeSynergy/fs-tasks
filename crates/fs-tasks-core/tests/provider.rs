@@ -42,7 +42,7 @@ impl TaskItems for ReadOnly {
 #[tokio::test]
 async fn a_missing_method_says_not_possible() {
     let p: Arc<dyn TaskItems> = Arc::new(ReadOnly);
-    assert!(p.list().await.unwrap().is_empty());
+    assert_eq!(p.list().await.unwrap(), [] as [fs_tasks_core::TaskEntry; 0]);
     let Err(Error::Unsupported(u)) = p.create(Task::new("x")).await else {
         panic!("expected an explicit not possible");
     };

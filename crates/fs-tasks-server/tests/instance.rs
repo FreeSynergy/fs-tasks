@@ -30,7 +30,7 @@ async fn the_report_carries_the_id_of_the_store_and_the_log_does_not() {
 
         create(&items_of(&root).await, "uid-1", "Ada").await;
         let log = store.activities(&ActivityFilter::default()).await.unwrap();
-        assert!(!log.is_empty());
+        assert_ne!(log, [] as [fs_objects::Activity; 0]);
         let written = format!("{log:?}");
         assert!(!written.contains(&told.to_string()), "{written}");
     })

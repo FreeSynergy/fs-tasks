@@ -29,10 +29,10 @@ async fn every_answer_carries_a_revision_and_each_write_changes_it() {
         let items = items_of(&root).await;
         let mut make = items.create_request();
         make.get().set_jscalendar(json("u1", "Plan").as_str());
-        let made = make.send().promise.await.unwrap();
-        let first = revision_of(made.get().unwrap().get_task().unwrap());
+        let created = make.send().promise.await.unwrap();
+        let first = revision_of(created.get().unwrap().get_task().unwrap());
         let id = {
-            let env = made
+            let env = created
                 .get()
                 .unwrap()
                 .get_task()
