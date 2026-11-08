@@ -68,7 +68,7 @@ fn priority(text: &str) -> Result<Option<i32>, SourceError> {
 
 /// `2026-11-30 17:00`, with seconds if wanted, as a `LocalDateTime`. A date alone is refused: the task
 /// has no way yet to say "that day, at no particular time".
-fn due(text: &str) -> Result<Option<String>, SourceError> {
+pub(super) fn due(text: &str) -> Result<Option<String>, SourceError> {
     if text.is_empty() {
         return Ok(None);
     }

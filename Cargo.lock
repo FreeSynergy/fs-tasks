@@ -1401,8 +1401,8 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 
 [[package]]
 name = "fs-components-app"
-version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=8c38a3b17f6b723ef625046a271c5564f5d7aa26#8c38a3b17f6b723ef625046a271c5564f5d7aa26"
+version = "0.3.0"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1415,18 +1415,20 @@ dependencies = [
 
 [[package]]
 name = "fs-components-primitives"
-version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=8c38a3b17f6b723ef625046a271c5564f5d7aa26#8c38a3b17f6b723ef625046a271c5564f5d7aa26"
+version = "0.3.0"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
 dependencies = [
  "blinc_cn",
  "blinc_core",
  "blinc_layout",
+ "blinc_theme",
+ "fs-interfaces 0.51.0",
 ]
 
 [[package]]
 name = "fs-components-render"
-version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=8c38a3b17f6b723ef625046a271c5564f5d7aa26#8c38a3b17f6b723ef625046a271c5564f5d7aa26"
+version = "0.3.0"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1440,8 +1442,8 @@ dependencies = [
 
 [[package]]
 name = "fs-components-widgets"
-version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=8c38a3b17f6b723ef625046a271c5564f5d7aa26#8c38a3b17f6b723ef625046a271c5564f5d7aa26"
+version = "0.3.0"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
 dependencies = [
  "blinc_cn",
  "blinc_core",
@@ -1456,8 +1458,8 @@ dependencies = [
 
 [[package]]
 name = "fs-components-workbenches"
-version = "0.2.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=8c38a3b17f6b723ef625046a271c5564f5d7aa26#8c38a3b17f6b723ef625046a271c5564f5d7aa26"
+version = "0.3.0"
+source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1483,6 +1485,15 @@ dependencies = [
  "tokio",
  "tokio-util",
  "uuid",
+]
+
+[[package]]
+name = "fs-interfaces"
+version = "0.51.0"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?rev=8f917eb540cb90a8e6cfe646b826652729e3d950#8f917eb540cb90a8e6cfe646b826652729e3d950"
+dependencies = [
+ "capnp",
+ "idna",
 ]
 
 [[package]]
@@ -1522,7 +1533,7 @@ dependencies = [
 name = "fs-tasks"
 version = "0.9.3-rc.1"
 dependencies = [
- "fs-interfaces",
+ "fs-interfaces 0.49.1",
  "fs-tasks-app",
  "fs-tasks-cli",
  "fs-tasks-server",
@@ -1548,7 +1559,7 @@ name = "fs-tasks-cli"
 version = "0.9.3-rc.1"
 dependencies = [
  "capnp",
- "fs-interfaces",
+ "fs-interfaces 0.49.1",
  "fs-objects",
  "fs-tasks-core",
  "fs-tasks-server",
@@ -1564,7 +1575,7 @@ dependencies = [
  "async-trait",
  "capnp",
  "chrono",
- "fs-interfaces",
+ "fs-interfaces 0.49.1",
  "fs-jscalendar",
  "fs-objects",
  "serde",
@@ -1581,7 +1592,7 @@ dependencies = [
  "async-trait",
  "capnp",
  "capnp-rpc",
- "fs-interfaces",
+ "fs-interfaces 0.49.1",
  "fs-objects",
  "fs-tasks-core",
  "serde_json",
@@ -2168,6 +2179,27 @@ dependencies = [
  "zerofrom",
  "zerotrie",
  "zerovec",
+]
+
+[[package]]
+name = "idna"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b0875f23caa03898994f6ddc501886a45c7d3d62d04d2d90788d47be1b1e4de"
+dependencies = [
+ "idna_adapter",
+ "smallvec",
+ "utf8_iter",
+]
+
+[[package]]
+name = "idna_adapter"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb68373c0d6620ef8105e855e7745e18b0d00d3bdb07fb532e434244cdb9a714"
+dependencies = [
+ "icu_normalizer",
+ "icu_properties",
 ]
 
 [[package]]

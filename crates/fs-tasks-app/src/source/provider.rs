@@ -13,13 +13,21 @@ use fs_tasks_core::Task;
 use fs_tasks_core::validate::PROGRESS;
 
 use super::adapter::{TaskAdapter, reason};
-use super::apply::{apply_draft, set_progress};
-use super::draft::{blank_draft, draft_of, is_series};
+use super::apply::{apply_draft, due, set_progress};
+use super::draft::{DUE, blank_draft, draft_of, is_series};
 use super::rows::{is_open, matches, row_of};
 use super::sheet::sheet_of;
 use crate::words::{progress_title, say};
 
 impl TaskSource for TaskAdapter {
+    /// The due date is judged as it is typed, by the same rule as the save.
+    fn check(&self, key: &str, text: &str) -> Option<String> {
+        if key == DUE {
+            return due(text.trim()).err().map(|e| e.message);
+        }
+        None
+    }
+
     fn capabilities(&self) -> TaskCapabilities {
         let report = self.items.capabilities();
         let mut can = TaskCapabilities::read_only();
