@@ -9,3 +9,7 @@ repository = "https://github.com/FreeSynergy/fs-tasks"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.89"
+
+# Window resize crash (wgpu validation error when the window is enlarged); see fs-store/DESIGN.md.
+[patch.crates-io]
+blinc_app = { git = "https://github.com/FreeSynergy/blinc-app-fix" }
