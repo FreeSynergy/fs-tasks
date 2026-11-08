@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/fs-tasks-core", "crates/fs-tasks-server", "crates/fs-tasks-app", "crates/fs-tasks-cli", "crates/fs-tasks"]
 
 [workspace.package]
-version = "0.9.2"
+version = "0.9.3-rc.1"
 authors = ["FreeSynergy <support@freesynergy.net>"]
 repository = "https://github.com/FreeSynergy/fs-tasks"
 edition = "2024"

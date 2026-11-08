@@ -15,6 +15,7 @@ jobs:
       name: fs-tasks
       kind: app
       app-id: net.freesynergy.Tasks
+      macos: false
       windows-targets: ""   # Unix sockets and Unix paths for now
     secrets:
       GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
