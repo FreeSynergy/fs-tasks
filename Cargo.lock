@@ -1401,8 +1401,8 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 
 [[package]]
 name = "fs-components-app"
-version = "0.3.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1415,20 +1415,20 @@ dependencies = [
 
 [[package]]
 name = "fs-components-primitives"
-version = "0.3.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
 dependencies = [
  "blinc_cn",
  "blinc_core",
  "blinc_layout",
  "blinc_theme",
- "fs-interfaces 0.51.0",
+ "fs-interfaces 0.52.0",
 ]
 
 [[package]]
 name = "fs-components-render"
-version = "0.3.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1442,8 +1442,8 @@ dependencies = [
 
 [[package]]
 name = "fs-components-widgets"
-version = "0.3.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
 dependencies = [
  "blinc_cn",
  "blinc_core",
@@ -1458,8 +1458,8 @@ dependencies = [
 
 [[package]]
 name = "fs-components-workbenches"
-version = "0.3.0"
-source = "git+https://github.com/FreeSynergy/fs-components?rev=e43a9439d0e72601b05918c334b1768b7499479a#e43a9439d0e72601b05918c334b1768b7499479a"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-components?tag=v0.0.1#320de5f62953b1b3c259aa4746e606f3ece9a8dc"
 dependencies = [
  "blinc_app",
  "blinc_cn",
@@ -1473,8 +1473,8 @@ dependencies = [
 
 [[package]]
 name = "fs-interfaces"
-version = "0.49.1"
-source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.49.1#dcd9710c18e7a68f49310cc27340f3d3117af64e"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.1#9f2d3a0626d7382b478c754eb31834146188dfab"
 dependencies = [
  "capnp",
  "capnp-rpc",
@@ -1489,8 +1489,8 @@ dependencies = [
 
 [[package]]
 name = "fs-interfaces"
-version = "0.51.0"
-source = "git+https://github.com/FreeSynergy/fs-interfaces?rev=8f917eb540cb90a8e6cfe646b826652729e3d950#8f917eb540cb90a8e6cfe646b826652729e3d950"
+version = "0.52.0"
+source = "git+https://github.com/FreeSynergy/fs-interfaces?rev=9a288a6#9a288a6e7a1e5400cacca1a893fcc5c519bfe3b2"
 dependencies = [
  "capnp",
  "idna",
@@ -1498,8 +1498,8 @@ dependencies = [
 
 [[package]]
 name = "fs-jscalendar"
-version = "0.1.3"
-source = "git+https://github.com/FreeSynergy/fs-jscalendar?tag=v0.1.3#4c7468072e488ac13f8b6d7b712097a6700ae595"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-jscalendar?tag=v0.0.1#7a3b402359326921b044a78697a1d37667aef6bf"
 dependencies = [
  "calcard",
  "chrono",
@@ -1513,8 +1513,8 @@ dependencies = [
 
 [[package]]
 name = "fs-objects"
-version = "0.5.0"
-source = "git+https://github.com/FreeSynergy/fs-objects?tag=v0.5.0#b0a794ab702d8cf8660956950e1e8868e4c155c3"
+version = "0.0.1"
+source = "git+https://github.com/FreeSynergy/fs-objects?tag=v0.0.1#7cf0f05e3a9835b582aa2ac22014f2a1f1bff200"
 dependencies = [
  "async-trait",
  "base64",
@@ -1531,9 +1531,9 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks"
-version = "0.9.3-rc.1"
+version = "0.0.1"
 dependencies = [
- "fs-interfaces 0.49.1",
+ "fs-interfaces 0.0.1",
  "fs-tasks-app",
  "fs-tasks-cli",
  "fs-tasks-server",
@@ -1543,7 +1543,7 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-app"
-version = "0.9.3-rc.1"
+version = "0.0.1"
 dependencies = [
  "fs-components-app",
  "fs-components-render",
@@ -1556,10 +1556,10 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-cli"
-version = "0.9.3-rc.1"
+version = "0.0.1"
 dependencies = [
  "capnp",
- "fs-interfaces 0.49.1",
+ "fs-interfaces 0.0.1",
  "fs-objects",
  "fs-tasks-core",
  "fs-tasks-server",
@@ -1570,12 +1570,12 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-core"
-version = "0.9.3-rc.1"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "capnp",
  "chrono",
- "fs-interfaces 0.49.1",
+ "fs-interfaces 0.0.1",
  "fs-jscalendar",
  "fs-objects",
  "serde",
@@ -1587,12 +1587,12 @@ dependencies = [
 
 [[package]]
 name = "fs-tasks-server"
-version = "0.9.3-rc.1"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "capnp",
  "capnp-rpc",
- "fs-interfaces 0.49.1",
+ "fs-interfaces 0.0.1",
  "fs-objects",
  "fs-tasks-core",
  "serde_json",
