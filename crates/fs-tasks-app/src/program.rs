@@ -49,12 +49,12 @@ fn store_file(args: &crate::args::Args) -> Result<Option<std::path::PathBuf>, St
 }
 
 fn run(argv: &[String]) -> Result<(), String> {
-    let args = parse(argv)?;
-    if args.help {
+    let options = parse(argv)?;
+    if options.help {
         println!("{HELP}");
         return Ok(());
     }
-    let store_file = store_file(&args)?;
+    let store_file = store_file(&options)?;
     let runtime = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
     let store: Arc<dyn Store> = runtime
         .block_on(async {
@@ -69,7 +69,7 @@ fn run(argv: &[String]) -> Result<(), String> {
     let handle = runtime.handle().clone();
 
     let mut status = None;
-    if let Some(file) = &args.import {
+    if let Some(file) = &options.import {
         let summary = import_file(items.as_ref(), &handle, file)?;
         eprintln!("{}", summary.message());
         status = Some(if summary.is_clean() {
@@ -78,17 +78,17 @@ fn run(argv: &[String]) -> Result<(), String> {
             Status::Problem(summary.message())
         });
     }
-    if let Some(file) = &args.export {
-        let report = export_all(items.as_ref(), &handle, file, &args.export_sensitive)?;
+    if let Some(file) = &options.export {
+        let report = export_all(items.as_ref(), &handle, file, &options.export_sensitive)?;
         eprintln!("{}", report.message(file));
         if !report.failed.is_empty() {
             return Err(format!("{} could not be exported", report.failed.len()));
         }
-        if args.snapshot.is_none() {
+        if options.snapshot.is_none() {
             return Ok(());
         }
     }
-    show(&args, items, handle, status)
+    show(&options, items, handle, status)
 }
 
 fn show(
