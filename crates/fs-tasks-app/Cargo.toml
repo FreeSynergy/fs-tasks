@@ -16,14 +16,19 @@ fs-types = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.1
 fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11", features = ["values"] }
 fs-interfaces-frontend = { package = "fs-interfaces", git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.2", features = ["values"] }
 fs-types-frontend = { package = "fs-types", git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.2" }
-# Exactly this commit of branch thread-a-admin-frontend (untagged, reviewed through its fifth review); every
+# Exactly this commit of branch r1-components (it contains fs-admin-frontend unchanged since 4688cee of branch
+# thread-a-admin-frontend, plus fs-components-kanban and -timeline; untagged); every
 # fs-components crate below comes from the same commit, otherwise there are two copies of AppWidget. Switch to the
 # tag once Thread C/A tag. See DESIGN.md.
-fs-admin-frontend = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
-fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
-fs-components-fields = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
-fs-components-styles = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
-chrono = { version = "0.4", default-features = false, features = ["std"] }
+fs-admin-frontend = { git = "https://github.com/FreeSynergy/fs-components", rev = "aefc99e" }
+fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", rev = "aefc99e" }
+fs-components-fields = { git = "https://github.com/FreeSynergy/fs-components", rev = "aefc99e" }
+fs-components-styles = { git = "https://github.com/FreeSynergy/fs-components", rev = "aefc99e" }
+fs-components-widgets = { git = "https://github.com/FreeSynergy/fs-components", rev = "aefc99e" }
+fs-components-kanban = { git = "https://github.com/FreeSynergy/fs-components", rev = "aefc99e" }
+fs-components-timeline = { git = "https://github.com/FreeSynergy/fs-components", rev = "aefc99e" }
+fs-components-calendar-grid = { git = "https://github.com/FreeSynergy/fs-components", rev = "aefc99e" }
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread"] }
 

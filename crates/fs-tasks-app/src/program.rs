@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use crate::args::{HELP, parse};
-use crate::{TaskBackend, task_window};
+use crate::task_window;
 use fs_components_app::{WindowOptions, launch};
 use fs_objects::{Store, TursoStore};
 use fs_tasks_core::{TaskItems, TaskRepo};
@@ -56,8 +56,7 @@ fn run(argv: &[String]) -> Result<(), String> {
         .map(|s| Arc::new(s) as Arc<dyn Store>)
         .map_err(|e| format!("cannot open the store: {e}"))?;
     let items: Arc<dyn TaskItems> = Arc::new(TaskRepo::new(store, ACTOR));
-    let backend = Arc::new(TaskBackend::new(items, runtime.handle().clone()));
-    let app = task_window(backend).map_err(|e| e.to_string())?;
+    let app = task_window(items, runtime.handle().clone()).map_err(|e| e.to_string())?;
     let mut window = WindowOptions::default();
     window.width = options.size.0;
     window.height = options.size.1;

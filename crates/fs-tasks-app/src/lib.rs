@@ -11,12 +11,14 @@
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
 pub mod args;
-mod backend;
+pub(crate) mod backend;
 mod frontend_link;
 mod program;
+mod views;
 mod window;
 pub mod words;
 
 pub use backend::{TaskBackend, object_id, record_id};
 pub use program::app_command;
+pub use views::{TaskBoard, TaskTimeline};
 pub use window::{HELP_URL, about, task_window};

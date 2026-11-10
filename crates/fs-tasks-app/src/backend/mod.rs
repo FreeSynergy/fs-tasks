@@ -7,7 +7,7 @@
 
 mod commands;
 mod ids;
-mod instants;
+pub(crate) mod instants;
 mod issues;
 mod read;
 mod write;
