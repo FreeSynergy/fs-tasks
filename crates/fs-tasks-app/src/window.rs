@@ -82,12 +82,7 @@ pub fn task_window(items: Arc<dyn TaskItems>, runtime: Handle) -> Result<AppWidg
     let described = Task::describe();
     let description = frontend_link::description(&described, &READ_ONLY_FIELDS);
     let session = Session::new(description, backend.clone(), Arc::new(SystemClock::new()));
-    let admin = Arc::new(AdminSurface::new(
-        session,
-        look.clone(),
-        Arc::clone(&say),
-        None,
-    ));
+    let admin = Arc::new(AdminSurface::new(session, look, Arc::clone(&say), None));
 
     let board_data = Arc::new(TaskBoard::new(
         Arc::clone(&items),
@@ -95,8 +90,7 @@ pub fn task_window(items: Arc<dyn TaskItems>, runtime: Handle) -> Result<AppWidg
         backend,
         Arc::clone(&say),
     ));
-    let board =
-        KanbanBoard::new(board_data.clone(), Arc::clone(&say), look.clone()).events(board_data);
+    let board = KanbanBoard::new(board_data.clone(), Arc::clone(&say), look).events(board_data);
     let today = crate::views::today();
     let timeline = Timeline::new(
         TimelineState::new(Some(today)),

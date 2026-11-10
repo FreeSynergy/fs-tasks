@@ -217,6 +217,7 @@ impl Ctx<'_> {
         ))
     }
 
+    #[allow(clippy::unused_self)] // one command, one method, like the others
     /// `check`: the findings of the core for a task made of these values; nothing is stored.
     pub fn check(&self, input: &Values) -> Result<Outcome, BackendError> {
         let task = new_task(input)?;

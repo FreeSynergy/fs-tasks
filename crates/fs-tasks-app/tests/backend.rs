@@ -1,7 +1,7 @@
 //! `TaskBackend` against the real core over an in-memory store, command by command.
 //!
 //! Pattern: none (tests). Nothing here pretends to be the core: the repository is the real one.
-#![allow(clippy::pedantic)]
+#![allow(clippy::pedantic, clippy::cloned_ref_to_slice_refs)]
 
 use std::sync::Arc;
 

@@ -49,7 +49,7 @@ fn set_number(
         Some(Ok(n)) => {
             obj.insert(name.to_owned(), json!(n));
         }
-        Some(Err(_)) => problems.push(issue(name, TypeProblem::Character)),
+        Some(Err(())) => problems.push(issue(name, TypeProblem::Character)),
     }
 }
 
@@ -70,7 +70,7 @@ fn set_objects(obj: &mut Object, name: &str, kind: &str, member: &str, values: &
             .values()
             .any(|o| o.get(member).and_then(Value::as_str) == Some(text));
         if !known {
-            let key = (1..)
+            let key = (1..=map.len() + 1)
                 .map(|i| format!("{}{i}", &name[..1]))
                 .find(|k| !map.contains_key(k))
                 .unwrap_or_default();
