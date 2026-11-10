@@ -14,6 +14,10 @@ fn main() {
 
 fn dispatch(words: &[String]) -> i32 {
     match words.split_first() {
+        Some((first, _)) if first == "--version" || first == "-V" => {
+            println!("fs-tasks {}", env!("CARGO_PKG_VERSION"));
+            0
+        }
         Some((first, rest)) if first == "serve" => {
             fs_tasks_server::serve_command(rest.iter().map(OsString::from))
         }

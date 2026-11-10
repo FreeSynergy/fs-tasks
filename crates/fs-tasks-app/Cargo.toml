@@ -20,14 +20,14 @@ fs-types-frontend = { package = "fs-types", git = "https://github.com/FreeSynerg
 # thread-a-admin-frontend, plus fs-components-kanban and -timeline; untagged); every
 # fs-components crate below comes from the same commit, otherwise there are two copies of AppWidget. Switch to the
 # tag once Thread C/A tag. See DESIGN.md.
-fs-admin-frontend = { git = "https://github.com/FreeSynergy/fs-components", rev = "9950b51" }
-fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", rev = "9950b51" }
-fs-components-fields = { git = "https://github.com/FreeSynergy/fs-components", rev = "9950b51" }
-fs-components-styles = { git = "https://github.com/FreeSynergy/fs-components", rev = "9950b51" }
-fs-components-widgets = { git = "https://github.com/FreeSynergy/fs-components", rev = "9950b51" }
-fs-components-kanban = { git = "https://github.com/FreeSynergy/fs-components", rev = "9950b51" }
-fs-components-timeline = { git = "https://github.com/FreeSynergy/fs-components", rev = "9950b51" }
-fs-components-calendar-grid = { git = "https://github.com/FreeSynergy/fs-components", rev = "9950b51" }
+fs-admin-frontend = { git = "https://github.com/FreeSynergy/fs-components", rev = "6fe683b" }
+fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", rev = "6fe683b" }
+fs-components-fields = { git = "https://github.com/FreeSynergy/fs-components", rev = "6fe683b" }
+fs-components-styles = { git = "https://github.com/FreeSynergy/fs-components", rev = "6fe683b" }
+fs-components-widgets = { git = "https://github.com/FreeSynergy/fs-components", rev = "6fe683b" }
+fs-components-kanban = { git = "https://github.com/FreeSynergy/fs-components", rev = "6fe683b" }
+fs-components-timeline = { git = "https://github.com/FreeSynergy/fs-components", rev = "6fe683b" }
+fs-components-calendar-grid = { git = "https://github.com/FreeSynergy/fs-components", rev = "6fe683b" }
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread"] }

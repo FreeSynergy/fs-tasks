@@ -55,3 +55,10 @@ fn without_the_gui_the_bare_command_prints_help() {
     assert_eq!(code, Some(0));
     assert!(out.contains("fs-tasks serve"), "{out}");
 }
+
+#[test]
+fn version_prints_name_and_version_and_exits_0() {
+    let (code, out, _) = run(&["--version"]);
+    assert_eq!(code, Some(0));
+    assert_eq!(out.trim(), concat!("fs-tasks ", env!("CARGO_PKG_VERSION")));
+}
