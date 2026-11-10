@@ -12,6 +12,7 @@
 
 pub mod args;
 mod backend;
+mod frontend_link;
 mod program;
 mod window;
 pub mod words;

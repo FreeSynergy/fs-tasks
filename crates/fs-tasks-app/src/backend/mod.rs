@@ -15,9 +15,8 @@ mod write;
 use std::sync::Arc;
 
 use fs_admin_frontend::{Backend, BackendError, Outcome, Record, Values};
-use fs_tasks_core::describe::support;
 use fs_tasks_core::{DescribesType, Task, TaskItems};
-use fs_types::{BasicRules, TypeDescription};
+use fs_types::{BasicRules, CommandKind, TypeDescription};
 use tokio::runtime::Handle;
 
 use commands::Ctx;
@@ -46,6 +45,7 @@ impl TaskBackend {
         Ctx {
             items: &self.items,
             runtime: &self.runtime,
+            description: &self.description,
         }
     }
 
@@ -55,13 +55,17 @@ impl TaskBackend {
             .description
             .find_command(name)
             .ok_or(BackendError::NotFound)?;
+        if command.kind == CommandKind::Change {
+            // the input of `change` is an Edit, checked field by field in `commands.rs`
+            return Ok(());
+        }
         let mut shape = TypeDescription::new("Input", "fs-tasks", "none", "input");
         shape.fields.clone_from(&command.input);
         let issues = shape.check_record(&BasicRules::standard(), input);
         if issues.is_empty() {
             Ok(())
         } else {
-            Err(BackendError::Rejected(issues))
+            Err(issues::refused(&issues))
         }
     }
 }
@@ -73,10 +77,13 @@ impl Backend for TaskBackend {
     }
 
     fn run(&self, name: &str, input: &Values) -> Result<Outcome, BackendError> {
-        if self.description.find_command(name).is_none() {
-            return Err(BackendError::NotFound);
-        }
-        if !support::is_supported(name) {
+        let command = self
+            .description
+            .find_command(name)
+            .ok_or(BackendError::NotFound)?;
+        // the guard: the shipped frontend cannot show the lock, so a command the description reports as not supported
+        // is refused here
+        if !command.supported {
             return Err(BackendError::Unavailable(format!("unsupported: {name}")));
         }
         self.check(name, input)?;
@@ -92,7 +99,7 @@ impl Backend for TaskBackend {
             "exportIcs" => ctx.export_ics(input),
             "check" => ctx.check(input),
             "suggest" => ctx.suggest(input),
-            "find" => Ok(Outcome::default()),
+            "find" => Err(BackendError::Unavailable("find is read with list".into())),
             _ => Err(BackendError::Unavailable(format!("unsupported: {name}"))),
         }
     }

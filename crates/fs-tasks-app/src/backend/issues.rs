@@ -8,6 +8,8 @@ use fs_admin_frontend::BackendError;
 use fs_tasks_core::{Error, Issue};
 use fs_types::{RecordIssue, RecordProblem, TypeProblem};
 
+use crate::frontend_link;
+
 /// A finding on `field`, value 0.
 pub fn issue(field: &str, problem: TypeProblem) -> RecordIssue {
     RecordIssue {
@@ -34,7 +36,13 @@ fn of_core(i: &Issue) -> RecordIssue {
 
 /// The refusal for these findings of the core.
 pub fn rejected(issues: &[Issue]) -> BackendError {
-    BackendError::Rejected(issues.iter().map(of_core).collect())
+    let found: Vec<RecordIssue> = issues.iter().map(of_core).collect();
+    frontend_link::rejected(&found)
+}
+
+/// The refusal for these findings of the description's rules.
+pub fn refused(issues: &[RecordIssue]) -> BackendError {
+    frontend_link::rejected(issues)
 }
 
 /// The error of the core as the error of the front end.

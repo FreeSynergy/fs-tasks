@@ -13,6 +13,8 @@ fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.1"
 # The type description the core reports (supported flag, Edit).
 fs-types = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11" }
 # TEMPORARY: the tag fs-admin-frontend (rev 4688cee) is built on; see src/frontend_link.rs.
+fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11", features = ["values"] }
+fs-interfaces-frontend = { package = "fs-interfaces", git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.2", features = ["values"] }
 fs-types-frontend = { package = "fs-types", git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.2" }
 # Exactly this commit of branch thread-a-admin-frontend (untagged, reviewed through its fifth review); every
 # fs-components crate below comes from the same commit, otherwise there are two copies of AppWidget. Switch to the

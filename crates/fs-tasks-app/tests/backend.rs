@@ -10,7 +10,7 @@ use fs_objects::{Store, TursoStore};
 use fs_tasks_app::TaskBackend;
 use fs_tasks_core::describe::support::{self, TABLE};
 use fs_tasks_core::{DescribesType, Task, TaskItems, TaskRepo};
-use fs_types::{RecordProblem, TypeProblem};
+use fs_types_frontend::{RecordProblem, TypeProblem};
 use tokio::runtime::Runtime;
 
 struct World {
@@ -186,7 +186,7 @@ fn find_filters() {
             .collect()
     };
     assert_eq!(ids(&[]).len(), 2);
-    assert_eq!(ids(&[("text", &["alp"])]), [a.clone()]);
+    assert_eq!(ids(&[("term", &["alp"])]), [a.clone()]);
     assert_eq!(ids(&[("progress", &["completed"])]), [b.clone()]);
     assert_eq!(ids(&[("label", &["work"])]), [a.clone()]);
     assert_eq!(ids(&[("open", &["open"])]), [a.clone()]);
@@ -361,4 +361,42 @@ fn ics_check_suggest() {
     create(&w, &[("title", &["K"]), ("keywords", &["home, work"])]);
     let s = w.backend.run("suggest", &v(&[("typed", &["wo"])])).unwrap();
     assert_eq!(s.values["keywords"], ["work"]);
+}
+
+#[test]
+fn shown_only_fields_are_accepted_unchanged_and_refused_changed() {
+    let w = world();
+    let id = create(&w, &[("title", &["P"])]);
+    w.backend
+        .run(
+            "assign",
+            &v(&[
+                ("id", &[&id]),
+                ("name", &["Ada"]),
+                ("email", &["ada@example.org"]),
+            ]),
+        )
+        .unwrap();
+    // sent back as they are: fine
+    w.backend
+        .run(
+            "change",
+            &v(&[
+                ("id", &[&id]),
+                ("title", &["P2"]),
+                ("participants", &["mailto:ada@example.org"]),
+            ]),
+        )
+        .unwrap();
+    // changed: refused, nothing written
+    let r = w.backend.run(
+        "change",
+        &v(&[
+            ("id", &[&id]),
+            ("title", &["P3"]),
+            ("participants", &["mailto:bob@example.org"]),
+        ]),
+    );
+    assert!(matches!(r, Err(BackendError::Rejected(i)) if i[0].field == "participants"));
+    assert_eq!(first(&w, &id, "title").as_deref(), Some("P2"));
 }

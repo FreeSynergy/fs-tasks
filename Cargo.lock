@@ -1578,6 +1578,8 @@ dependencies = [
  "fs-components-app",
  "fs-components-fields",
  "fs-components-styles",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.11)",
+ "fs-interfaces 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.2)",
  "fs-objects",
  "fs-tasks-core",
  "fs-types 0.0.1 (git+https://github.com/FreeSynergy/fs-interfaces?tag=v0.0.11)",

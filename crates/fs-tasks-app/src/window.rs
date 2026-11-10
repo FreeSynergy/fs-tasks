@@ -13,7 +13,11 @@ use fs_components_fields::{Look, Say};
 use fs_components_styles::StyleId;
 use fs_tasks_core::{DescribesType, Task};
 
+use crate::frontend_link;
 use crate::words::words;
+
+/// Fields the form of `change` does not offer (see `backend/commands.rs`).
+const READ_ONLY_FIELDS: [&str; 4] = ["participants", "relatedTo", "recurrenceRules", "alerts"];
 
 /// Where help is.
 pub const HELP_URL: &str = "https://github.com/FreeSynergy/fs-tasks#readme";
@@ -35,8 +39,9 @@ pub fn about() -> AboutInfo {
 /// [`AppError`] if the shell refuses the screens.
 pub fn task_window(backend: Arc<dyn Backend>) -> Result<AppWidget, AppError> {
     let say: Arc<dyn Say> = words();
-    let description = Task::describe();
-    let label = description.label.clone();
+    let described = Task::describe();
+    let label = described.label.clone();
+    let description = frontend_link::description(&described, &READ_ONLY_FIELDS);
     let session = Session::new(description, backend, Arc::new(SystemClock::new()));
     let surface = AdminSurface::new(
         session,
