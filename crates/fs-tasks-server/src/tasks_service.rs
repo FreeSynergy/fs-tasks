@@ -11,7 +11,8 @@ use fs_interfaces::Unsupported;
 use fs_interfaces::rpc::{DEFAULT_PAGE_SIZE, unsupported, write_uuid};
 use fs_interfaces::tasks_capnp::tasks;
 use fs_tasks_core::contract::CONTRACT_VERSION;
-use fs_tasks_core::{TaskFeed, TaskItems};
+use fs_tasks_core::{DescribesType, Task, TaskFeed, TaskItems};
+use fs_types::{TypeRegistry, describe::CatalogServer};
 
 use crate::feed::subscribe;
 use crate::items_service::ItemsImpl;
@@ -90,6 +91,22 @@ impl tasks::Server for TasksServer {
             "board.open",
             "Boards is a placeholder in the contract; not built yet, it is possible",
         )))
+    }
+
+    /// The data types this program owns (`Task`) with every command, the unsupported ones flagged (ADR 0066).
+    async fn types(
+        self: Rc<Self>,
+        _: tasks::TypesParams,
+        mut results: tasks::TypesResults,
+    ) -> Done {
+        let mut registry = TypeRegistry::new();
+        registry
+            .register::<Task>()
+            .map_err(|e| capnp::Error::failed(format!("types.unsound: {e:?}")))?;
+        results
+            .get()
+            .set_catalog(new_client(CatalogServer::new(registry)));
+        Ok(())
     }
 
     async fn support_report(
