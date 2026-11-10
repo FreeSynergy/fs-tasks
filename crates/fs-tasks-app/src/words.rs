@@ -116,7 +116,7 @@ const FIXED: &[(&str, &str)] = &[
         "problem.keywords.bad",
         "A keyword is too long or has a character it may not.",
     ),
-    ("task.estimated-duration", "Estimated duration (like PT2H)"),
+    ("task.estimated-duration", "Duration estimate"),
     ("task.percent-complete", "Percent complete"),
     ("task.related-to", "Related to"),
     ("task.time-zone", "Time zone"),

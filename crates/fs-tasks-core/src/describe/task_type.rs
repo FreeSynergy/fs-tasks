@@ -18,7 +18,11 @@ impl DescribesType for Task {
         for f in fields::record() {
             t = t.field(f);
         }
-        for name in support::command_names() {
+        // what works comes first: a front end that lays the commands out in a row shows these at the start
+        let (done, later): (Vec<_>, Vec<_>) = support::command_names()
+            .into_iter()
+            .partition(|n| support::is_supported(n));
+        for name in done.into_iter().chain(later) {
             let command = commands::supported(name).unwrap_or_else(|| locked::locked(name));
             // SWITCH: the one place where the support table becomes the `supported` flag of the description.
             t = t.command(if support::is_supported(name) {
