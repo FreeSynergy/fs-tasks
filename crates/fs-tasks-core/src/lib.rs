@@ -25,6 +25,7 @@ pub use fs_interfaces::{Capabilities, Unsupported};
 pub use fs_interfaces::{common_capnp, tasks_capnp};
 #[cfg(feature = "contract")]
 pub mod contract;
+pub mod describe;
 mod error;
 pub mod ical;
 mod interface;
@@ -36,6 +37,7 @@ pub mod validate;
 pub use error::{Error, MAX_TASK_BYTES, Result};
 pub use fs_jscalendar::upgrade::{Upgraded, upgrade};
 pub use fs_jscalendar::{Issue, now_utc, time, upgrade};
+pub use fs_types::DescribesType;
 pub use interface::{
     CAPABILITIES, ImportReport, Place, Placed, Registry, Subscription, TaskChange, TaskEntry,
     TaskFeed, TaskItems, TaskListener, TaskPage, TaskQuery,
