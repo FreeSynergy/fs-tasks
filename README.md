@@ -8,7 +8,7 @@ What is different here: a task follows the open JSCalendar standard (RFC 8984), 
 
 ## What it can do today
 
-Latest tag: `v0.0.2`.
+Next tag: `v0.0.4` (latest tagged: `v0.0.3`).
 
 - Create, edit, assign, label, relate, list and delete tasks. Find them by due date range, progress, label, or a word in the title or description.
 - Import and export iCalendar tasks (VTODO). Events in the same file are left for the calendar.
@@ -16,15 +16,16 @@ Latest tag: `v0.0.2`.
 - Refuse an overwrite when someone else changed the task meanwhile (compare-and-set).
 - Tasks marked sensitive are left out of exports unless you release them by name.
 - A small server that offers all of this over a local socket.
-- A first, provisional window: a list and a status view of your tasks, search, create, edit, delete, import and export.
+- A window made from the description of a task: list, detail, forms and command buttons (generated, the same way for every FreeSynergy program), plus a status board and a timeline. Import and export of iCalendar files is on the command line.
+- The program tells every front end what a task is and which commands exist (`Tasks.types`); commands that are planned but not built are listed as not supported.
 - The calendar already shows tasks through this interface.
 
 ## What is not there yet
 
-- No real boards. The status view in the window is not a board: moving a card changes the task's status for everyone, and the window says so. Columns of your own, swimlanes and limits are not built.
+- No real boards. The status board in the window is a view of the task's status: moving a card changes the status for everyone. Columns of your own, swimlanes and limits are not built (their controls are locked, "comes later").
+- Not supported yet (listed, locked): boards, columns, attachments, comments, watching and notifications, history, custom fields, templates, members, webhooks, board export/import, editing of repeating rules and reminders, and the rest of the list in [DESIGN.md](DESIGN.md). The generated Admin view of this revision cannot show the lock: such a command answers "unsupported".
 - No repeating-task engine. Repeating tasks are kept but not expanded, and the window cannot edit one occurrence.
-- The window cannot assign people, show relations, checklists, comments, attachments or reminders, and it has no undo.
-- The window reads the data directly instead of talking to the server (a version over the server is on branch `gui`), and "my next tasks" shows every open task because there is no sign-in yet.
+- The window reads the data directly instead of talking to the server, and "my next tasks" shows every open task because there is no sign-in yet.
 - The interface is a draft with one user (the calendar); it needs a second before it can be called stable.
 
 ## Part of FreeSynergy

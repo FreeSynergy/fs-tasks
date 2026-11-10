@@ -35,7 +35,7 @@ Branch `linear-import` (after 0.8.0, not tagged): the `.ics` import is **linear*
 | Server `fs-tasks-server`: every method of `Items`, `subscribe` (with `ended`), `capabilities` (what the provider offers), `supportReport`; `boards` answers `Unsupported`; errors as typed problems (`tasks/not-found` 404, `tasks/conflict` 409, `tasks/invalid` 422, `Unsupported` 501); binary with `--socket`, `--data`, `--actor`, `--instance` (must be a domain, else exit code 2) | done, draft; pages cut in the store at a place (cursor form 2, see Paging), `with_page_size` for tests |
 | One command `fs-tasks` (ADR 0063, `crates/fs-tasks`): `serve` → `fs-tasks-server`, `app` or no word → `fs-tasks-app` (feature `gui`, on by default), the rest → `fs-tasks-cli` (`capabilities`, `list`, `show`, `add`, `done`, `delete`, `export`, `import` over the socket; the second user of `tasks.capnp` after the MCP tools). The three crates have no binary of their own; tests: the real program across a restart (`tests/binary.rs`), the dispatch (`tests/dispatch.rs`), and the commands against a real server in process (`fs-tasks-cli/tests`) | done, draft; `add` knows `--due`, `--zone`, `--label` only; no `query` filter yet |
 | Boards, columns, `task_link`, card moves (`Update` on `task_link`, never on the task) | open, not started (design.md; `Boards` is a placeholder); the frontend's status view is something else, see Frontend |
-| Frontend `fs-tasks-app` | first version, provisional, see Frontend |
+| Type description of `Task` (`DescribesType`, all commands of requirements.md, `supported` flag), `Tasks.types` in the server, window = Admin view + status board + timeline | done, see Frontend; the Admin view cannot show the lock yet |
 | Provider rule: `Error::Unsupported`; `capabilities()` and the reads (`get`, `get_by_uid`, `list`, `query`) are required, all other methods default to `Unsupported`; `TaskRepo` reports all but the boards ids (unsupported: "Boards is a placeholder; not built yet, it is possible") | done |
 | Integrity: a uid that names an existing object is a `Conflict`, not an overwrite; write flows run one at a time (`writes`); `progress` is indexed as its RFC 8984 §5.2.5 effective value; `list` is by due date, undated last; range bounds round up to the index's seconds; imports report what they lost: garbage in `DTSTART`, `DUE`, `DURATION`, `COMPLETED`, `PERCENT-COMPLETE`, `RRULE`, read on the `VTODO`'s own unfolded lines | done |
 | Limits: a task's JSON plus its envelope name is at most `MAX_TASK_BYTES`, so every answer fits; messages quote a value short; an import report is cut in bytes (`created` whole, the lists end with `... N more`); index times stay inside years 0 to 9999 (the task keeps its real time) | done |
@@ -45,27 +45,84 @@ Branch `linear-import` (after 0.8.0, not tagged): the `.ics` import is **linear*
 | Tests | core `tests/edit_checked.rs`, `tests/integrity.rs` plus the earlier ones; server over a real socket, comparing values, exact problem types, the real binary across a restart, exit codes, data directory mode |
 | ADR 0043 | every file <= 200 lines, `//! Pattern:` in every module, `#![deny(missing_docs)]`, `#![warn(clippy::pedantic)]` clean |
 
-## Frontend (`crates/fs-tasks-app`, provisional)
+## Frontend (`crates/fs-tasks-app`, ADR 0065 / 0066)
 
-A list and a view by status of one set of tasks; search; create, edit (title, description, due, priority, status, labels), delete; a card moved by keyboard, by the buttons beside the task, or by a frontend's gesture through `TasksWidget::grab`, `hover`, `drop_held`; iCalendar in and out by path on the command line (`--store`, `--import`, `--export`, `--export-sensitive`, `--snapshot`, `--size`, `--view list|status`). It imports no `blinc_*` crate. Its menus (ADR 0056, only real commands, in `surface.rs`): Task: New; View: List, Status; the compact variant has none. The work surface is the workbench `tasks` in `fs-components`, which knows no store and no type of this repo and has no window function: it gives its host a plain context (selected key, view; ADR 0056).
+The window is the standard shell (ADR 0065) with three screens: the generated **Admin** view of the type `Task` (list, detail, forms, command buttons, all made from the type description by `fs-admin-frontend`), the **status board** (`fs-components-kanban`) and the **timeline** (`fs-components-timeline`). Menus: Program (Quit), View (Tasks, Status board, Timeline), Help (Help, About: `FreeSynergy.Tasks`, `v` + `CARGO_PKG_VERSION`, licence, repository, origin). The app draws nothing and imports no `blinc_*` crate; it gives data, the trait and the description. The old workbench window (`fs-components-workbenches`; own search, sheet and form; `--import`, `--export`, `--snapshot`, `--view`) left the build; its code is in git history at tag `v0.0.3` (tags are not deleted). iCalendar import and export is the command line (`fs-tasks import|export`); the window keeps `--store`, `--size`, `--help`. The marking of sensitive tasks of the old window (`is_marked`) left with it: the core has no check of its own yet (ADR 0029, open).
 
-**In process, provisional.** `TaskAdapter` drives `Arc<dyn TaskItems>` with a tokio handle from the interface thread, until the RPC client of `fs-tasks-server` exists. `TaskSource` is synchronous, so a slow core freezes the window.
+**Pattern map of the new parts.**
 
-**Provisional decision: the status view is not a board.** The design says boards, columns and `task_link` are proposals with no standard, and that moving a card on a board must not change the task for everyone. **Real boards are open and not built here: no new standard, no `Boards` interface.** This first view is a view over the task's own JSCalendar `progress`, one column per value, and it is called "Status" in the GUI, not board or kanban. So moving a card **is an edit of the task's own status, for everyone**, and the screen says so: always above the columns, also that a status worked out from the participants becomes fixed on a move and cannot go back to that in the GUI, and after each move.
+| Module | Pattern | Why |
+|---|---|---|
+| core `describe/task_type.rs` | Registry entry (`DescribesType`) | `Task` reports name, program `fs-tasks`, standard "JSCalendar Task (RFC 8984 / 9253)", fields and **every** command |
+| core `describe/support.rs` | Registry | the one table capability id -> command, supported, reason; the description gets its `supported` flag from it in one line (`SWITCH` in `task_type.rs`) |
+| core `describe/{fields,commands,locked}.rs` | Builder | the fields, the commands the core does, the locked ones (their inputs are a first guess) |
+| app `backend/*` | Adapter + Command | `TaskBackend`: `fs_admin_frontend::Backend` over `Arc<dyn TaskItems>`; `read.rs` / `write.rs` map JSCalendar JSON and values, `commands.rs` is one function per command, `issues.rs` maps errors |
+| app `frontend_link.rs` | Adapter (**temporary**) | description and findings v0.0.11 -> the v0.0.2 types of the shipped frontend, and the form of `change` |
+| app `views/*` | Adapter | tasks as columns and cards, as bars and arrows; moves go through the backend |
+| app `window.rs` | Facade | shell, three screens, menus, About |
+| server `tasks_service.rs` (`types`) | Adapter | `Tasks.types` returns the registry through `CatalogServer` |
 
-| What a move does | |
-|---|---|
-| Writes | `progress` (the value the person chose) and `progressUpdated`; the core sets `updated` |
-| Keeps | everything else, compared as JSON in `tests/moves.rs`: participants and what they said, `percentComplete`, `freesynergy.net:taskStatus`, relations, `extra`, the original iCalendar |
-| To the status the task effectively has | writes nothing, so a status the core only computes (`effective_progress`) stays computed. An edit that leaves the status alone does not write it either |
-| A task that repeats, or one occurrence | refused with the reason, in the source and on the card: its status belongs to each occurrence, and there is no per-occurrence edit yet. Its form has no due date and no status; title, description, priority and labels change for all occurrences |
-| From an old row | a conflict; nothing is written and what is stored now is shown |
+**Type `Task`.** Fields (JSCalendar): `title` (text, required), `description` (multilineText), `start`, `due` (dateTime), `estimatedDuration` (text), `progress` (choice needs-action / in-process / completed / failed / cancelled), `percentComplete`, `priority` (text), `keywords` (keywords), `participants` (reference Person, shown), `relatedTo` (reference Task, shown), `locations` (place, multiple), `links` (link, multiple), `recurrenceRules` (text, shown), `alerts` (text, shown), `color`, `timeZone` (text). **Basic kinds `fs-types` does not have** are mapped to `text`: duration (ISO 8601, checked by the core), whole number (percent 0..100, priority 0..9, checked in the backend), colour, time zone (IANA name, checked by the core). Date-times are instants in the form and local times of the task's zone in the JSON (`start` and `due` are read in `timeZone`; a floating time counts as UTC). `participants`, `relatedTo`, `recurrenceRules` and `alerts` are shown; `change` accepts them only unchanged (people: `assign`; relations: `relate`; rules and alerts cannot be edited yet). `locations` and `links` replace the entries that have a coordinate or a `href` and keep the others. A record id is `urn:uuid:<object id>`.
 
-**`Unsupported` in the frontend:** own boards, columns other than the five values of `progress`, order within a column (it follows the list: by due date, a card put elsewhere goes back and this is said), swimlanes, column limits, assigning people, relations, `task_link`, checklists, timeline, comments, attachments, reminders, undo, recurrence and per-occurrence edits. What the form does not show stays on the task and is shown on the sheet where it is simple (participants and related tasks by count, percent, extended status). The picker dialogs for import and export do not exist: paths on the command line.
+**Commands the core does** (`supported = true`): `create`, `change` (an `Edit`), `find` (list: empty `term`), `delete`, `assign`, `relate`, `label`, `importIcs`, `exportIcs`, `check`, `suggest`. `change` has no input list (rule of `types.capnp`): its input is an `Edit`; the backend checks it with the rules of `fs-types`, reads the task, merges only the fields sent and writes with `edit_checked` and the revision it read (a stale write is refused). `find` is the standard find (`term`) with the filters of `TaskQuery` as further input (`dueFrom`, `dueTo`, `progress`, `label`, `open`).
 
-**Sensitive tasks (ADR 0029).** Marked in list, card, sheet and form; never opened by the workbench; `--export` leaves them out and names them by `uid` alone, `--export-sensitive <uid>` releases one, and a file with a released task is mode 0600. **The core has no check of its own:** `is_marked` walks the task for the member `freesynergy.net:sensitive`, also as a patch path in an override, and for `privacy` other than `public`, and reads `envelope.sensitive`; a mention in a text or a key of an id map (a label called `privacy`) marks nothing. To be replaced by the core's. The core also does not fill `envelope.sensitive` from the vendor property, as `fs-people-core` does, so the store's refusal to keep marked objects unencrypted does not apply to tasks marked that way.
+**`Unsupported` (`supported = false`; in the description, locked where the frontend can show it).** Every other command of `docs/en/programs/apps/tasks/requirements.md` (`card.*` are the board-view names of the same actions; dotted ids are camel case as command names: `card.move` is `cardMove`). Ids the core does by an existing command (`card.create`, `card.edit`, `card.setDue`, `card.assign`, `label.assign`, `relation.create`, `card.priority`, `card.locate`, `task.schedule`, `card.search`, `card.list`, `task.create` ...) are in the table with that command. The row "Script and automate through our own contract" has no capability id. Not supported:
 
-**Other limits.** A write compares the revision and then writes: not atomic, `TaskItems::edit` takes no revision (a compare-and-set is a wish for the core). `rows` reads the whole list each time and cuts a page from it; `TaskItems::page` and the filters `term` and `open` exist now, the frontend has not moved to them (Thread 4). There is no sign-in, so "my next tasks" (the compact variant) is every open task. Floating tasks are ordered as if in UTC; there is no `--zone` yet. A due date needs a time: "that day" has no form yet. A keyword switched off is kept and not shown; one with a comma stands in quotes in the form. One unreadable stored task makes the whole list and export fail, plainly: `TaskItems::list` answers all or nothing, and the contract has no other way through the tasks (with Thread 3). Closing the window loses an unsaved edit. Provisional words and sizes are in `words.rs`.
+| Capability | Command | Why |
+|---|---|---|
+| `board.create` | `boardCreate` | boards are not built; the Boards interface is a placeholder |
+| `board.edit` | `boardEdit` | boards are not built; the Boards interface is a placeholder |
+| `board.open` | `boardOpen` | boards are not built; the Boards interface is a placeholder |
+| `column.create` | `columnCreate` | boards are not built; the Boards interface is a placeholder |
+| `column.rename` | `columnRename` | boards are not built; the Boards interface is a placeholder |
+| `column.move` | `columnMove` | boards are not built; the Boards interface is a placeholder |
+| `card.move` | `cardMove` | a card is in a column through task_link, which is not started |
+| `card.setStatus` | `cardSetStatus` | RFC 10051 status has no interface method; progress is changed with change |
+| `subtask.add` | `subtaskAdd` | progress from the children is not started; relate with child works |
+| `attachment.add` | `attachmentAdd` | the file is kept by fs-files; not connected |
+| `comment.add` | `commentAdd` | comments are AS2 notes; no model yet |
+| `card.watch` | `cardWatch` | no subscription list yet |
+| `card.notify` | `cardNotify` | delivery is a platform matter; not defined |
+| `card.history` | `cardHistory` | history belongs to fs-history; not connected |
+| `field.define` | `fieldDefine` | boards are not built; the Boards interface is a placeholder |
+| `card.setField` | `cardSetField` | no model or no interface method in the core yet |
+| `template.apply` | `templateApply` | boards are not built; the Boards interface is a placeholder |
+| `member.add` | `memberAdd` | membership and rights belong to fs-groups; not connected |
+| `member.role` | `memberRole` | membership and rights belong to fs-groups; not connected |
+| `webhook.create` | `webhookCreate` | no model or no interface method in the core yet |
+| `board.export` | `boardExport` | boards are not built; the Boards interface is a placeholder |
+| `board.sync` | `boardSync` | subscribe exists in TaskFeed; live sync of a board is not built |
+| `swimlane.create` | `swimlaneCreate` | boards are not built; the Boards interface is a placeholder |
+| `column.limit` | `columnLimit` | boards are not built; the Boards interface is a placeholder |
+| `epic.create` | `epicCreate` | no model or no interface method in the core yet |
+| `card.type` | `cardType` | no model or no interface method in the core yet |
+| `workflow.define` | `workflowDefine` | no model or no interface method in the core yet |
+| `card.remind` | `cardRemind` | alerts are kept but cannot be edited yet |
+| `card.repeat` | `cardRepeat` | no basic type for a recurrence rule; recurrence rules are kept but cannot be edited |
+| `comment.mention` | `commentMention` | no model or no interface method in the core yet |
+| `card.copy` | `cardCopy` | no model or no interface method in the core yet |
+| `card.share` | `cardShare` | no model or no interface method in the core yet |
+| `card.archive` | `cardArchive` | no model or no interface method in the core yet |
+| `board.archive` | `boardArchive` | boards are not built; the Boards interface is a placeholder |
+| `board.style` | `boardStyle` | boards are not built; the Boards interface is a placeholder |
+| `query.save` | `querySave` | no model or no interface method in the core yet |
+| `rule.create` | `ruleCreate` | no model or no interface method in the core yet |
+| `form.submit` | `formSubmit` | no model or no interface method in the core yet |
+| `card.linkCommit` | `cardLinkCommit` | no model or no interface method in the core yet |
+| `board.import` | `boardImport` | boards are not built; the Boards interface is a placeholder |
+| `task.filter` | `taskFilter` | no query language; find takes the fields of TaskQuery |
+| `task.triage` | `taskTriage` | no model or no interface method in the core yet |
+| `cycle.create` | `cycleCreate` | no model or no interface method in the core yet |
+| `task.urgency` | `taskUrgency` | no model or no interface method in the core yet |
+| `project.review` | `projectReview` | no model or no interface method in the core yet |
+
+**The lock.** The shipped Admin frontend (`fs-admin-frontend` as of `4688cee`) does not know `supported`: it draws every command of the description as a normal button. Therefore `TaskBackend::run` refuses a command whose `supported` is false with `BackendError::Unavailable("unsupported: <name>")` (tested for each one). The visible, locked "kommt noch" control in the Admin view needs Thread A's display: a gap, reported. The status board draws its locked controls itself (add and rename column, limit; text `kanban.soon`).
+
+**Status board and timeline.** The board is a view of the task's own `progress` (the old rule stays: **the status view is not a board**; no `Boards`, no `task_link`): one column per value; a move **edits `progress` of the task for everyone** (through `change`, with the revision check); the column operations are locked (`columnCreate`, `columnRename`, `columnLimit` are `Unsupported`). The timeline shows a bar from `start` to `due` (progress from `percentComplete`, 100 when completed), a milestone where only one of them is set, and an arrow for `depends-on` and `finishtostart`; it is read only. A task without a date has no place on the axis. Days are the days written in the task's zone.
+
+**Pins and the temporary duplication.** `fs-admin-frontend` and every `fs-components-*` crate of the app come from `fs-components` rev `aefc99e` (branch `r1-components`; its `fs-admin-frontend` is the reviewed `4688cee` of branch `thread-a-admin-frontend`, unchanged, and the same commit adds kanban and timeline). Untagged: switch to the tag once Thread A / C tag. All crates of the app must come from the same commit, otherwise there are two copies of `AppWidget`. The admin frontend is built on `fs-types` **v0.0.2**; the core and the server use **v0.0.11** (the `supported` flag, `Edit`, `change` without input). Cargo cannot unify two tags of one repository, so the app depends on both (`fs-types-frontend` and `fs-interfaces-frontend` are v0.0.2) and `frontend_link.rs` converts the description and the findings and adds the form of `change`. Delete that file when the frontend is tagged on the new types. `[patch.crates-io]` pins `blinc_app` (blinc-app-fix `5180d4e`) and `blinc_layout` (blinc-layout-fix `cb17db8`), checked on 2026-11-10 as the newest commits of both forks.
+
+**Other limits.** The core is called in process (a tokio handle blocks the interface thread; a slow core freezes the window) until the RPC client exists. A move on the board does not refresh the Admin list until that list reloads. No sign-in. Closing the window loses an unsaved form (the Quit menu warns). Words are English in `words.rs` until the catalog (ADR 0057) serves them.
 
 ## Paging (`TaskItems::page`, `repo/page.rs`, server `cursor.rs`, `paging.rs`)
 
@@ -124,11 +181,6 @@ The detail text is as before; the facts are extensions (`fs_interfaces::rpc::pro
 | `model/ops.rs` | Command | small edits of the value |
 | `validate/check.rs` | Specification | task rules; the shared rules and `Ctx` are in `fs-jscalendar` |
 | `contract/*` | Adapter | generated Cap'n Proto code and the wire <-> Rust mapping |
-| `fs-tasks-app/source/{adapter,provider}.rs` | Adapter | `dyn TaskItems` as the workbench's `TaskSource` |
-| `fs-tasks-app/source/{rows,sheet,draft}.rs` | Adapter, Factory | a task as a row, a sheet and a form |
-| `fs-tasks-app/source/apply.rs` | Command | only what differs from what the form started with goes onto the task |
-| `fs-tasks-app/source/marks.rs` | Visitor + Specification | is it marked sensitive; fails closed |
-| `fs-tasks-app/transfer.rs` | Template method | read, import or export, report |
 | `error.rs` | none | plain error enum; one `From` for the errors of `fs-jscalendar` |
 
 Design.md names a `Tasks` facade as the single entry point and a Command pattern with `apply` / `invert` for moves and edits
@@ -155,7 +207,7 @@ column -> status mapping and ordering arrives with boards.
 ## Crates
 
 * `fs-interfaces` (git tag v0.44.0), `fs-objects` (git tag v0.4.0): contract, `Capabilities`, `Unsupported`, the store.
-* Frontend only: `fs-components-app`, `fs-components-workbenches` (git `rev`, provisional until a tag exists).
+* Frontend only: `fs-admin-frontend`, `fs-components-{app,fields,styles,widgets,kanban,timeline,calendar-grid}` (git `rev` `aefc99e`, untagged), `fs-types` / `fs-interfaces` v0.0.2 renamed (temporary).
 * `fs-objects` (git tag v0.2.0), `fs-jscalendar` (git tag v0.1.0; it also holds the exact pin of `calcard`).
 * `chrono`, `serde`, `serde_json`, `thiserror`, `async-trait`.
 * Optional (feature `contract`): `capnp` 0.27.
