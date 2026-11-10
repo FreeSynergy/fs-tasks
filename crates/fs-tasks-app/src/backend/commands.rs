@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use fs_admin_frontend::{BackendError, Outcome, Record, Values};
 use fs_objects::ObjectId;
-use fs_tasks_core::{Revision, Task, TaskItems, TaskQuery, validate};
-use fs_types::{BasicRules, Edit, RecordIssue, RecordProblem, TypeDescription, TypeProblem};
+use fs_tasks_core::{Task, TaskItems, TaskQuery, validate};
+use fs_types::{TypeDescription, TypeProblem};
 use tokio::runtime::Handle;
 
 use super::ids::{object_id, record_id};
@@ -24,10 +24,6 @@ pub struct Ctx<'a> {
     pub description: &'a TypeDescription,
 }
 
-/// Fields the description lists but this program does not write through `change`: they are shown, and `change`
-/// accepts them only unchanged (people and relations have their own commands; rules and alerts are `Unsupported`).
-const READ_ONLY: [&str; 4] = ["participants", "relatedTo", "recurrenceRules", "alerts"];
-
 fn first<'v>(input: &'v Values, name: &str) -> &'v str {
     input
         .get(name)
@@ -35,11 +31,11 @@ fn first<'v>(input: &'v Values, name: &str) -> &'v str {
         .map_or("", |t| t.trim())
 }
 
-fn id_of(input: &Values, name: &str) -> Result<ObjectId, BackendError> {
+pub(super) fn id_of(input: &Values, name: &str) -> Result<ObjectId, BackendError> {
     object_id(first(input, name)).ok_or(BackendError::NotFound)
 }
 
-fn done(id: ObjectId) -> Outcome {
+pub(super) fn done(id: ObjectId) -> Outcome {
     Outcome {
         id: Some(record_id(id)),
         values: Values::new(),
@@ -54,7 +50,7 @@ fn answer(name: &str, texts: Vec<String>) -> Outcome {
 }
 
 impl Ctx<'_> {
-    fn wait<T>(
+    pub(super) fn wait<T>(
         &self,
         f: impl Future<Output = fs_tasks_core::Result<T>>,
     ) -> Result<T, BackendError> {
@@ -96,60 +92,6 @@ impl Ctx<'_> {
     pub fn create(&self, input: &Values) -> Result<Outcome, BackendError> {
         let task = new_task(input)?;
         Ok(done(self.wait(self.items.create(task))?.id))
-    }
-
-    /// `change`: the fields sent become an `Edit`, checked by the rules of `fs-types`; read, merge, write if nobody
-    /// wrote in between.
-    pub fn change(&self, input: &Values) -> Result<Outcome, BackendError> {
-        let id = id_of(input, "id")?;
-        let entry = self
-            .wait(self.items.get(id))?
-            .ok_or(BackendError::NotFound)?;
-        let revision = Revision::of(&entry);
-        let sent = self.checked_edit(input, &record(&entry).values)?;
-        let mut json = entry.task.to_value();
-        merge(&mut json, &sent).map_err(|e| refused(&e))?;
-        let task = Task::from_value(json).map_err(|e| backend_error(&e.into()))?;
-        Ok(done(
-            self.wait(self.items.edit_checked(id, revision, task))?.id,
-        ))
-    }
-
-    /// The values of the edit in canonical form; a field that is cleared is an empty list.
-    fn checked_edit(&self, input: &Values, current: &Values) -> Result<Values, BackendError> {
-        let mut edit = Edit::new();
-        let mut found: Vec<RecordIssue> = Vec::new();
-        for (name, values) in input.iter().filter(|(n, _)| *n != "id") {
-            let Some(field) = self.description.find_field(name) else {
-                found.push(RecordIssue {
-                    field: name.clone(),
-                    index: 0,
-                    problem: RecordProblem::UnknownField,
-                });
-                continue;
-            };
-            let same = current.get(name).map_or(&[][..], Vec::as_slice) == values.as_slice();
-            if READ_ONLY.contains(&name.as_str()) {
-                if !same {
-                    found.push(issue(name, TypeProblem::Character));
-                }
-                continue;
-            }
-            let texts: Vec<&str> = values.iter().map(String::as_str).collect();
-            edit = edit.set(&[name], field.basic, &texts);
-        }
-        match edit.check(self.description, &BasicRules::standard()) {
-            Ok(canonical) if found.is_empty() => Ok(canonical
-                .fields
-                .into_iter()
-                .map(|f| (f.path.join("/"), f.values))
-                .collect()),
-            Ok(_) => Err(refused(&found)),
-            Err(mut issues) => {
-                issues.extend(found);
-                Err(refused(&issues))
-            }
-        }
     }
 
     /// `delete`.
