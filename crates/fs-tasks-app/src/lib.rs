@@ -1,8 +1,8 @@
-//! `fs-tasks-app`: the frontend of the tasks program (ADR 0005, 0009, 0037).
+//! `fs-tasks-app`: the window of the tasks program (ADR 0005, 0009, 0037, 0065, 0066).
 //!
-//! Arguments, opening the core, the words, and an adapter from the program's contract to the
-//! workbench's `TaskSource`. It imports no `blinc_*` crate: the window and the work surface come from
-//! `fs-components`. The core is called in process for now, not over RPC (see `DESIGN.md`).
+//! The Admin frontend is generated from the type description of `Task` (`fs-tasks-core`); this crate gives it the
+//! records and commands ([`TaskBackend`] over `TaskItems`), the words, and the window shell. It draws nothing and
+//! imports no `blinc_*` crate. The core is called in process (see `DESIGN.md`).
 //!
 //! Pattern: Facade — this file only declares modules and re-exports the public API.
 
@@ -11,14 +11,11 @@
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
 pub mod args;
+mod backend;
 mod program;
-mod source;
-mod surface;
-mod transfer;
-mod words;
+mod window;
+pub mod words;
 
+pub use backend::{TaskBackend, object_id, record_id};
 pub use program::app_command;
-pub use source::{TaskAdapter, apply_draft, is_marked, is_series};
-pub use surface::{TasksScreen, app_widget, screen_widget};
-pub use transfer::{ExportReport, ImportSummary, export_all, import_file};
-pub use words::labels;
+pub use window::{HELP_URL, about, task_window};

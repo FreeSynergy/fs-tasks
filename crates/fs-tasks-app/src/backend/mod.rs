@@ -1,0 +1,99 @@
+//! `TaskBackend`: the generated Admin frontend's `Backend` over the tasks program's own interface.
+//!
+//! Pattern: Adapter + Command — the frontend's trait (`fs_admin_frontend::Backend`, Repository) over `TaskItems`
+//! (ADR 0043: the core's trait, never `TaskRepo`). `run` picks the function of `commands.rs` by command name; a command
+//! the support table of the core marks as not supported is refused before anything else (a last guard: the front end of
+//! this revision cannot show the lock itself, see `DESIGN.md`).
+
+mod commands;
+mod ids;
+mod instants;
+mod issues;
+mod read;
+mod write;
+
+use std::sync::Arc;
+
+use fs_admin_frontend::{Backend, BackendError, Outcome, Record, Values};
+use fs_tasks_core::describe::support;
+use fs_tasks_core::{DescribesType, Task, TaskItems};
+use fs_types::{BasicRules, TypeDescription};
+use tokio::runtime::Handle;
+
+use commands::Ctx;
+
+pub use ids::{object_id, record_id};
+
+/// The tasks of one provider as records of the type `Task`. Do not call it from inside the runtime: it blocks the
+/// calling thread until the core has answered.
+pub struct TaskBackend {
+    items: Arc<dyn TaskItems>,
+    runtime: Handle,
+    description: TypeDescription,
+}
+
+impl TaskBackend {
+    /// A backend over `items`, driven with `runtime`.
+    pub fn new(items: Arc<dyn TaskItems>, runtime: Handle) -> Self {
+        Self {
+            items,
+            runtime,
+            description: Task::describe(),
+        }
+    }
+
+    fn ctx(&self) -> Ctx<'_> {
+        Ctx {
+            items: &self.items,
+            runtime: &self.runtime,
+        }
+    }
+
+    /// The input checked against the description, as a program must (the front end checked it too).
+    fn check(&self, name: &str, input: &Values) -> Result<(), BackendError> {
+        let command = self
+            .description
+            .find_command(name)
+            .ok_or(BackendError::NotFound)?;
+        let mut shape = TypeDescription::new("Input", "fs-tasks", "none", "input");
+        shape.fields.clone_from(&command.input);
+        let issues = shape.check_record(&BasicRules::standard(), input);
+        if issues.is_empty() {
+            Ok(())
+        } else {
+            Err(BackendError::Rejected(issues))
+        }
+    }
+}
+
+impl Backend for TaskBackend {
+    fn list(&self, query: &Values) -> Result<Vec<Record>, BackendError> {
+        self.check("find", query)?;
+        self.ctx().find(query)
+    }
+
+    fn run(&self, name: &str, input: &Values) -> Result<Outcome, BackendError> {
+        if self.description.find_command(name).is_none() {
+            return Err(BackendError::NotFound);
+        }
+        if !support::is_supported(name) {
+            return Err(BackendError::Unavailable(format!("unsupported: {name}")));
+        }
+        self.check(name, input)?;
+        let ctx = self.ctx();
+        match name {
+            "create" => ctx.create(input),
+            "change" => ctx.change(input),
+            "delete" => ctx.delete(input),
+            "assign" => ctx.assign(input),
+            "label" => ctx.label(input),
+            "relate" => ctx.relate(input),
+            "importIcs" => ctx.import_ics(input),
+            "exportIcs" => ctx.export_ics(input),
+            "check" => ctx.check(input),
+            "suggest" => ctx.suggest(input),
+            "find" => Ok(Outcome::default()),
+            _ => Err(BackendError::Unavailable(format!("unsupported: {name}"))),
+        }
+    }
+}

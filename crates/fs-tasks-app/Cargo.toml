@@ -1,6 +1,6 @@
 [package]
 name = "fs-tasks-app"
-description = "The tasks program of FreeSynergy, first window: list and status view of one set of tasks; search, create, edit, delete, move; iCalendar in and out; on fs-components"
+description = "The tasks program of FreeSynergy, window: the generated Admin frontend over the type description of Task (ADR 0066), in the standard window shell (ADR 0065)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,13 +10,18 @@ repository.workspace = true
 [dependencies]
 fs-tasks-core = { path = "../fs-tasks-core" }
 fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.1" }
-# provisional: becomes a tag once reviewed
-fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.2" }
-# provisional: becomes a tag once reviewed
-fs-components-workbenches = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.2" }
+# The tag fs-admin-frontend pins and fs-tasks-core uses: one DescribesType, one TypeDescription.
+fs-types = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.2" }
+# Exactly this commit of branch thread-a-admin-frontend (untagged, reviewed through its fifth review); every
+# fs-components crate below comes from the same commit, otherwise there are two copies of AppWidget. Switch to the
+# tag once Thread C/A tag. See DESIGN.md.
+fs-admin-frontend = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
+fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
+fs-components-fields = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
+fs-components-styles = { git = "https://github.com/FreeSynergy/fs-components", rev = "4688cee" }
+chrono = { version = "0.4", default-features = false, features = ["std"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread"] }
 
 [dev-dependencies]
-# provisional: becomes a tag once reviewed
-fs-components-render = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.2" }
+tokio = { version = "1", features = ["full"] }

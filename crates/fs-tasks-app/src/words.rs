@@ -1,80 +1,97 @@
-//! The words of the program.
+//! The words of the window (English until the catalog of ADR 0057 serves them).
 //!
-//! Pattern: Value objects — all English text of this frontend in one place; translation (ADR 0053)
-//! will replace this file's content, not its users.
+//! Pattern: Strategy (`Say`, a closure of `fs-components-fields`) — a key becomes a text. The fixed words of the
+//! frontend and its problem codes are a table; the keys of the type description (`task.due-from`,
+//! `command.board-create.name`) are made readable from the key itself, so a new field needs no entry here.
 
-use fs_components_workbenches::tasks::TaskLabels;
+use std::sync::Arc;
 
-/// The title of the window.
-pub const TITLE: &str = "FreeSynergy Tasks";
+use fs_components_fields::Say;
 
-/// The words of the workbench.
-pub fn labels() -> TaskLabels {
-    let mut labels = TaskLabels::default();
-    labels.columns = vec![
-        field::TITLE.into(),
-        field::DUE.into(),
-        field::PRIORITY.into(),
-        field::STATUS.into(),
-    ];
-    labels.create = menu::NEW.into();
-    labels.view_list = menu::LIST.into();
-    labels.view_status = menu::STATUS.into();
-    labels
-}
+const FIXED: &[(&str, &str)] = &[
+    ("menu.program", "Program"),
+    ("menu.quit", "Quit"),
+    ("menu.view", "View"),
+    ("menu.help", "Help"),
+    ("menu.about", "About"),
+    ("about.version", "Version"),
+    ("about.licence", "Licence"),
+    ("about.origin", "Origin"),
+    ("about.repository", "Repository"),
+    ("about.unoffered", "Not offered here"),
+    ("action.add", "Add"),
+    ("action.back", "Back"),
+    ("action.cancel", "Cancel"),
+    ("action.close", "Close"),
+    ("action.remove", "Remove"),
+    ("action.save", "Save"),
+    ("confirm.sure", "Are you sure?"),
+    ("detail.not-loaded", "This task is not loaded."),
+    ("list.empty", "No tasks yet."),
+    ("list.separator", ", "),
+    (
+        "list.stale",
+        "The program cannot be reached; this list may be out of date.",
+    ),
+    ("value.none", "none"),
+    ("sort.ascending", "ascending"),
+    ("sort.descending", "descending"),
+    ("type.task", "Tasks"),
+    ("problem.empty", "Nothing typed."),
+    ("problem.missing", "This is needed."),
+    ("problem.incomplete", "Incomplete."),
+    (
+        "problem.unknown-field",
+        "The program does not know this field.",
+    ),
+    ("problem.not-multiple", "Only one value is possible here."),
+    ("problem.not-a-number", "Not a number."),
+    ("problem.too-long", "Too long."),
+    ("problem.character", "This value is not accepted."),
+    ("problem.choice.not-in-list", "Not one of the choices."),
+    (
+        "problem.date-time.bad",
+        "Not a date and time with an offset, like 2026-11-10T09:30:00+01:00.",
+    ),
+    ("problem.uri.bad", "Not an address."),
+    (
+        "problem.uri.not-absolute",
+        "An address needs a scheme, like https:.",
+    ),
+    (
+        "problem.uri.unsafe-scheme",
+        "This kind of address is not allowed.",
+    ),
+    (
+        "problem.place.bad",
+        "Not a place, like geo:48.2010,16.3695.",
+    ),
+    (
+        "problem.place.range",
+        "Latitude or longitude is out of range.",
+    ),
+    (
+        "problem.keywords.bad",
+        "A keyword is too long or has a character it may not.",
+    ),
+    ("task.estimated-duration", "Estimated duration (like PT2H)"),
+    ("task.percent-complete", "Percent complete"),
+    ("task.related-to", "Related to"),
+    ("task.time-zone", "Time zone"),
+];
 
-/// The name of a `progress` value; a value the standard does not list shows as it is.
-pub(crate) fn progress_title(progress: &str) -> &str {
-    match progress {
-        "needs-action" => "To do",
-        "in-process" => "In progress",
-        "completed" => "Done",
-        "failed" => "Failed",
-        "cancelled" => "Cancelled",
-        other => other,
+/// The text for `key`.
+pub fn say(key: &str) -> String {
+    if let Some((_, text)) = FIXED.iter().find(|(k, _)| *k == key) {
+        return (*text).to_owned();
     }
+    let words = key.rsplit('.').next().unwrap_or(key).replace('-', " ");
+    let mut chars = words.chars();
+    let first = chars.next().map(|c| c.to_uppercase().collect::<String>());
+    first.map_or_else(|| key.to_owned(), |f| f + chars.as_str())
 }
 
-/// The menus of the window.
-pub(crate) mod menu {
-    pub const TASK: &str = "Task";
-    pub const NEW: &str = "New";
-    pub const VIEW: &str = "View";
-    pub const LIST: &str = "List";
-    pub const STATUS: &str = "Status";
-}
-
-/// Headings and labels of what is shown about a task.
-pub(crate) mod field {
-    pub const SENSITIVE: &str = "Sensitive";
-    pub const DETAILS: &str = "Details";
-    pub const TITLE: &str = "Title";
-    pub const DESCRIPTION: &str = "Description";
-    pub const DUE: &str = "Due";
-    pub const PRIORITY: &str = "Priority";
-    pub const STATUS: &str = "Status";
-    pub const LABELS: &str = "Labels (separated by commas; \"a, b\" is one label)";
-    pub const LABELS_SHORT: &str = "Labels";
-    pub const PERCENT: &str = "Percent done";
-    pub const EXTENDED: &str = "Extended status";
-    pub const ZONE: &str = "Time zone";
-    pub const REPEATS: &str = "Repeats";
-    pub const YES: &str = "Yes";
-    pub const PEOPLE: &str = "Participants";
-    pub const RELATED: &str = "Related tasks";
-}
-
-/// Sentences about what an edit or a move can do.
-pub(crate) mod say {
-    pub const SERIES_SHEET: &str = "This task repeats. Edit changes the title, description, priority and labels of all its occurrences. Its due date and status cannot be changed here.";
-    pub const SERIES_FORM: &str = "You are editing all occurrences of this repeating task. Its due date and status cannot be changed here, because that could damage the series.";
-    pub const SERIES_REFUSED: &str = "this task repeats, and changing its due date or status here could damage the series. Nothing was changed";
-    pub const SERIES_MOVE: &str =
-        "This task repeats, and its status belongs to each occurrence. It cannot be moved here.";
-    pub const COMPUTED: &str = "This status is worked out from the participants; the task does not state one itself. Moving it makes the status fixed, and it cannot go back to worked out here.";
-    pub const NEEDS_TITLE: &str = "enter a title";
-    pub const BAD_DUE: &str = "enter the due date with a time, like 2026-11-30 17:00";
-    pub const BAD_PRIORITY: &str = "the priority is a number from 0 to 9, or empty";
-    pub const CHANGED_SINCE: &str = "Someone else changed this task in the meantime.";
-    pub const NO_COLUMN: &str = "there is no such status";
+/// The words as a `Say`.
+pub fn words() -> Arc<dyn Say> {
+    Arc::new(|key: &str| say(key))
 }
