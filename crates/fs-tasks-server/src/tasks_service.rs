@@ -11,7 +11,7 @@ use fs_interfaces::Unsupported;
 use fs_interfaces::rpc::{DEFAULT_PAGE_SIZE, unsupported, write_uuid};
 use fs_interfaces::tasks_capnp::tasks;
 use fs_tasks_core::contract::CONTRACT_VERSION;
-use fs_tasks_core::{DescribesType, Task, TaskFeed, TaskItems};
+use fs_tasks_core::{Task, TaskFeed, TaskItems};
 use fs_types::{TypeRegistry, describe::CatalogServer};
 
 use crate::feed::subscribe;
