@@ -1,7 +1,8 @@
 //! The commands the core does: one per method of `TaskItems` (plus `change`, `find`, `check`, `suggest`).
 //!
 //! Pattern: Builder, as `fields.rs`; the name of a command is the key of the support table (`support.rs`).
-//! `change` is partial (ADR 0066): a field that is not sent stays, an empty list clears it, values replace.
+//! `change` is an `Edit` (ADR 0066): a field that is not in it stays, an empty one clears it, values replace. Commands that
+//! take a record (`assign`, `relate`, `label`) are kind `other` with a reference to the type: kind `change` has no input.
 
 use fs_types::{BasicType, CommandDescription, CommandKind, FieldDescription};
 
@@ -27,18 +28,18 @@ fn with_inputs(mut c: CommandDescription, fields: Vec<FieldDescription>) -> Comm
 pub fn supported(name: &str) -> Option<CommandDescription> {
     Some(match name {
         "create" => with_inputs(command(name, CommandKind::Create), editable()),
-        "change" => {
-            let mut inputs = vec![id()];
-            inputs.extend(editable());
-            with_inputs(command(name, CommandKind::Change), inputs)
-        }
+        // The input of `change` is an `Edit` over the fields of the type (rule of `types.capnp`): no input list.
+        "change" => command(name, CommandKind::Change),
         "delete" => command(name, CommandKind::Delete).input(id()),
-        "find" => with_inputs(command(name, CommandKind::Find), find_inputs()),
-        "assign" => command(name, CommandKind::Change)
+        "find" => with_inputs(
+            CommandDescription::standard_find("command.find", "Task"),
+            find_inputs(),
+        ),
+        "assign" => command(name, CommandKind::Other)
             .input(id())
             .input(local(name, "name", BasicType::Text).required())
             .input(local(name, "email", BasicType::Email).required()),
-        "relate" => command(name, CommandKind::Change)
+        "relate" => command(name, CommandKind::Other)
             .input(id())
             .input(
                 local(name, "other", BasicType::Reference)
@@ -50,7 +51,7 @@ pub fn supported(name: &str) -> Option<CommandDescription> {
                     .choices(&RELATIONS)
                     .required(),
             ),
-        "label" => command(name, CommandKind::Change)
+        "label" => command(name, CommandKind::Other)
             .input(id())
             .input(local(name, "label", BasicType::Text).required()),
         "importIcs" => command(name, CommandKind::Other)
@@ -81,7 +82,6 @@ pub fn supported(name: &str) -> Option<CommandDescription> {
 fn find_inputs() -> Vec<FieldDescription> {
     let n = "find";
     vec![
-        local(n, "text", BasicType::Text),
         local(n, "dueFrom", BasicType::DateTime),
         local(n, "dueTo", BasicType::DateTime),
         local(n, "progress", BasicType::Choice).choices(&PROGRESS),

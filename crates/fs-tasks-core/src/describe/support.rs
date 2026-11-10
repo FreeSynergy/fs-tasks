@@ -2,10 +2,8 @@
 //!
 //! Pattern: Registry (`coding.md` §2) — one table, `capability id -> command name, supported, reason`, is the single
 //! source for the type description, for the refusal of a front end and for the self-check against `requirements.md`.
-//! Transition (ADR 0066, coordinator decision): `types.capnp` has no `supported` field yet; when it has, [`mark`] is the
-//! only place that changes (one line), and nothing else reads this table to decide how a command looks.
-
-use fs_types::CommandDescription;
+//! The description carries the flag (`CommandDescription::supported`, fs-interfaces v0.0.11); `task_type.rs` sets it from
+//! this table in one line (`SWITCH`). A front end and the backend read the flag of the description, not this table.
 
 /// One capability id of `requirements.md` (or of the contract) and the command that stands for it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -178,10 +176,4 @@ pub fn reason(command: &str) -> Option<&'static str> {
         .iter()
         .find(|r| r.command == command && !r.supported)
         .map(|r| r.reason)
-}
-
-/// Where the later `supported` field of `fs-types` is set, in one line. Today the description cannot carry it
-/// (`types.capnp` has no such field), so the command is returned as it is and a front end asks [`is_supported`].
-pub fn mark(command: CommandDescription, _supported: bool) -> CommandDescription {
-    command // later: CommandDescription { supported: _supported, ..command }
 }

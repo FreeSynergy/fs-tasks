@@ -122,11 +122,9 @@ fn fields_and_labels() {
     assert_eq!(d.find_field("participants").unwrap().target, "Person");
     let change = d.find_command("change").unwrap();
     assert_eq!(change.kind, CommandKind::Change);
-    assert!(
-        change
-            .input
-            .iter()
-            .any(|f| f.name == "id" && f.target == "Task")
-    );
-    assert_eq!(d.find_command("find").unwrap().kind, CommandKind::Find);
+    assert!(change.input.is_empty());
+    let find = d.find_command("find").unwrap();
+    assert_eq!(find.kind, CommandKind::Find);
+    assert_eq!(find.input[0].name, "term");
+    assert!(find.supported);
 }

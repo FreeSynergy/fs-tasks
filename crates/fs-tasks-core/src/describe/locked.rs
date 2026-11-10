@@ -19,8 +19,6 @@ fn kind_of(name: &str) -> CommandKind {
     let creates = ["Create", "Add", "Define", "Submit"];
     if creates.iter().any(|s| name.ends_with(s)) {
         CommandKind::Create
-    } else if on_task(name) {
-        CommandKind::Change
     } else {
         CommandKind::Other
     }

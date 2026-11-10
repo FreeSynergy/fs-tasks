@@ -20,7 +20,12 @@ impl DescribesType for Task {
         }
         for name in support::command_names() {
             let command = commands::supported(name).unwrap_or_else(|| locked::locked(name));
-            t = t.command(support::mark(command, support::is_supported(name)));
+            // SWITCH: the one place where the support table becomes the `supported` flag of the description.
+            t = t.command(if support::is_supported(name) {
+                command
+            } else {
+                command.unsupported()
+            });
         }
         t
     }

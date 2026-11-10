@@ -10,8 +10,10 @@ repository.workspace = true
 [dependencies]
 fs-tasks-core = { path = "../fs-tasks-core" }
 fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.1" }
-# The tag fs-admin-frontend pins and fs-tasks-core uses: one DescribesType, one TypeDescription.
-fs-types = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.2" }
+# The type description the core reports (supported flag, Edit).
+fs-types = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.11" }
+# TEMPORARY: the tag fs-admin-frontend (rev 4688cee) is built on; see src/frontend_link.rs.
+fs-types-frontend = { package = "fs-types", git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.2" }
 # Exactly this commit of branch thread-a-admin-frontend (untagged, reviewed through its fifth review); every
 # fs-components crate below comes from the same commit, otherwise there are two copies of AppWidget. Switch to the
 # tag once Thread C/A tag. See DESIGN.md.
