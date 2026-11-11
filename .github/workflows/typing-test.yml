@@ -1,6 +1,6 @@
 # The typing test of fs-release (actions/typing-test): the built window runs under a virtual KWin, the keys of the layout
-# `de` (Shift, AltGr: Ä ä ö ü ß @ € { } [ ] \ | ~ µ) are typed into the "Name" field of the search form, and the test checks
-# that each one arrives as that glyph and how long key-to-picture takes. On the GitHub runner (no GPU) the time is only
+# `de` (Shift, AltGr: Ä ä ö ü ß @ € { } [ ] \ | ~ µ) are typed into the search field, and the test checks
+# that each one arrives as that glyph and how long key-to-picture takes (the field is the search field of the task list). On the GitHub runner (no GPU) the time is only
 # reported, not enforced (`enforce-ms` stays empty). The way to the field is `.github/typing-test/focus.sh`.
 name: typing-test
 on:
@@ -17,6 +17,11 @@ env:
 jobs:
   typing-test:
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # The layouts come from here; the special-character test (de and us) joins when fs-release has it.
+        layout: [de]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -33,7 +38,8 @@ jobs:
       - uses: FreeSynergy/fs-release/actions/typing-test@main
         with:
           app-binary: target/release/fs-tasks
-          app-args: "--size 1000x640"
+          app-args: "--size 1000x640 --store /tmp/typing-test-tasks.db"
           scenario: .github/typing-test/focus.sh
           name: fs-tasks
-          runs: 3
+          layout: ${{ matrix.layout }}
+          runs: "3"

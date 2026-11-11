@@ -12,6 +12,16 @@ fn main() {
     std::process::exit(dispatch(&words));
 }
 
+/// Options only the window has; the command line does not know them.
+const WINDOW_OPTIONS: [&str; 6] = [
+    "--size",
+    "--snapshot",
+    "--store",
+    "--view",
+    "--import",
+    "--export",
+];
+
 fn dispatch(words: &[String]) -> i32 {
     match words.split_first() {
         Some((first, rest)) if first == "serve" => {
@@ -19,6 +29,8 @@ fn dispatch(words: &[String]) -> i32 {
         }
         Some((first, rest)) if first == "app" => window(rest),
         None => window(&[]),
+        // The window's own options may stand without the word `app` (`fs-tasks --size 1000x640`).
+        Some((first, _)) if WINDOW_OPTIONS.contains(&first.as_str()) => window(words),
         Some(_) => fs_tasks_cli::cli_command(words),
     }
 }
