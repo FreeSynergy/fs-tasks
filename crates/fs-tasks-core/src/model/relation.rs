@@ -14,15 +14,16 @@ pub enum Relation {
     Child,
     /// The other object is a parent (RFC 8984).
     Parent,
-    /// This task depends on the other (RFC 9253).
+    /// This task depends on the other (RFC 9253 section 5): the holder is the dependent one.
     DependsOn,
-    /// This task can start when the other finishes (RFC 9253).
+    /// The other task cannot start until this one finishes (RFC 9253 section 4: the relation is present in the
+    /// predecessor and refers to the successor, so the task that holds it is the predecessor).
     FinishToStart,
-    /// This task can finish when the other finishes (RFC 9253).
+    /// The other task cannot finish until this one finishes (holder = predecessor, RFC 9253 section 4).
     FinishToFinish,
-    /// This task can start when the other starts (RFC 9253).
+    /// The other task cannot start until this one starts (holder = predecessor, RFC 9253 section 4).
     StartToStart,
-    /// This task can finish when the other starts (RFC 9253).
+    /// The other task cannot finish until this one starts (holder = predecessor, RFC 9253 section 4).
     StartToFinish,
 }
 
@@ -55,8 +56,11 @@ impl Relation {
         }
     }
 
-    /// Read a JSCalendar key.
+    /// Read a JSCalendar key. Both spellings are read: ours in lower case and the RFC 9253 names in capitals
+    /// (`FINISHTOSTART`, `DEPENDS-ON`) that the iCalendar import writes.
     pub fn parse(s: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|r| r.as_str() == s)
+        Self::ALL
+            .into_iter()
+            .find(|r| r.as_str().eq_ignore_ascii_case(s))
     }
 }

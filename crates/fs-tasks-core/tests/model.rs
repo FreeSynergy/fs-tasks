@@ -104,6 +104,19 @@ fn commands_edit_the_value() {
         assert_eq!(Relation::parse(r.as_str()), Some(r));
     }
     assert_eq!(Relation::parse("sibling"), None);
+    assert_eq!(
+        Relation::parse("FINISHTOSTART"),
+        Some(Relation::FinishToStart)
+    );
+    assert_eq!(Relation::parse("DEPENDS-ON"), Some(Relation::DependsOn));
+    // an imported capital spelling and a new relation of the same kind are one key
+    let mut u = Task::new("U");
+    u.related_to.insert(
+        "x".into(),
+        json!({"@type":"Relation","relation":{"FINISHTOSTART":true}}),
+    );
+    u.relate("x", Relation::FinishToStart);
+    assert_eq!(u.related_to["x"]["relation"].as_object().unwrap().len(), 1);
 }
 
 #[test]

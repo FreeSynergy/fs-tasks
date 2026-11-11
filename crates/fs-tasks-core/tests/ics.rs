@@ -103,3 +103,30 @@ async fn ics_export_roundtrip() {
         "{out}"
     );
 }
+
+/// RFC 9253 names in capitals, as the import writes them, are relations like our own lower case ones; the direction
+/// (the holder is the predecessor) and the text survive the way back.
+#[test]
+fn imported_rfc_9253_relations_are_seen_and_keep_their_direction() {
+    use fs_tasks_core::Relation;
+    let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\nBEGIN:VTODO\r\nUID:task-a\r\nDTSTAMP:20261101T000000Z\r\nSUMMARY:paint the room\r\nRELATED-TO;RELTYPE=FINISHTOSTART;GAP=P1D:task-b\r\nRELATED-TO;RELTYPE=DEPENDS-ON:task-c\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
+    let (tasks, _) = ical::parse_ics(ics).unwrap();
+    assert_eq!(
+        tasks[0].relations(),
+        [
+            ("task-b".to_string(), Relation::FinishToStart),
+            ("task-c".to_string(), Relation::DependsOn)
+        ]
+    );
+    let out = ical::to_ics(&tasks).unwrap();
+    assert!(
+        out.contains("RELATED-TO;RELTYPE=FINISHTOSTART;GAP=P1D:task-b\r\n"),
+        "{out}"
+    );
+    assert!(
+        out.contains("RELATED-TO;RELTYPE=DEPENDS-ON:task-c\r\n"),
+        "{out}"
+    );
+    let (again, _) = ical::parse_ics(&out).unwrap();
+    assert_eq!(again[0].relations(), tasks[0].relations());
+}

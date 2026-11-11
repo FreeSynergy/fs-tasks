@@ -21,6 +21,11 @@ Version 0.0.4 (`v0.0.4`).
 
 **Not done:** the window calls the core in process, not over the socket, so it has no version handshake with the server yet; that comes with a window over RPC.
 
+## Notes for 0.0.4
+
+- The documentation of the relation types `finishtostart`, `finishtofinish`, `starttostart` and `starttofinish` was reversed before. As in RFC 9253 section 4, **the task that holds the relation is the predecessor** (the other task cannot start or finish until this one does); `depends-on` is held by the dependent task. If you created such relations over the interface, check their direction.
+- Relations imported from iCalendar with the RFC names in capitals (`FINISHTOSTART`, `DEPENDS-ON`) are now recognised like ours in lower case. The export keeps its spelling.
+
 ## What is not there yet
 
 - No real boards. The status view in the window is not a board: moving a card changes the task's status for everyone, and the window says so. Columns of your own, swimlanes and limits are not built.

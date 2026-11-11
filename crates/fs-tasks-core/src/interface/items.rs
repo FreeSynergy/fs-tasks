@@ -79,7 +79,9 @@ pub trait TaskItems: Send + Sync {
     async fn assign(&self, _id: ObjectId, _name: &str, _email: &str) -> Result<TaskEntry> {
         not_possible("task.assign")
     }
-    /// `relation.create`: relate the task to the object with `other_uid` (RFC 9253).
+    /// `relation.create`: relate the task to the object with `other_uid` (RFC 9253). The task that holds the relation
+    /// is the predecessor for the four temporal types (`finishtostart` ...: the other cannot start or finish until this
+    /// one does); for `depends-on` it is the dependent one (it depends on `other_uid`).
     async fn relate(
         &self,
         _id: ObjectId,

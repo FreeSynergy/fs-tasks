@@ -77,6 +77,10 @@ impl Task {
             .entry(uid.to_string())
             .or_insert_with(|| json!({"@type": "Relation", "relation": {}}));
         if let Some(map) = entry.get_mut("relation").and_then(Value::as_object_mut) {
+            // An imported `FINISHTOSTART` is the same relation as our `finishtostart`: no second key.
+            if map.keys().any(|k| Relation::parse(k) == Some(relation)) {
+                return;
+            }
             map.insert(relation.as_str().to_string(), Value::Bool(true));
         }
     }
