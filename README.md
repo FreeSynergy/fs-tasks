@@ -8,7 +8,7 @@ What is different here: a task follows the open JSCalendar standard (RFC 8984), 
 
 ## What it can do today
 
-Version 0.0.4 (in progress). Latest tag: `v0.0.3`.
+Version 0.0.4 (`v0.0.4`).
 
 - Create, edit, assign, label, relate, list and delete tasks. Find them by due date range, progress, label, or a word in the title or description.
 - Import and export iCalendar tasks (VTODO). Events in the same file are left for the calendar.
@@ -18,6 +18,8 @@ Version 0.0.4 (in progress). Latest tag: `v0.0.3`.
 - A small server that offers all of this over a local socket.
 - A first, provisional window: a list and a status view of your tasks, search, create, edit, delete, import and export.
 - The calendar already shows tasks through this interface.
+
+**Not done:** the window calls the core in process, not over the socket, so it has no version handshake with the server yet; that comes with a window over RPC.
 
 ## What is not there yet
 
