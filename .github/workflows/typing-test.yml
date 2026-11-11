@@ -1,6 +1,6 @@
 # The typing test of fs-release (actions/typing-test): the built window runs under a virtual KWin, the keys of the layout
-# `de` (Shift, AltGr: Ä ä ö ü ß @ € { } [ ] \ | ~ µ) are typed into the search field, and the test checks
-# that each one arrives as that glyph and how long key-to-picture takes (the field is the search field of the task list). On the GitHub runner (no GPU) the time is only
+# `de` (Shift, AltGr: Ä ä ö ü ß @ € { } [ ] \ | ~ µ) are typed into the "Title" field of the new-task form, and the test checks
+# that each one arrives as that glyph and how long key-to-picture takes (the field is the "Title" field of the new-task form of the task list). On the GitHub runner (no GPU) the time is only
 # reported, not enforced (`enforce-ms` stays empty). The way to the field is `.github/typing-test/focus.sh`.
 name: typing-test
 on:
