@@ -25,8 +25,6 @@ Version 0.0.4 (`v0.0.4`).
 
 - The documentation of the relation types `finishtostart`, `finishtofinish`, `starttostart` and `starttofinish` was reversed before. As in RFC 9253 section 4, **the task that holds the relation is the predecessor** (the other task cannot start or finish until this one does); `depends-on` is held by the dependent task. If you created such relations over the interface, check their direction.
 - Relations imported from iCalendar with the RFC names in capitals (`FINISHTOSTART`, `DEPENDS-ON`) are now recognised like ours in lower case. The export keeps its spelling.
-- Bekannt: Ctrl+Alt+Buchstabe tippt zusätzlich den Buchstaben (Blinc), behoben mit fs-blinc-3.2 im nächsten gemeinsamen Schritt.
-- Known: Ctrl+Alt+letter additionally types the letter (Blinc); fixed with fs-blinc-3.2 in the next shared step.
 
 ## What is not there yet
 
