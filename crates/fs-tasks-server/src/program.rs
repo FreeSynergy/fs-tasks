@@ -6,7 +6,7 @@
 use std::ffi::OsString;
 use std::sync::Arc;
 
-use fs_interfaces::rpc::{ServerOptions, prepare_data_dir, run_until_signal};
+use fs_interfaces::rpc::{ServerIdentity, ServerOptions, prepare_data_dir, run_until_signal_as};
 use fs_objects::{Store, TursoStore};
 use fs_tasks_core::TaskRepo;
 
@@ -34,8 +34,16 @@ pub fn serve_command(args: impl IntoIterator<Item = OsString>) -> i32 {
         data,
         actor,
         instance,
+        facet,
     } = options;
-    let served = run_until_signal(&socket, || async move {
+    // Tasks has one view only; a facet name is refused at the start, so a wrong link is found early.
+    if let Some(facet) = facet {
+        eprintln!("fs-tasks serve: no facet named {facet:?} (Tasks has none)");
+        return 2;
+    }
+    // Name and version go to `Control.version`: a window of another version replaces this server (fs-interfaces handshake).
+    let identity = ServerIdentity::new("fs-tasks", env!("CARGO_PKG_VERSION"));
+    let served = run_until_signal_as(&socket, identity, || async move {
         let data = prepare_data_dir(&data)?;
         let store = TursoStore::open(data.join("objects.db"))
             .await
