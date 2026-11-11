@@ -117,6 +117,17 @@ fn commands_edit_the_value() {
     );
     u.relate("x", Relation::FinishToStart);
     assert_eq!(u.related_to["x"]["relation"].as_object().unwrap().len(), 1);
+    // a key switched off is not a relation: relating again switches it on
+    let mut off = Task::new("V");
+    off.related_to.insert(
+        "y".into(),
+        json!({"@type":"Relation","relation":{"finishtostart":false}}),
+    );
+    off.relate("y", Relation::FinishToStart);
+    assert_eq!(
+        off.relations(),
+        [("y".to_string(), Relation::FinishToStart)]
+    );
 }
 
 #[test]

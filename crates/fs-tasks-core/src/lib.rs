@@ -29,6 +29,7 @@ mod error;
 pub mod ical;
 mod interface;
 pub mod model;
+pub mod plan;
 mod repo;
 mod revision;
 pub mod validate;

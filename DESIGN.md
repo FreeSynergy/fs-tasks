@@ -122,6 +122,7 @@ The detail text is as before; the facts are extensions (`fs_interfaces::rpc::pro
 | `fs-tasks-server/{cursor,facts}.rs` | none | pure functions: a `Place` as bytes; the facts of a problem |
 | `fs-tasks-server/paging.rs` | Adapter | a `TaskPage` on the wire, cut by weight |
 | `repo/items.rs` | Facade | the trait impls forward to the flows |
+| `plan/{graph,readiness,schedule}.rs` | Value object + Specification + Template method | pure functions over tasks and edges (no store): `Edge` always predecessor to successor (RFC 9253), `cycles` (iterative Tarjan), `path_closing_cycle` (for a refusing `relate`, not wired yet), `Readiness` (Ready, Blocked, DependencyCancelled, Done, Unknown, Conflict), `schedule` (earliest/latest start, slack; calendar time; no `gap` yet) |
 | `model/task.rs`, `model/relation.rs` | Template method (`calendar_object!` of `fs-jscalendar`) / Value object | only what is specific to `Task`; `Relation` is a closed enum |
 | `model/ops.rs` | Command | small edits of the value |
 | `validate/check.rs` | Specification | task rules; the shared rules and `Ctx` are in `fs-jscalendar` |
