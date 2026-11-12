@@ -81,7 +81,7 @@ pub fn actor_type_of(p: &Participant) -> Option<ActorType> {
         .get(ACTOR_TYPE_KEY)
         .and_then(Value::as_str)
         .and_then(ActorType::parse)
-        .or_else(|| match p.kind.as_deref() {
+        .or(match p.kind.as_deref() {
             Some("individual") => Some(ActorType::Person),
             Some("group") => Some(ActorType::Group),
             _ => None,
