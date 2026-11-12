@@ -85,6 +85,9 @@ impl TaskRepo {
 
     /// Queue a change for [`Self::flush_unblocked`] if it can change anybody's readiness. Called under the write turn.
     pub(super) fn queue_unblocked(&self, old: &Task, new: Option<&TaskEntry>) {
+        if let Some(new) = new {
+            self.forget_newly_waiting(Some(old), &new.task);
+        }
         if may_change_readiness(old, new.map(|e| &e.task)) {
             self.push_pending(Pending {
                 old: Some(old.clone()),
@@ -95,11 +98,39 @@ impl TaskRepo {
 
     /// Queue a task that was just created: a task that named it as a dependency may be free now. Whether any does is
     /// asked when the changes are judged (in one scan for an import), not for each created task.
-    pub(super) fn queue_created(&self, uid: &str) {
+    pub(super) fn queue_created(&self, task: &Task) {
+        self.forget_newly_waiting(None, task);
         self.push_pending(Pending {
             old: None,
-            uid: uid.to_string(),
+            uid: task.uid.clone(),
         });
+    }
+
+    /// A relation that was added can make its successor wait again: that task is no longer "announced ready", so freeing
+    /// it later is announced again (the judgement only sees changes that can free somebody, not these).
+    fn forget_newly_waiting(&self, old: Option<&Task>, new: &Task) {
+        let before = old
+            .map(|o| edges_of(std::slice::from_ref(o)))
+            .unwrap_or_default();
+        let added: Vec<String> = edges_of(std::slice::from_ref(new))
+            .into_iter()
+            .filter(|e| {
+                !before
+                    .iter()
+                    .any(|b| b.from == e.from && b.to == e.to && b.kind == e.kind)
+            })
+            .map(|e| e.to)
+            .collect();
+        if added.is_empty() {
+            return;
+        }
+        let mut announced = self
+            .announced_ready
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        for uid in added {
+            announced.remove(&uid);
+        }
     }
 
     fn push_pending(&self, change: Pending) {

@@ -50,7 +50,7 @@ impl TaskRepo {
         }
         self.objects.put(o, &self.actor).await?;
         self.feed.notify(&TaskChange::Created(id));
-        self.queue_created(&task.uid);
+        self.queue_created(&task);
         self.entry(id).await?.ok_or(Error::NotFound(id))
     }
 
