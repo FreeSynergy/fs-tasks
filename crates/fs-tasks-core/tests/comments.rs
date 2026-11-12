@@ -38,10 +38,7 @@ async fn a_comment_is_its_own_object_with_the_author_the_provider_sets() {
     // not part of the task: the task is unchanged and a query of tasks does not see the comment
     assert_eq!(r.get(t.id).await.unwrap().unwrap().task, t.task);
     assert_eq!(r.list().await.unwrap().len(), 1);
-    let first = r
-        .query(&TaskQuery::new().matching("First"))
-        .await
-        .unwrap();
+    let first = r.query(&TaskQuery::new().matching("First")).await.unwrap();
     assert_eq!(first.len(), 0);
     let _ = store;
     // refused: empty text, a context that is no task
