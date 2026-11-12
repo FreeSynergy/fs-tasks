@@ -40,11 +40,11 @@ async fn an_actor_is_assigned_once_and_found_by_its_iri() {
         .await
         .unwrap();
     assert_eq!(mine.len(), 1);
-    assert!(
+    assert_eq!(
         r.query(&TaskQuery::new().assigned_to("nobody"))
             .await
-            .unwrap()
-            .is_empty()
+            .unwrap(),
+        []
     );
 }
 

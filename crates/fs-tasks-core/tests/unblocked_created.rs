@@ -3,6 +3,7 @@
 
 mod common;
 
+use std::fmt::Write;
 use std::sync::{Arc, Mutex};
 
 use common::repo;
@@ -71,9 +72,11 @@ async fn importing_the_task_a_relation_named_frees_the_one_that_waited_few_and_m
             } else {
                 "NEEDS-ACTION"
             };
-            ics.push_str(&format!(
+            write!(
+                ics,
                 "BEGIN:VTODO\r\nUID:{uid}\r\nDTSTAMP:20261101T000000Z\r\nSUMMARY:{uid}\r\nSTATUS:{status}\r\nEND:VTODO\r\n"
-            ));
+            )
+            .unwrap();
         }
         ics.push_str("END:VCALENDAR\r\n");
         let report = r.import_ics(&ics).await.unwrap();

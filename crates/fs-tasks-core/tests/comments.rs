@@ -5,10 +5,19 @@ mod common;
 use std::sync::{Arc, Mutex};
 
 use common::{ME, repo, setup};
+use fs_objects::Query;
 use fs_tasks_core::{
     Comments, Error, Task, TaskChange, TaskEntry, TaskFeed, TaskItems, TaskListener, TaskQuery,
     TaskRepo,
 };
+
+struct Log(Mutex<Vec<TaskChange>>);
+
+impl TaskListener for Log {
+    fn changed(&self, c: &TaskChange) {
+        self.0.lock().unwrap().push(*c);
+    }
+}
 
 async fn task(r: &TaskRepo, title: &str) -> (TaskEntry, String) {
     let e = r.create(Task::new(title)).await.unwrap();
@@ -29,11 +38,9 @@ async fn a_comment_is_its_own_object_with_the_author_the_provider_sets() {
     // not part of the task: the task is unchanged and a query of tasks does not see the comment
     assert_eq!(r.get(t.id).await.unwrap().unwrap().task, t.task);
     assert_eq!(r.list().await.unwrap().len(), 1);
-    assert!(
-        r.query(&TaskQuery::new().matching("First"))
-            .await
-            .unwrap()
-            .is_empty()
+    assert_eq!(
+        r.query(&TaskQuery::new().matching("First")).await.unwrap(),
+        []
     );
     let _ = store;
     // refused: empty text, a context that is no task
@@ -141,12 +148,6 @@ async fn only_the_author_or_the_task_owner_may_change_a_comment() {
 async fn deleting_the_task_takes_its_comments_and_a_comment_is_announced() {
     let (r, store) = setup().await;
     let (t, iri) = task(&r, "Plan").await;
-    struct Log(Mutex<Vec<TaskChange>>);
-    impl TaskListener for Log {
-        fn changed(&self, c: &TaskChange) {
-            self.0.lock().unwrap().push(*c);
-        }
-    }
     let log = Arc::new(Log(Mutex::default()));
     let _sub = r.subscribe(log.clone());
     let c = r.comment_add(&iri, "hello", None).await.unwrap();
@@ -155,7 +156,6 @@ async fn deleting_the_task_takes_its_comments_and_a_comment_is_announced() {
         comment: c.id
     }));
     r.delete(t.id).await.unwrap();
-    use fs_objects::Query;
     let left = store
         .query(&Query::new().in_context(iri.as_str()))
         .await
