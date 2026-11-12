@@ -23,6 +23,6 @@ fs-tasks-cli = { path = "../fs-tasks-cli" }
 fs-tasks-app = { path = "../fs-tasks-app", optional = true }
 
 [dev-dependencies]
-fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.18", features = ["rpc"] }
+fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.19", features = ["rpc"] }
 tokio = { version = "1", features = ["full"] }
 tempfile = "3"

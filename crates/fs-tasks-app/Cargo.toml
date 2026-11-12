@@ -10,10 +10,10 @@ repository.workspace = true
 [dependencies]
 fs-tasks-core = { path = "../fs-tasks-core" }
 fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.1" }
-fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.8" }
-fs-components-workbenches = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.8" }
+fs-components-app = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.11" }
+fs-components-workbenches = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.11" }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread"] }
 
 [dev-dependencies]
-fs-components-render = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.8" }
+fs-components-render = { git = "https://github.com/FreeSynergy/fs-components", tag = "v0.0.11" }
