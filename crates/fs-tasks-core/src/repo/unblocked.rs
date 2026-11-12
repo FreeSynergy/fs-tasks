@@ -155,7 +155,7 @@ impl TaskRepo {
             .scan_graph()
             .await?
             .values()
-            .flat_map(|t| t.relations())
+            .flat_map(Task::relations)
             .filter(|(_, r)| *r == crate::model::Relation::DependsOn)
             .map(|(other, _)| other)
             .collect();
