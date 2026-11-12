@@ -11,8 +11,6 @@ use crate::facts::with_facts;
 const NOT_FOUND: &str = "https://freesynergy.net/problems/tasks/not-found";
 const CONFLICT: &str = "https://freesynergy.net/problems/tasks/conflict";
 const CYCLE: &str = "https://freesynergy.net/problems/tasks/cycle";
-const INVALID_REPLY: &str = "https://freesynergy.net/problems/invalid-reply";
-const FORBIDDEN: &str = "https://freesynergy.net/problems/tasks/forbidden";
 const INVALID: &str = "https://freesynergy.net/problems/tasks/invalid";
 
 /// A core error as an RPC error. `Json` means data already stored no longer reads: not the caller's
@@ -29,8 +27,6 @@ pub(crate) fn rpc_error(e: Error) -> capnp::Error {
         Error::NotFound(_) | Error::Store(Store::NotFound(_)) => {
             problem(NOT_FOUND, "Task not found", 404)
         }
-        Error::InvalidReply(_) => problem(INVALID_REPLY, "Invalid reply", 422),
-        Error::Forbidden(_) => problem(FORBIDDEN, "Not allowed", 403),
         Error::Rejected(_) => problem(INVALID, "Invalid", 422),
         Error::Cycle(_) => problem(CYCLE, "Dependency cycle", 409),
         Error::Conflict(_)

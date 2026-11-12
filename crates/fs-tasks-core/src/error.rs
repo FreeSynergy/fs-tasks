@@ -52,13 +52,7 @@ pub enum Error {
     /// edge back to its predecessor. Nothing was written. Counts as a conflict ([`Error::is_conflict`]).
     #[error("this relation would close a dependency cycle: {}", .0.join(" -> "))]
     Cycle(Vec<String>),
-    /// A comment's `inReplyTo` does not name a comment of the same task that is itself no reply (threads are one level deep).
-    #[error("invalid reply: {0}")]
-    InvalidReply(String),
-    /// Only the author (or the owner of the task) may do this.
-    #[error("not allowed: {0}")]
-    Forbidden(String),
-    /// A comment or board is not acceptable (empty text, too long, no such column ...).
+    /// A board is not acceptable (no name, no column, no such column ...).
     #[error("rejected: {0}")]
     Rejected(String),
     /// A task with this uid exists already; the id is the existing task's, so a caller can open it

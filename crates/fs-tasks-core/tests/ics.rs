@@ -153,3 +153,14 @@ fn the_gap_survives_import_and_export_as_the_member() {
         "{out}"
     );
 }
+
+/// The tasks program has no comments of its own: the `COMMENT` lines of a VTODO stay in the task as they were read and
+/// go out again unchanged (they belong to the comment topic, not to this program).
+#[test]
+fn comment_lines_of_a_vtodo_are_kept_and_exported_unchanged() {
+    let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\nBEGIN:VTODO\r\nUID:todo-c\r\nDTSTAMP:20261101T000000Z\r\nSUMMARY:Minutes\r\nCOMMENT:first\\, with comma\r\nCOMMENT;LANGUAGE=de:zweite\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
+    let (tasks, _) = ical::parse_ics(ics).unwrap();
+    let out = ical::to_ics(&tasks).unwrap();
+    assert!(out.contains("COMMENT:first\\, with comma\r\n"), "{out}");
+    assert!(out.contains("COMMENT;LANGUAGE=de:zweite\r\n"), "{out}");
+}

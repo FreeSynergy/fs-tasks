@@ -16,13 +16,6 @@ pub enum TaskChange {
     Updated(ObjectId),
     /// A task was deleted.
     Deleted(ObjectId),
-    /// A comment was added, edited or deleted on a task.
-    Commented {
-        /// The task that was commented.
-        task: ObjectId,
-        /// The comment.
-        comment: ObjectId,
-    },
     /// A task became ready to start because the task it waited for was completed: the trigger of anyone who takes
     /// ready tasks (a runner). Comes after the `Updated` of the task that was completed.
     Unblocked(ObjectId),

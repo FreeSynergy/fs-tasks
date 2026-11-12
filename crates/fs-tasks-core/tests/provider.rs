@@ -71,11 +71,10 @@ async fn the_store_backed_provider_reports_what_it_can() {
     ] {
         assert!(caps.is_supported(id), "{id}");
     }
-    // boards and comments are offered by the provider itself (the wire does not carry them yet)
+    // boards and claims are offered by the provider itself (the wire does not carry them yet)
     for id in [
         "card.move",
         "board.open",
-        "comment.add",
         "task.claim",
         "dependency.evaluate",
     ] {

@@ -89,10 +89,6 @@ impl TaskRepo {
         let gone = entry_of(stored).ok();
         self.objects.delete(id, &self.actor).await?;
         self.feed.notify(&TaskChange::Deleted(id));
-        // its comments go with it (each is one logged, undoable deletion of the store)
-        if let Some(iri) = gone.as_ref().and_then(|g| g.envelope.iri.clone()) {
-            self.delete_comments_of(&iri).await?;
-        }
         if let Some(gone) = gone {
             self.queue_unblocked(&gone.task, None);
         }

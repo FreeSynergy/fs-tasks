@@ -7,7 +7,6 @@ mod backend;
 mod boards;
 mod build;
 mod claim;
-mod comments;
 mod consts;
 mod crud;
 mod deps;

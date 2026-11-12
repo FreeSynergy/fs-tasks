@@ -120,12 +120,11 @@ async fn capabilities_and_report_match() {
             .filter(|e| !e.get_supported())
             .map(|e| e.get_capability().unwrap().to_string().unwrap())
             .collect();
-        // what the core offers and the contract has no method for yet: boards, comments, claims
-        assert_eq!(refused.len(), 10);
+        // what the core offers and the contract has no method for yet: boards, claims
+        assert_eq!(refused.len(), 6);
         assert!(refused.iter().all(|i| i.starts_with("board.")
             || i.starts_with("column.")
             || i.starts_with("card.")
-            || i.starts_with("comment.")
             || i == "task.claim"));
     })
     .await;

@@ -4,7 +4,4 @@
 
 mod convert;
 
-pub use convert::{
-    ICS_MEDIA_TYPE, IcsPart, parse_ics, put_comments, split_ics, take_comments, to_ics,
-    unfolded_lines,
-};
+pub use convert::{ICS_MEDIA_TYPE, IcsPart, parse_ics, split_ics, to_ics, unfolded_lines};
