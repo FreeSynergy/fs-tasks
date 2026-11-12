@@ -47,6 +47,8 @@ pub struct Args {
     pub today: Option<Day>,
     /// Choose the task whose title holds this text (a picture of the open panel).
     pub open: Option<String>,
+    /// The day list to show first (`--list today|upcoming|...`).
+    pub list: Option<String>,
     /// `--help` was given.
     pub help: bool,
 }
@@ -65,6 +67,7 @@ impl Default for Args {
             sample: None,
             today: None,
             open: None,
+            list: None,
             help: false,
         }
     }
@@ -93,6 +96,7 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
             "--view" => out.view = Some(view(&value("--view")?)?),
             "--plan" => out.plan = Some(plan(&value("--plan")?)?),
             "--open" => out.open = Some(value("--open")?),
+            "--list" => out.list = Some(value("--list")?),
             "--sample" => out.sample = Some(value("--sample")?),
             "--today" => out.today = Some(Day::parse(&value("--today")?)?),
             "-h" | "--help" => out.help = true,

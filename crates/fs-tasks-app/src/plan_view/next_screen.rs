@@ -109,6 +109,27 @@ impl NextScreen {
     }
 }
 
+impl NextScreen {
+    /// Open the line whose title holds `part` and show its list (for a picture of an open line).
+    pub fn open_title(&self, part: &str) {
+        let part = part.to_lowercase();
+        let found = self.cache.current().and_then(|s| {
+            s.entries
+                .iter()
+                .find(|e| e.task.display_title().to_lowercase().contains(&part))
+                .map(|e| e.id.to_string())
+        });
+        if let Some(key) = found {
+            held(&self.state).opened.push(key);
+        }
+    }
+
+    /// Show the list with this key.
+    pub fn show(&self, list: &str) {
+        held(&self.state).chosen = list.to_string();
+    }
+}
+
 impl Surface for NextScreen {
     fn build(&self, width: f32, height: f32) -> Box<dyn Element> {
         let Some(snapshot) = self.cache.current() else {
@@ -170,7 +191,16 @@ impl PlanSurface {
 
     /// Choose the card of the board whose title holds `part` (a picture of the open panel).
     pub fn select_title(&self, part: &str) {
-        self.board.select_title(part);
+        if self.mode.is_list() {
+            self.list.open_title(part);
+        } else {
+            self.board.select_title(part);
+        }
+    }
+
+    /// Show the day list `list` (for a picture).
+    pub fn show_list(&self, list: &str) {
+        self.list.show(list);
     }
 }
 

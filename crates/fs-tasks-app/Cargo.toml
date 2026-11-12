@@ -7,6 +7,12 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 
+[features]
+# The window writes what is typed into its fields to `FS_TEST_ACCESS_FILE` (fs-components `test-access`). ONLY for the
+# typing test, in a debug build: fs-components refuses the feature in a release build (compile_error), and no release
+# manifest of ours turns it on.
+test-access = ["fs-components-app/test-access"]
+
 [dependencies]
 fs-tasks-core = { path = "../fs-tasks-core" }
 fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.1" }
