@@ -8,7 +8,7 @@ What is different here: a task follows the open JSCalendar standard (RFC 8984), 
 
 ## What it can do today
 
-Version 0.0.5 (in progress). Latest tag: `v0.0.4`.
+Version 0.0.6 (in progress). Latest tag: `v0.0.5`.
 
 - Create, edit, assign, label, relate, list and delete tasks. Find them by due date range, progress, label, or a word in the title or description.
 - Import and export iCalendar tasks (VTODO). Events in the same file are left for the calendar.
@@ -20,6 +20,12 @@ Version 0.0.5 (in progress). Latest tag: `v0.0.4`.
 - The calendar already shows tasks through this interface.
 
 **Not done:** the window calls the core in process, not over the socket, so it has no version handshake with the server yet; that comes with a window over RPC.
+
+## Notes for 0.0.6
+
+- **Faster dependency questions:** the readiness of many tasks at once, the `ready` filter and the cycle check of `relate` no longer walk the graph once per task. Measured on a chain of 5000 tasks (release build): a page of ready tasks 0.22 s (before: 117 s for a chain of 200), `relate` in front of the chain 19 ms. `readiness_many` is new in the core (not on the wire yet).
+- **`ready` filter** for lists and pages in the core (`TaskQuery::only_ready`); on the wire it needs a filter member in a later `fs-interfaces`.
+- **"Became ready" events** are now also sent when a task starts and a start-to-start tie is satisfied, when a relation is removed, and when a task is deleted.
 
 ## Notes for 0.0.5
 
