@@ -184,6 +184,46 @@ impl TaskItems for TaskRepo {
 }
 
 #[async_trait]
+impl crate::interface::Boards for TaskRepo {
+    async fn board_create(
+        &self,
+        name: &str,
+        label: Option<&str>,
+    ) -> Result<crate::interface::BoardEntry> {
+        self.board_create_inner(name, label).await
+    }
+    async fn board_get(&self, id: ObjectId) -> Result<Option<crate::interface::BoardEntry>> {
+        self.board_get_inner(id).await
+    }
+    async fn boards(&self) -> Result<Vec<crate::interface::BoardEntry>> {
+        self.boards_inner().await
+    }
+    async fn board_edit(
+        &self,
+        id: ObjectId,
+        revision: Revision,
+        board: crate::model::Board,
+    ) -> Result<crate::interface::BoardEntry> {
+        self.board_edit_inner(id, revision, board).await
+    }
+    async fn board_move_card(
+        &self,
+        id: ObjectId,
+        uid: &str,
+        column: &str,
+        index: Option<usize>,
+    ) -> Result<crate::interface::BoardEntry> {
+        self.board_move_card_inner(id, uid, column, index).await
+    }
+    async fn board_delete(&self, id: ObjectId) -> Result<()> {
+        self.board_delete_inner(id).await
+    }
+    async fn board_layout(&self, id: ObjectId) -> Result<crate::model::Layout> {
+        self.board_layout_inner(id).await
+    }
+}
+
+#[async_trait]
 impl crate::interface::Comments for TaskRepo {
     async fn comments(&self, context: &str) -> Result<Vec<crate::interface::Comment>> {
         self.comments_inner(context).await
@@ -246,10 +286,7 @@ fn capabilities() -> Capabilities {
         "column.limit",
         "card.move",
     ] {
-        caps.unsupported(
-            id,
-            "Boards is a placeholder in the contract; not built yet, it is possible",
-        );
+        caps.supported(id);
     }
     caps
 }
