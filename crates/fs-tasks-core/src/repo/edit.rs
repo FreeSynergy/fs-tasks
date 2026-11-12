@@ -32,7 +32,7 @@ impl TaskRepo {
         let entry = self.entry(id).await?.ok_or(Error::NotFound(id))?;
         // Who is ready now because this edit freed it (the task started or was completed, gave up an edge it held, or
         // a cycle was resolved).
-        self.announce_unblocked(&old, Some(&entry)).await;
+        self.queue_unblocked(&old, Some(&entry));
         Ok(entry)
     }
 

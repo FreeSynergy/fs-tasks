@@ -32,8 +32,7 @@ impl TaskItems for TaskRepo {
         self.create_inner(task, None).await
     }
     async fn edit(&self, id: ObjectId, task: Task) -> Result<TaskEntry> {
-        let _one_at_a_time = self.writes.lock().await;
-        self.edit_inner(id, task).await
+        self.writing(async || self.edit_inner(id, task).await).await
     }
     async fn edit_checked(
         &self,
@@ -42,27 +41,33 @@ impl TaskItems for TaskRepo {
         task: Task,
     ) -> Result<TaskEntry> {
         // The turn makes compare and write one step: nobody else writes in between.
-        let _one_at_a_time = self.writes.lock().await;
-        let current = self.entry(id).await?.ok_or(Error::NotFound(id))?;
-        if Revision::of(&current) != expected {
-            return Err(Error::Changed(id));
-        }
-        self.edit_inner(id, task).await
+        self.writing(async || {
+            let current = self.entry(id).await?.ok_or(Error::NotFound(id))?;
+            if Revision::of(&current) != expected {
+                return Err(Error::Changed(id));
+            }
+            self.edit_inner(id, task).await
+        })
+        .await
     }
     async fn assign(&self, id: ObjectId, name: &str, email: &str) -> Result<TaskEntry> {
         let (name, email) = (name.to_string(), email.to_string());
-        let _one_at_a_time = self.writes.lock().await;
-        self.modify(id, move |t| {
-            t.assign(&name, &email);
+        self.writing(async || {
+            self.modify(id, move |t| {
+                t.assign(&name, &email);
+            })
+            .await
         })
         .await
     }
     async fn relate(&self, id: ObjectId, other_uid: &str, relation: Relation) -> Result<TaskEntry> {
         let uid = other_uid.to_string();
-        let _one_at_a_time = self.writes.lock().await;
-        let holder = self.entry(id).await?.ok_or(Error::NotFound(id))?;
-        self.check_no_cycle(&holder.task, &uid, relation).await?;
-        self.modify(id, move |t| t.relate(&uid, relation)).await
+        self.writing(async || {
+            let holder = self.entry(id).await?.ok_or(Error::NotFound(id))?;
+            self.check_no_cycle(&holder.task, &uid, relation).await?;
+            self.modify(id, move |t| t.relate(&uid, relation)).await
+        })
+        .await
     }
     async fn relate_with_gap(
         &self,
@@ -72,15 +77,17 @@ impl TaskItems for TaskRepo {
         gap: &str,
     ) -> Result<TaskEntry> {
         let (uid, gap) = (other_uid.to_string(), gap.to_string());
-        let _one_at_a_time = self.writes.lock().await;
-        let holder = self.entry(id).await?.ok_or(Error::NotFound(id))?;
-        // The gap is checked before anything is written (and before the graph is read).
-        holder.task.clone().relate_with_gap(&uid, relation, &gap)?;
-        self.check_no_cycle(&holder.task, &uid, relation).await?;
-        let stored = self.stored(id).await?.ok_or(Error::NotFound(id))?;
-        let mut task = super::crud::entry_of(stored)?.task;
-        task.relate_with_gap(&uid, relation, &gap)?;
-        self.edit_inner(id, task).await
+        self.writing(async || {
+            let holder = self.entry(id).await?.ok_or(Error::NotFound(id))?;
+            // The gap is checked before anything is written (and before the graph is read).
+            holder.task.clone().relate_with_gap(&uid, relation, &gap)?;
+            self.check_no_cycle(&holder.task, &uid, relation).await?;
+            let stored = self.stored(id).await?.ok_or(Error::NotFound(id))?;
+            let mut task = super::crud::entry_of(stored)?.task;
+            task.relate_with_gap(&uid, relation, &gap)?;
+            self.edit_inner(id, task).await
+        })
+        .await
     }
     async fn readiness(&self, id: ObjectId) -> Result<Readiness> {
         self.readiness_inner(id).await
@@ -107,8 +114,8 @@ impl TaskItems for TaskRepo {
     }
     async fn label(&self, id: ObjectId, label: &str) -> Result<TaskEntry> {
         let label = label.to_string();
-        let _one_at_a_time = self.writes.lock().await;
-        self.modify(id, move |t| t.label(&label)).await
+        self.writing(async || self.modify(id, move |t| t.label(&label)).await)
+            .await
     }
     async fn get(&self, id: ObjectId) -> Result<Option<TaskEntry>> {
         self.entry(id).await
@@ -120,8 +127,7 @@ impl TaskItems for TaskRepo {
             .transpose()
     }
     async fn delete(&self, id: ObjectId) -> Result<()> {
-        let _one_at_a_time = self.writes.lock().await;
-        self.delete_inner(id).await
+        self.writing(async || self.delete_inner(id).await).await
     }
     async fn list(&self) -> Result<Vec<TaskEntry>> {
         self.query_inner(&TaskQuery::new()).await

@@ -1,0 +1,93 @@
+//! Who became ready is judged after the write turn is given back: another write does not wait for the (possibly long)
+//! reading of a deep graph. The queries are slowed down, so the order of the two finishing is the proof.
+
+mod common;
+
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use async_trait::async_trait;
+use common::ME;
+use fs_objects::traits::{ObjectQuery, ObjectRepository};
+use fs_objects::{Query, Store, StoredObject, TursoStore};
+use fs_tasks_core::{Relation, Task, TaskItems, TaskRepo};
+
+struct Slow(Arc<dyn Store>, Duration);
+
+#[async_trait]
+impl ObjectQuery for Slow {
+    async fn query(&self, q: &Query) -> fs_objects::Result<Vec<StoredObject>> {
+        tokio::time::sleep(self.1).await;
+        self.0.query(q).await
+    }
+    async fn count(&self, q: &Query) -> fs_objects::Result<usize> {
+        self.0.count(q).await
+    }
+}
+
+struct Plain(Arc<dyn Store>);
+
+#[async_trait]
+impl ObjectRepository for Plain {
+    async fn put(&self, o: StoredObject, a: &str) -> fs_objects::Result<fs_objects::Activity> {
+        self.0.put(o, a).await
+    }
+    async fn put_and_log(
+        &self,
+        o: StoredObject,
+        a: &str,
+        e: Vec<fs_objects::LogEntry>,
+    ) -> fs_objects::Result<Vec<fs_objects::Activity>> {
+        self.0.put_and_log(o, a, e).await
+    }
+    async fn get(&self, id: fs_objects::ObjectId) -> fs_objects::Result<Option<StoredObject>> {
+        self.0.get(id).await
+    }
+    async fn delete(
+        &self,
+        id: fs_objects::ObjectId,
+        a: &str,
+    ) -> fs_objects::Result<fs_objects::Activity> {
+        self.0.delete(id, a).await
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn another_write_does_not_wait_for_the_judgement_of_a_change() {
+    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let fast = TaskRepo::new(store.clone(), ME);
+    let mut head_id = None;
+    for i in 0..6 {
+        let mut t = Task::new(format!("t{i}"));
+        t.uid = format!("t{i}");
+        if i + 1 < 6 {
+            t.relate(&format!("t{}", i + 1), Relation::FinishToStart);
+        }
+        let id = fast.create(t).await.unwrap().id;
+        head_id.get_or_insert(id);
+    }
+    let slow = TaskRepo::with_backend(
+        Arc::new(Plain(store.clone())),
+        Arc::new(Slow(store, Duration::from_millis(60))),
+        ME,
+    );
+    let head = slow.get(head_id.unwrap()).await.unwrap().unwrap();
+    let started = Instant::now();
+    let finishing = slow.clone();
+    let completing = tokio::spawn(async move {
+        let mut t = head.task.clone();
+        t.progress = Some("completed".into());
+        finishing.edit(head.id, t).await.unwrap();
+        started.elapsed()
+    });
+    tokio::time::sleep(Duration::from_millis(30)).await;
+    let mut other = Task::new("other");
+    other.uid = "other".into();
+    slow.create(other).await.unwrap();
+    let other_done = started.elapsed();
+    let edit_done = completing.await.unwrap();
+    assert!(
+        other_done < edit_done,
+        "the create ({other_done:?}) waited for the whole edit ({edit_done:?}) including its judgement"
+    );
+}

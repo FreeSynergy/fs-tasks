@@ -17,6 +17,8 @@ use fs_tasks_core::{Task, TaskItems, TaskQuery, TaskRepo};
 struct Editing {
     store: Arc<dyn Store>,
     calls: AtomicUsize,
+    /// What it does at the third query: edit `t0`, or create a task whose id is below every id the scan has seen.
+    create_small_id: bool,
 }
 
 #[async_trait]
@@ -25,6 +27,12 @@ impl ObjectQuery for Editing {
         let found = self.store.query(q).await?;
         if self.calls.fetch_add(1, Ordering::SeqCst) == 2 {
             let repo = TaskRepo::new(self.store.clone(), ME);
+            if self.create_small_id {
+                let mut t = Task::new("early");
+                t.uid = "urn:uuid:00000000-0000-7000-8000-000000000001".into();
+                repo.create(t).await.unwrap();
+                return Ok(found);
+            }
             let t0 = repo.get_by_uid("t0").await.unwrap().unwrap();
             let mut t = t0.task.clone();
             t.title = Some("edited during the scan".into());
@@ -53,6 +61,7 @@ async fn an_edit_during_the_scan_changes_nothing_about_who_is_in_it() {
         Arc::new(Editing {
             store: store.clone(),
             calls: AtomicUsize::new(0),
+            create_small_id: false,
         }),
         ME,
     )
@@ -71,6 +80,39 @@ async fn an_edit_during_the_scan_changes_nothing_about_who_is_in_it() {
     uids.sort();
     uids.dedup();
     assert_eq!(uids.len(), 30, "no task twice");
+}
+
+/// A task that appears during the scan with an id below the scan's position is no error (the scan once called that
+/// "tasks without an id key"); it is stored later than the others, so it comes at the end of the scan.
+#[tokio::test]
+async fn a_task_created_during_the_scan_with_a_smaller_id_is_no_error() {
+    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let plain = TaskRepo::new(store.clone(), ME);
+    for i in 0..30 {
+        let mut t = Task::new(format!("t{i}"));
+        t.uid = format!("t{i}");
+        plain.create(t).await.unwrap();
+    }
+    let objects: Arc<dyn ObjectRepository> = Arc::new(StoreObjects(store.clone()));
+    let watched = TaskRepo::with_backend(
+        objects,
+        Arc::new(Editing {
+            store,
+            calls: AtomicUsize::new(0),
+            create_small_id: true,
+        }),
+        ME,
+    )
+    .with_scan_chunk(7);
+    let page = watched
+        .page(&TaskQuery::new().only_ready(true), None, 100)
+        .await
+        .expect("a task created during the scan is not an error");
+    assert_eq!(
+        page.items.len(),
+        31,
+        "the 30 that were there, and the new one at the end of the scan"
+    );
 }
 
 struct StoreObjects(Arc<dyn Store>);
