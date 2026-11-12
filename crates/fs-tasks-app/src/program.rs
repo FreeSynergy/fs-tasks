@@ -5,10 +5,13 @@
 
 use std::sync::Arc;
 
-use crate::args::{Args, HELP, parse};
-use crate::{TaskAdapter, export_all, import_file, labels, screen_widget};
+use crate::args::{Args, HELP, Plan, parse};
+use crate::day::Day;
+use crate::plan_view::{Board, Cache, Layout, Next, PlanSource};
+use crate::sample::by_name as sample_by_name;
+use crate::{TaskAdapter, export_all, import_file, labels, labels_next, screen_widget};
 use fs_components_app::{Status, WindowOptions, launch};
-use fs_components_workbenches::tasks::TasksWidget;
+use fs_components_workbenches::tasks::{TaskView, TasksWidget};
 use fs_objects::{Store, TursoStore};
 use fs_tasks_core::{TaskItems, TaskRepo};
 
@@ -80,6 +83,18 @@ fn run(argv: &[String]) -> Result<(), String> {
     let items: Arc<dyn TaskItems> = Arc::new(repo);
     let handle = runtime.handle().clone();
 
+    let today = options.today.unwrap_or_else(Day::today);
+    if let Some(name) = &options.sample {
+        let text = sample_by_name(name, today)?;
+        let report = handle
+            .block_on(items.import_ics(&text))
+            .map_err(|e| format!("cannot import the sample: {e}"))?;
+        eprintln!(
+            "fs-tasks: sample {name}: {} tasks made, {} failed",
+            report.created.len(),
+            report.failed.len()
+        );
+    }
     let mut status = None;
     if let Some(file) = &options.import {
         let summary = import_file(items.as_ref(), &handle, file)?;
@@ -100,7 +115,7 @@ fn run(argv: &[String]) -> Result<(), String> {
             return Ok(());
         }
     }
-    show(&options, items, handle, status)
+    show(&options, items, handle, status, today)
 }
 
 fn show(
@@ -108,8 +123,12 @@ fn show(
     items: Arc<dyn TaskItems>,
     handle: tokio::runtime::Handle,
     status: Option<Status>,
+    today: Day,
 ) -> Result<(), String> {
-    let widget = TasksWidget::new(Arc::new(TaskAdapter::new(items, handle)), labels());
+    let widget = match args.plan {
+        Some(plan) => plan_widget(plan, items, handle, today, args.snapshot.is_some()),
+        None => TasksWidget::new(Arc::new(TaskAdapter::new(items, handle)), labels()),
+    };
     if let Some(view) = args.view {
         widget.with_state(|s| s.set_view(view));
     }
@@ -126,4 +145,42 @@ fn show(
     options.width = width;
     options.height = height;
     launch(options, app).map_err(|e| e.to_string())
+}
+
+/// The widget of a plan view. A picture waits for the first reading of the store; a window opens at once and
+/// fills when it arrives (the cache tells the window, which reads the list again).
+fn plan_widget(
+    plan: Plan,
+    items: Arc<dyn TaskItems>,
+    handle: tokio::runtime::Handle,
+    today: Day,
+    wait: bool,
+) -> TasksWidget {
+    let adapter = Arc::new(TaskAdapter::new(Arc::clone(&items), handle.clone()));
+    let cache = Cache::start(items, handle, today);
+    if wait {
+        let started = std::time::Instant::now();
+        let picture = cache.wait(std::time::Duration::from_secs(600));
+        let count = picture.map_or(0, |p| p.entries.len());
+        eprintln!(
+            "fs-tasks: picture of {count} tasks with their readiness in {:?}",
+            started.elapsed()
+        );
+    }
+    let (layout, words, view): (Box<dyn Layout>, _, _) = match plan {
+        Plan::Board => (Box::new(Board), labels(), TaskView::Status),
+        Plan::Next => (Box::new(Next), labels_next(), TaskView::List),
+    };
+    let source = PlanSource::new(adapter, Arc::clone(&cache), layout);
+    let widget = TasksWidget::new(Arc::new(source), words);
+    widget.with_state(|s| s.set_view(view));
+    let again = widget.clone();
+    cache.on_change(move || {
+        again.with_state(|s| {
+            let term = s.term().to_string();
+            s.search(&term);
+        });
+        again.refresh();
+    });
+    widget
 }

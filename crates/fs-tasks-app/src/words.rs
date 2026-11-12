@@ -23,6 +23,14 @@ pub fn labels() -> TaskLabels {
     labels
 }
 
+/// The words of the "what next" list: its columns say what, when or why it waits, and who.
+pub fn labels_next() -> TaskLabels {
+    let mut labels = labels();
+    labels.columns = vec!["Task".into(), "When, or why it waits".into(), "Who".into()];
+    labels.create = "Quick add".into();
+    labels
+}
+
 /// The name of a `progress` value; a value the standard does not list shows as it is.
 pub(crate) fn progress_title(progress: &str) -> &str {
     match progress {
