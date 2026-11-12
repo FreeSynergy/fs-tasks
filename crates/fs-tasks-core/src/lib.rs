@@ -38,8 +38,8 @@ pub use error::{Error, MAX_TASK_BYTES, Result};
 pub use fs_jscalendar::upgrade::{Upgraded, upgrade};
 pub use fs_jscalendar::{Issue, now_utc, time, upgrade};
 pub use interface::{
-    CAPABILITIES, ImportReport, Place, Placed, Registry, Subscription, TaskChange, TaskEntry,
-    TaskFeed, TaskItems, TaskListener, TaskPage, TaskQuery,
+    CAPABILITIES, COMMENT_CAPABILITIES, Comment, Comments, ImportReport, Place, Placed, Registry,
+    Subscription, TaskChange, TaskEntry, TaskFeed, TaskItems, TaskListener, TaskPage, TaskQuery,
 };
 pub use model::{Participant, RecurrenceRule, Relation, Task};
 pub use repo::{CONTENT_TYPE, CONTEXT, IndexReport, TASK_TYPE, TaskRepo};
