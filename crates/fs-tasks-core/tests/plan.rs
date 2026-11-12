@@ -139,7 +139,7 @@ fn a_diamond_is_no_cycle_and_a_self_dependency_is() {
         e("b", "d", EdgeKind::FinishToStart),
         e("c", "d", EdgeKind::FinishToStart),
     ];
-    assert!(cycles(&diamond).is_empty());
+    assert_eq!(cycles(&diamond), Vec::<Vec<String>>::new());
     assert_eq!(
         cycles(&[e("x", "x", EdgeKind::StartToStart)]),
         [vec!["x".to_string()]]
@@ -157,7 +157,7 @@ fn a_long_chain_does_not_overflow_the_stack() {
             )
         })
         .collect();
-    assert!(cycles(&chain).is_empty());
+    assert_eq!(cycles(&chain), Vec::<Vec<String>>::new());
     let closing = e("t20000", "t0", EdgeKind::FinishToStart);
     assert_eq!(path_closing_cycle(&chain, &closing).unwrap().len(), 20_001);
 }

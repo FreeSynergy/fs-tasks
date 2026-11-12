@@ -44,7 +44,7 @@ pub const PROG: [Option<&str>; 7] = [
 
 pub fn random_task(rng: &mut Rng, i: usize, n: usize, ghosts: usize, max_rel: usize) -> Task {
     let uid = format!("u{i}");
-    let mut t = Task::new(&format!(
+    let mut t = Task::new(format!(
         "{}Task {}",
         if rng.below(2) == 0 { "a" } else { "B" },
         rng.below(4)

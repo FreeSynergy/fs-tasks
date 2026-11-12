@@ -6,6 +6,7 @@
 
 mod common;
 
+use std::fmt::Write;
 use std::time::Instant;
 
 use common::repo;
@@ -22,11 +23,13 @@ async fn a_chain_is_judged_as_a_whole_in_batches() {
     // The chain goes in as an iCalendar import (linear, as a real import is), the tasks are found again by their uid.
     let mut ics = String::from("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\n");
     for i in 0..n {
-        ics.push_str(&format!(
+        write!(
+            ics,
             "BEGIN:VTODO\r\nUID:t{i}\r\nDTSTAMP:20261101T000000Z\r\nSUMMARY:t{i}\r\nSTATUS:NEEDS-ACTION\r\n"
-        ));
+        )
+        .unwrap();
         if i + 1 < n {
-            ics.push_str(&format!("RELATED-TO;RELTYPE=FINISHTOSTART:t{}\r\n", i + 1));
+            write!(ics, "RELATED-TO;RELTYPE=FINISHTOSTART:t{}\r\n", i + 1).unwrap();
         }
         ics.push_str("END:VTODO\r\n");
     }

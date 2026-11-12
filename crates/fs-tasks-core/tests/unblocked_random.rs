@@ -134,7 +134,7 @@ async fn unblocked_matches_the_expectation() {
     let mut handles = Vec::new();
     for p in 0..parts {
         handles.push(tokio::spawn(unblocked_runs(
-            0xA5A5_1234_9876_0001 ^ (p as u64 + 5) * 15_485_863,
+            0xA5A5_1234_9876_0001 ^ ((p as u64 + 5) * 15_485_863),
             runs / parts,
         )));
     }

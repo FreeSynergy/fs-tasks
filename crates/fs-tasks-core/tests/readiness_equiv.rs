@@ -41,13 +41,13 @@ async fn equiv_runs(seed: u64, runs: usize) -> (usize, usize, Vec<String>) {
             let one = format!("{:?}", r.readiness(e.id).await.unwrap());
             let m = format!("{:?}", many[&e.id]);
             checked += 1;
-            if old != one || old != m {
-                if findings.len() < 12 {
-                    findings.push(format!(
-                        "seed {seed} run {run} n {n} uid {uid}: whole {old} single {one} many {m}; tasks: {:?}",
-                        all.iter().map(|t| (t.uid.clone(), t.effective_progress().to_string(), t.relations())).collect::<Vec<_>>()
-                    ));
-                }
+            if (old != one || old != m) && findings.len() < 12 {
+                findings.push(format!(
+                    "seed {seed} run {run} n {n} uid {uid}: whole {old} single {one} many {m}; tasks: {:?}",
+                    all.iter()
+                        .map(|t| (t.uid.clone(), t.effective_progress().to_string(), t.relations()))
+                        .collect::<Vec<_>>()
+                ));
             }
             if old == "Ready" {
                 ready_ref.insert(uid.clone());
@@ -96,7 +96,7 @@ async fn every_way_of_asking_gives_the_same_readiness() {
     let mut handles = Vec::new();
     for p in 0..parts {
         handles.push(tokio::spawn(equiv_runs(
-            0x9E37_79B9_7F4A_7C15 ^ (p as u64 + 1) * 7919,
+            0x9E37_79B9_7F4A_7C15 ^ ((p as u64 + 1) * 7919),
             runs / parts,
         )));
     }

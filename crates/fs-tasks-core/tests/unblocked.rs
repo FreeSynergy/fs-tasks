@@ -65,7 +65,7 @@ async fn a_finish_to_start_successor_is_not_announced_when_the_other_only_starts
     let log = Arc::new(Log(Mutex::default()));
     let _sub = r.subscribe(log.clone());
     set_progress(&r, &a, "in-process").await;
-    assert!(unblocked(&log).is_empty());
+    assert_eq!(unblocked(&log), []);
     set_progress(&r, &a, "completed").await;
     assert_eq!(unblocked(&log), [b.id]);
 }
