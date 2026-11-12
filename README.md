@@ -25,7 +25,7 @@ Version 0.0.6 (in progress). Latest tag: `v0.0.5`.
 
 - **Faster dependency questions:** the readiness of many tasks at once, the `ready` filter and the cycle check of `relate` no longer walk the graph once per task. Measured on a chain of 5000 tasks (release build): a page of ready tasks 0.22 s (before: 117 s for a chain of 200), `relate` in front of the chain 19 ms. `readiness_many` is new in the core (not on the wire yet).
 - **`ready` filter** for lists and pages in the core (`TaskQuery::only_ready`); on the wire it needs a filter member in a later `fs-interfaces`.
-- **"Became ready" events** are now also sent when a task starts and a start-to-start tie is satisfied, when a relation is removed, and when a task is deleted.
+- **"Became ready" events** are sent for every task that was waiting and is ready after a change: when a task starts (a start-to-start tie), is completed, loses a relation, is deleted, or when a cycle is resolved; not for a task that was ready already.
 
 ## Notes for 0.0.5
 

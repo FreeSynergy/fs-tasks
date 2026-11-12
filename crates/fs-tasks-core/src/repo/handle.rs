@@ -25,6 +25,12 @@ pub struct TaskRepo {
     pub(crate) floating: Zone,
     /// One write flow at a time: each reads, decides and writes, and a backend may yield in between.
     pub(crate) writes: Arc<tokio::sync::Mutex<()>>,
+    /// Most tasks one question about the dependency graph loads (see `graph_load.rs`).
+    pub(crate) max_loaded: usize,
+    /// Most tasks of the store a scan reads.
+    pub(crate) max_scanned: usize,
+    /// Tasks read per query of a scan.
+    pub(crate) scan_chunk: usize,
 }
 
 impl TaskRepo {
@@ -50,7 +56,26 @@ impl TaskRepo {
             instance: "local.invalid".into(),
             floating: Zone::Utc,
             writes: Arc::default(),
+            max_loaded: super::graph_load::DEFAULT_MAX_LOADED,
+            max_scanned: super::graph_load::DEFAULT_MAX_SCANNED,
+            scan_chunk: super::graph_load::DEFAULT_SCAN_CHUNK,
         }
+    }
+
+    /// How many tasks a scan reads per query (default 1000); a small value is for tests of the scan itself.
+    #[must_use]
+    pub fn with_scan_chunk(mut self, chunk: usize) -> Self {
+        self.scan_chunk = chunk.max(1);
+        self
+    }
+
+    /// Change the limits of the dependency questions: the most tasks one question loads, and the most tasks of the store
+    /// a scan reads. The defaults are 20 000 and 100 000; a smaller value is for tests.
+    #[must_use]
+    pub fn with_graph_limits(mut self, max_loaded: usize, max_scanned: usize) -> Self {
+        self.max_loaded = max_loaded;
+        self.max_scanned = max_scanned;
+        self
     }
 
     /// Say whose store this is: [`TaskItems::identity`](crate::TaskItems::identity) answers from it.

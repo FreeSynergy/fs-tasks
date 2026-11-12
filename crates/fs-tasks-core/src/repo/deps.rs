@@ -10,6 +10,7 @@ use fs_objects::{ObjectId, Query};
 
 use super::consts::{CONTEXT, TASK_TYPE};
 use super::crud::entry_of;
+use super::graph_load::Preds;
 use super::handle::TaskRepo;
 use crate::error::{Error, Result};
 use crate::interface::TaskEntry;
@@ -94,7 +95,7 @@ impl TaskRepo {
         if entries.is_empty() {
             return Ok(BTreeMap::new());
         }
-        let loaded = self.load_graph(entries, true).await?;
+        let loaded = self.load_graph(entries, Preds::Start).await?;
         let all: Vec<Task> = loaded.into_values().collect();
         let mut judged = readiness_of(&all);
         let wanted: BTreeSet<&str> = entries.iter().map(|e| e.task.uid.as_str()).collect();

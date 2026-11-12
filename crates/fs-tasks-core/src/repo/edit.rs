@@ -30,12 +30,9 @@ impl TaskRepo {
         self.objects.put(o, &self.actor).await?;
         self.feed.notify(&TaskChange::Updated(id));
         let entry = self.entry(id).await?.ok_or(Error::NotFound(id))?;
-        // Who waited for this task, and is ready now because this edit freed it (it started, it was completed, or it
-        // gave up an edge it held).
-        let successors = self.successors(&entry.task).await.unwrap_or_default();
-        let successors = successors.into_iter().map(|e| e.task).collect();
-        self.announce_unblocked(Some(&old), Some(&entry), successors)
-            .await;
+        // Who is ready now because this edit freed it (the task started or was completed, gave up an edge it held, or
+        // a cycle was resolved).
+        self.announce_unblocked(&old, Some(&entry)).await;
         Ok(entry)
     }
 

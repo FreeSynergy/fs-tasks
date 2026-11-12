@@ -97,6 +97,9 @@ impl TaskRepo {
                 parsed.insert(uid.clone(), task);
             }
         }
+        if parsed.len() > self.max_loaded {
+            return Err(self.too_big());
+        }
         let tasks: Vec<Task> = parsed.values().cloned().collect();
         let judged = readiness_of(&tasks);
         let mut out: Vec<StoredObject> = objects
