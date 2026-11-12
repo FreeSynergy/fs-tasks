@@ -31,6 +31,8 @@ pub struct TaskRepo {
     pub(crate) max_scanned: usize,
     /// Tasks read per query of a scan.
     pub(crate) scan_chunk: usize,
+    /// Changes whose "who became ready" has not been judged yet: written under the write turn, judged after it.
+    pub(crate) pending: Arc<std::sync::Mutex<Vec<super::unblocked::Pending>>>,
 }
 
 impl TaskRepo {
@@ -59,6 +61,7 @@ impl TaskRepo {
             max_loaded: super::graph_load::DEFAULT_MAX_LOADED,
             max_scanned: super::graph_load::DEFAULT_MAX_SCANNED,
             scan_chunk: super::graph_load::DEFAULT_SCAN_CHUNK,
+            pending: Arc::default(),
         }
     }
 

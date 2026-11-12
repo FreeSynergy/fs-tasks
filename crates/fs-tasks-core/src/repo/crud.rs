@@ -80,7 +80,7 @@ impl TaskRepo {
         self.objects.delete(id, &self.actor).await?;
         self.feed.notify(&TaskChange::Deleted(id));
         if let Some(gone) = gone {
-            self.announce_unblocked(&gone.task, None).await;
+            self.queue_unblocked(&gone.task, None);
         }
         Ok(())
     }

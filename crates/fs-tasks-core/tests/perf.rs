@@ -80,6 +80,20 @@ async fn a_chain_is_judged_as_a_whole_in_batches() {
     let relate_time = started.elapsed();
     eprintln!("relate in front of the head: {relate_time:?}");
 
+    // what a write costs: a title (nothing to judge), and completing the head (the graph behind it is judged after the turn)
+    let mut titled = head.task.clone();
+    titled.title = Some("new title".into());
+    let started = Instant::now();
+    r.edit(head.id, titled).await.unwrap();
+    let title_time = started.elapsed();
+    let mut done = r.get(head.id).await.unwrap().unwrap().task;
+    done.progress = Some("completed".into());
+    let started = Instant::now();
+    r.edit(head.id, done).await.unwrap();
+    let complete_time = started.elapsed();
+    eprintln!("edit a title:                {title_time:?}");
+    eprintln!("complete the head (judged):  {complete_time:?}");
+
     // the way round of a cycle through the whole chain is found too (the quick search gives way to the scan)
     let started = Instant::now();
     let err = r.relate(tail.id, "t0", Relation::FinishToStart).await;
