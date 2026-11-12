@@ -27,33 +27,37 @@ impl TaskRepo {
             ));
         }
         let by = by.to_string();
-        let _one_at_a_time = self.writes.lock().await;
-        let mut task = self.entry(id).await?.ok_or(Error::NotFound(id))?.task;
-        if let Some(held) = task.claimed_at(now)
-            && held.by != by
-        {
-            return Err(Error::Conflict(format!(
-                "the task is claimed by {} until {}",
-                held.by, held.until
-            )));
-        }
-        task.set_claim(&by, until);
-        self.edit_inner(id, task).await
+        self.writing(async || {
+            let mut task = self.entry(id).await?.ok_or(Error::NotFound(id))?.task;
+            if let Some(held) = task.claimed_at(now)
+                && held.by != by
+            {
+                return Err(Error::Conflict(format!(
+                    "the task is claimed by {} until {}",
+                    held.by, held.until
+                )));
+            }
+            task.set_claim(&by, until);
+            self.edit_inner(id, task).await
+        })
+        .await
     }
 
     pub(super) async fn release_inner(&self, id: ObjectId, by: &str) -> Result<TaskEntry> {
         let now = parse_utc(&now_utc()).map_err(Error::from)?;
-        let _one_at_a_time = self.writes.lock().await;
-        let mut task = self.entry(id).await?.ok_or(Error::NotFound(id))?.task;
-        if let Some(held) = task.claimed_at(now)
-            && held.by != by
-        {
-            return Err(Error::Conflict(format!(
-                "the claim belongs to {}, not to {by}",
-                held.by
-            )));
-        }
-        task.clear_claim();
-        self.edit_inner(id, task).await
+        self.writing(async || {
+            let mut task = self.entry(id).await?.ok_or(Error::NotFound(id))?.task;
+            if let Some(held) = task.claimed_at(now)
+                && held.by != by
+            {
+                return Err(Error::Conflict(format!(
+                    "the claim belongs to {}, not to {by}",
+                    held.by
+                )));
+            }
+            task.clear_claim();
+            self.edit_inner(id, task).await
+        })
+        .await
     }
 }

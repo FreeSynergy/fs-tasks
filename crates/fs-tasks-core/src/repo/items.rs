@@ -77,9 +77,11 @@ impl TaskItems for TaskRepo {
         name: &str,
     ) -> Result<TaskEntry> {
         let (actor, name) = (actor.to_string(), name.to_string());
-        let _one_at_a_time = self.writes.lock().await;
-        self.modify(id, move |t| {
-            t.assign_actor(&actor, kind, &name);
+        self.writing(async || {
+            self.modify(id, move |t| {
+                t.assign_actor(&actor, kind, &name);
+            })
+            .await
         })
         .await
     }
