@@ -159,23 +159,23 @@ fn the_fields_survive_the_json_round_trip_and_name_what_the_ical_does_with_them(
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn of_two_simultaneous_claims_one_wins_and_the_other_is_told_who_holds_it() {
     for _round in 0..25 {
-        let r = repo().await;
-        let t = r.create(Task::new("Take me")).await.unwrap();
+        let repo = repo().await;
+        let task = repo.create(Task::new("Take me")).await.unwrap();
         let until = Utc::now() + Duration::minutes(10);
-        let (a, b) = (r.clone(), r.clone());
-        let id = t.id;
-        let first = tokio::spawn(async move { a.claim(id, RUNNER, until).await });
-        let second = tokio::spawn(async move { b.claim(id, ADA, until).await });
+        let (one, two) = (repo.clone(), repo.clone());
+        let id = task.id;
+        let first = tokio::spawn(async move { one.claim(id, RUNNER, until).await });
+        let second = tokio::spawn(async move { two.claim(id, ADA, until).await });
         let results = [first.await.unwrap(), second.await.unwrap()];
-        let wins: Vec<_> = results.iter().filter(|r| r.is_ok()).collect();
+        let wins: Vec<_> = results.iter().filter(|res| res.is_ok()).collect();
         assert_eq!(wins.len(), 1, "exactly one claim wins");
         let winner = if results[0].is_ok() { RUNNER } else { ADA };
-        let loser = results.iter().find_map(|r| r.as_ref().err()).unwrap();
+        let loser = results.iter().find_map(|res| res.as_ref().err()).unwrap();
         match loser {
             Error::Conflict(m) => assert!(m.contains(winner), "the conflict names the holder: {m}"),
             other => panic!("{other:?}"),
         }
-        let held = r.get(id).await.unwrap().unwrap().task.claim().unwrap();
+        let held = repo.get(id).await.unwrap().unwrap().task.claim().unwrap();
         assert_eq!(held.by, winner);
     }
 }
