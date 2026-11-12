@@ -4,12 +4,14 @@
 //! 0050); the store-backed implementation is `repo::TaskRepo`.
 //! Interface status: draft (ADR 0045); the Cap'n Proto form is `tasks.capnp` in fs-interfaces.
 
+mod boards;
 mod comments;
 mod feed;
 mod items;
 mod page;
 mod types;
 
+pub use boards::{BoardEntry, Boards};
 pub use comments::{COMMENT_CAPABILITIES, Comment, Comments};
 pub use feed::{Registry, Subscription, TaskChange, TaskFeed, TaskListener};
 pub use items::{CAPABILITIES, TaskItems};

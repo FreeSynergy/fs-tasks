@@ -4,6 +4,7 @@
 //! one concept each (build, CRUD, edit, queries, iCalendar transfer, the trait impls).
 
 mod backend;
+mod boards;
 mod build;
 mod claim;
 mod comments;

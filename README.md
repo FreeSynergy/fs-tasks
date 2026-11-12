@@ -8,7 +8,7 @@ What is different here: a task follows the open JSCalendar standard (RFC 8984), 
 
 ## What it can do today
 
-Version 0.0.6 (in progress). Latest tag: `v0.0.5`.
+Version 0.0.7 (in progress). Latest tag: `v0.0.5`.
 
 - Create, edit, assign, label, relate, list and delete tasks. Find them by due date range, progress, label, or a word in the title or description.
 - Import and export iCalendar tasks (VTODO). Events in the same file are left for the calendar.
@@ -20,6 +20,13 @@ Version 0.0.6 (in progress). Latest tag: `v0.0.5`.
 - The calendar already shows tasks through this interface.
 
 **Not done:** the window calls the core in process, not over the socket, so it has no version handshake with the server yet; that comes with a window over RPC.
+
+## Notes for 0.0.7
+
+- **Comments** on tasks (core, not on the wire yet): own objects (AS2 `Note`, `Tombstone` once deleted), never a member of the task, so the iCalendar and JSCalendar of a task are unchanged. The author is an actor IRI set by the provider; threads are one level deep (a reply to a reply is refused as `invalid reply`); only the author edits (compare-and-set), the author or the owner of the task deletes. `COMMENT` lines of a VTODO become comments on import (author: the importing actor, as iCalendar names none) and go out again as `COMMENT` lines on export. Deleting a task deletes its comments. This is the first provider of the draft topic `comments` of fs-interfaces; which settings choose where comments are stored is not built here.
+- **Boards** (core): a board is its own object with columns (name, limit, the progress values it stands for), the order of the cards in each column, and an optional label that says which tasks are on it. A task can be on several boards. Without a place of its own a card stands in the column its progress names. A column limit is only reported by the layout, a full column never refuses a card.
+- **Actors as assignees:** `assign_actor` assigns a person, an application or a service by its actor IRI (`freesynergy.net:actor`, `freesynergy.net:actorType`); it exports as an attendee of type `RESOURCE` (non-human) or `INDIVIDUAL`, and `tasks` can be asked for what is assigned to an actor.
+- **Execution fields** for runners, as vendor members (checked for form and size only, interpreted by nobody here): `freesynergy.net:run`, `result`, `attempts`, `error`, `claim`, `template`, `loop`. A claim is taken and given back with `claim` / `release_claim`; somebody else's live claim refuses with a conflict.
 
 ## Notes for 0.0.6
 
