@@ -49,10 +49,10 @@ fn freed(before: &BTreeMap<String, Readiness>, after: &BTreeMap<String, Readines
         .collect()
 }
 
-/// A change waiting to be judged: the task as it was, and as it is now (`None`: it was deleted).
+/// A change waiting to be judged: the task as it was before the change. What it is now is read from the store when the
+/// change is judged (a later write may have changed it again).
 pub(crate) struct Pending {
     old: Task,
-    new: Option<TaskEntry>,
 }
 
 impl TaskRepo {
@@ -76,15 +76,14 @@ impl TaskRepo {
                 .pending
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
-            pending.push(Pending {
-                old: old.clone(),
-                new: new.cloned(),
-            });
+            pending.push(Pending { old: old.clone() });
         }
     }
 
-    /// Judge and announce every queued change.
+    /// Judge and announce every queued change. One flush at a time: a call that queued a change returns only after the
+    /// change was judged, by itself or by the flush that took it (that one finishes first, the next waits for it).
     pub(super) async fn flush_unblocked(&self) {
+        let _one_flush = self.flush_turn.lock().await;
         let queued: Vec<Pending> = {
             let mut pending = self
                 .pending
@@ -93,26 +92,40 @@ impl TaskRepo {
             std::mem::take(&mut *pending)
         };
         for change in queued {
-            self.announce_unblocked(&change.old, change.new.as_ref())
-                .await;
+            self.announce_unblocked(&change.old).await;
         }
     }
 
-    /// Announce the tasks freed by `old` becoming `new` (an edit) or by `old` being deleted (`new = None`). A failed
-    /// lookup tells nothing: the write is done, and the readiness of each task can still be asked.
-    pub(super) async fn announce_unblocked(&self, old: &Task, new: Option<&TaskEntry>) {
-        let new_task = new.map(|e| &e.task);
+    /// Announce the tasks that were waiting when `old` was the task and are ready in the store as it is now (the task
+    /// changed, or deleted). "Now" is read here, not taken from the writer: of two writers the later one decides. A
+    /// failed lookup tells nothing: the write is done, and the readiness of each task can still be asked.
+    pub(super) async fn announce_unblocked(&self, old: &Task) {
+        let Ok(now) = self.entries_by_uids(std::slice::from_ref(&old.uid)).await else {
+            return;
+        };
+        let current = now.into_iter().next();
         let Ok(mut graph) = self
             .load_graph_of(std::slice::from_ref(old), Preds::All)
             .await
         else {
             return;
         };
-        // the store holds the new state; the graph is judged with the old task for "before"
+        // the closure of the new relations too, if the task has others than it had
+        if let Some(c) = &current
+            && edges_of(std::slice::from_ref(&c.task)) != edges_of(std::slice::from_ref(old))
+            && let Ok(more) = self
+                .load_graph_of(std::slice::from_ref(&c.task), Preds::All)
+                .await
+        {
+            for (uid, task) in more {
+                graph.entry(uid).or_insert(task);
+            }
+        }
+        // before: the task as it was; after: the store as it is
         graph.insert(old.uid.clone(), old.clone());
         let before_tasks: Vec<Task> = graph.values().cloned().collect();
-        match new_task {
-            Some(n) => graph.insert(n.uid.clone(), n.clone()),
+        match &current {
+            Some(c) => graph.insert(c.task.uid.clone(), c.task.clone()),
             None => graph.remove(&old.uid),
         };
         let after_tasks: Vec<Task> = graph.values().cloned().collect();
@@ -121,15 +134,9 @@ impl TaskRepo {
         if names.is_empty() {
             return;
         }
-        let Ok(mut entries) = self.entries_by_uids(&names).await else {
+        let Ok(entries) = self.entries_by_uids(&names).await else {
             return;
         };
-        if let Some(new) = new
-            && names.contains(&new.task.uid)
-            && !entries.iter().any(|e| e.id == new.id)
-        {
-            entries.push(new.clone());
-        }
         for entry in entries {
             self.feed.notify(&TaskChange::Unblocked(entry.id));
         }

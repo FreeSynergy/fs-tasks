@@ -33,6 +33,8 @@ pub struct TaskRepo {
     pub(crate) scan_chunk: usize,
     /// Changes whose "who became ready" has not been judged yet: written under the write turn, judged after it.
     pub(crate) pending: Arc<std::sync::Mutex<Vec<super::unblocked::Pending>>>,
+    /// One judgement of queued changes at a time (see `unblocked.rs`).
+    pub(crate) flush_turn: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl TaskRepo {
@@ -62,6 +64,7 @@ impl TaskRepo {
             max_scanned: super::graph_load::DEFAULT_MAX_SCANNED,
             scan_chunk: super::graph_load::DEFAULT_SCAN_CHUNK,
             pending: Arc::default(),
+            flush_turn: Arc::default(),
         }
     }
 
