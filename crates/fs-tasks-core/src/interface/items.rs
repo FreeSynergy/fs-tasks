@@ -6,13 +6,14 @@
 //! it does not override answers an explicit [`Unsupported`], and `capabilities` reports the same.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use fs_interfaces::{Capabilities, Unsupported};
 use fs_objects::{ObjectId, StoreId};
 
 use super::page::{Place, TaskPage};
 use super::types::{ImportReport, TaskEntry, TaskQuery};
 use crate::error::Result;
-use crate::model::{Relation, Task};
+use crate::model::{ActorType, Relation, Task};
 use crate::plan::Readiness;
 use crate::revision::Revision;
 
@@ -90,6 +91,26 @@ pub trait TaskItems: Send + Sync {
         _relation: Relation,
     ) -> Result<TaskEntry> {
         not_possible("relation.create")
+    }
+    /// Assign the task to an actor (a person, a program, a service ...) by its AS2 actor IRI, as the owner. Assigning the
+    /// same actor twice keeps one participant. Not on the wire yet (`assign` knows only people with an e-mail address).
+    async fn assign_actor(
+        &self,
+        _id: ObjectId,
+        _actor: &str,
+        _kind: ActorType,
+        _name: &str,
+    ) -> Result<TaskEntry> {
+        not_possible("task.assign")
+    }
+    /// Take the task for `by` (an actor IRI) until `until`: a claim against being taken twice. Refused with a conflict if
+    /// somebody else's claim still holds; the same actor may renew its own. Not on the wire yet.
+    async fn claim(&self, _id: ObjectId, _by: &str, _until: DateTime<Utc>) -> Result<TaskEntry> {
+        not_possible("task.claim")
+    }
+    /// Give the claim back: only by the actor that holds it (an expired claim can be released by anyone).
+    async fn release_claim(&self, _id: ObjectId, _by: &str) -> Result<TaskEntry> {
+        not_possible("task.claim")
     }
     /// `relation.create` with a lag (positive) or lead (negative), an ISO 8601 duration such as `P1D` or `-PT4H` (empty =
     /// none): only for the four temporal relations. A relation that would close a dependency cycle is refused with

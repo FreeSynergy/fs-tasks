@@ -54,6 +54,9 @@ pub(super) fn base(query: &TaskQuery) -> Query {
     if let Some(l) = &query.label {
         q = q.with_index("label", l);
     }
+    if let Some(actor) = &query.assignee_actor {
+        q = q.with_index("assignee_actor", actor);
+    }
     if query.open {
         q = q.index_op("progress", Op::Ge, FIRST_OPEN);
     }

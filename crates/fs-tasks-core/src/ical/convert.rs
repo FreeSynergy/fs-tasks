@@ -43,6 +43,16 @@ pub fn to_ics(tasks: &[Task]) -> Result<String> {
         for uid in with_gap {
             t.mirror_gap(&uid);
         }
+        // An assignee without an e-mail address (a program, a service) goes out as an attendee whose address is its actor
+        // IRI (RFC 5545: a calendar user address is a URI), not as nothing.
+        for p in t.participants.values_mut() {
+            if p.email.is_none()
+                && p.calendar_address.is_none()
+                && let Some(actor) = crate::model::actor_of(p).map(str::to_string)
+            {
+                p.calendar_address = Some(actor);
+            }
+        }
         t.to_value()
     });
     Ok(ical::write_ics(

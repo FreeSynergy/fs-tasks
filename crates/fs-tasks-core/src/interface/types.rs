@@ -39,6 +39,8 @@ pub struct TaskQuery {
     /// left out); `Some(false)`: only tasks that are not (blocked, waiting on a cancelled task, unknown, in a cycle,
     /// or finished). Not on the wire yet: `TaskFilter` has no such member.
     pub ready: Option<bool>,
+    /// Assigned to this actor (an AS2 actor IRI). Core only for now.
+    pub assignee_actor: Option<String>,
 }
 
 impl TaskQuery {
@@ -80,6 +82,13 @@ impl TaskQuery {
     #[must_use]
     pub fn only_ready(mut self, ready: bool) -> Self {
         self.ready = Some(ready);
+        self
+    }
+
+    /// Only tasks assigned to this actor IRI.
+    #[must_use]
+    pub fn assigned_to(mut self, actor: impl Into<String>) -> Self {
+        self.assignee_actor = Some(actor.into());
         self
     }
 

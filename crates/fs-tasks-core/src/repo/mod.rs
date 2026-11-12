@@ -5,6 +5,7 @@
 
 mod backend;
 mod build;
+mod claim;
 mod consts;
 mod crud;
 mod deps;
