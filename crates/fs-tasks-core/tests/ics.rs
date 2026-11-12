@@ -130,3 +130,26 @@ fn imported_rfc_9253_relations_are_seen_and_keep_their_direction() {
     let (again, _) = ical::parse_ics(&out).unwrap();
     assert_eq!(again[0].relations(), tasks[0].relations());
 }
+
+/// The gap of RFC 9253 (`GAP=P1D`) is the member `freesynergy.net:gap` of the relation after the import, and the export
+/// writes it again, also for a relation made over the interface.
+#[test]
+fn the_gap_survives_import_and_export_as_the_member() {
+    let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//x//y//EN\r\nBEGIN:VTODO\r\nUID:task-a\r\nDTSTAMP:20261101T000000Z\r\nSUMMARY:paint\r\nRELATED-TO;RELTYPE=FINISHTOSTART;GAP=P1D:task-b\r\nRELATED-TO;RELTYPE=STARTTOSTART;GAP=-PT4H:task-c\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
+    let (tasks, _) = ical::parse_ics(ics).unwrap();
+    assert_eq!(tasks[0].related_to["task-b"]["freesynergy.net:gap"], "P1D");
+    assert_eq!(
+        tasks[0].related_to["task-c"]["freesynergy.net:gap"],
+        "-PT4H"
+    );
+    assert_eq!(tasks[0].relation_gap("task-c"), chrono::Duration::hours(-4));
+    let out = ical::to_ics(&tasks).unwrap();
+    assert!(
+        out.contains("RELTYPE=FINISHTOSTART;GAP=P1D:task-b"),
+        "{out}"
+    );
+    assert!(
+        out.contains("RELTYPE=STARTTOSTART;GAP=-PT4H:task-c"),
+        "{out}"
+    );
+}

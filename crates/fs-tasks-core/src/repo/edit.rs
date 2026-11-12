@@ -29,7 +29,28 @@ impl TaskRepo {
         }
         self.objects.put(o, &self.actor).await?;
         self.feed.notify(&TaskChange::Updated(id));
-        self.entry(id).await?.ok_or(Error::NotFound(id))
+        let entry = self.entry(id).await?.ok_or(Error::NotFound(id))?;
+        if old.effective_progress() != "completed" && entry.task.effective_progress() == "completed"
+        {
+            self.announce_unblocked(&entry).await;
+        }
+        Ok(entry)
+    }
+
+    /// Tell the listeners which tasks became ready because `done` was completed. A failed lookup tells nothing
+    /// (the edit is written; the readiness of each task can still be asked).
+    async fn announce_unblocked(&self, done: &crate::interface::TaskEntry) {
+        let Ok(successors) = self.successors(&done.task).await else {
+            return;
+        };
+        for next in successors {
+            if matches!(
+                self.readiness_of_entry(&next).await,
+                Ok(crate::plan::Readiness::Ready)
+            ) {
+                self.feed.notify(&TaskChange::Unblocked(next.id));
+            }
+        }
     }
 
     /// Read the task, apply one command to it and store the result.

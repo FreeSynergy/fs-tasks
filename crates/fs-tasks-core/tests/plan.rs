@@ -19,6 +19,7 @@ fn e(from: &str, to: &str, kind: EdgeKind) -> Edge {
         from: from.into(),
         to: to.into(),
         kind,
+        gap: Duration::zero(),
     }
 }
 
@@ -49,7 +50,17 @@ fn the_holder_of_a_temporal_relation_is_the_predecessor_and_depends_on_is_the_ot
             e("a", "c", EdgeKind::FinishToStart)
         ]
     );
-    assert_eq!(Edge::of_relation("a", "b", Relation::Child), None);
+    for structure in [
+        Relation::First,
+        Relation::Next,
+        Relation::Child,
+        Relation::Parent,
+    ] {
+        assert_eq!(
+            Edge::of_relation("a", "b", structure, Duration::zero()),
+            None
+        );
+    }
 }
 
 #[test]
@@ -236,5 +247,40 @@ fn schedule_does_not_place_what_has_no_anchor_and_refuses_cycles() {
             ]
         ),
         Err(ScheduleError::Cycle(vec!["a".into(), "b".into()]))
+    );
+}
+
+#[test]
+fn a_gap_moves_the_successor_and_a_lead_pulls_it_forward() {
+    let items = [item("a", 4, Some(0)), item("b", 2, None)];
+    let with = |gap_hours: i64| {
+        let mut edge = e("a", "b", EdgeKind::FinishToStart);
+        edge.gap = Duration::hours(gap_hours);
+        let plan = schedule(&items, &[edge]).unwrap();
+        plan.iter().find(|p| p.uid == "b").unwrap().start
+    };
+    assert_eq!(with(0), at(4));
+    assert_eq!(with(24), at(28), "lag of one day");
+    assert_eq!(with(-1), at(3), "lead of one hour");
+}
+
+#[test]
+fn the_gap_of_a_relation_is_read_from_its_member() {
+    let mut a = task("a", "needs-action");
+    a.relate_with_gap("b", Relation::FinishToStart, "P1D")
+        .unwrap();
+    a.relate_with_gap("c", Relation::StartToStart, "-PT4H")
+        .unwrap();
+    let edges = edges_of(&[a.clone()]);
+    assert_eq!(edges[0].gap, Duration::days(1));
+    assert_eq!(edges[1].gap, Duration::hours(-4));
+    assert!(a.relate_with_gap("d", Relation::DependsOn, "P1D").is_err());
+    assert!(
+        a.relate_with_gap("d", Relation::FinishToStart, "soon")
+            .is_err()
+    );
+    assert!(
+        a.relate_with_gap("d", Relation::FinishToStart, "P99999D")
+            .is_err()
     );
 }

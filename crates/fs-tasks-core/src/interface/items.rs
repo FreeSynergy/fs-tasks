@@ -13,6 +13,7 @@ use super::page::{Place, TaskPage};
 use super::types::{ImportReport, TaskEntry, TaskQuery};
 use crate::error::Result;
 use crate::model::{Relation, Task};
+use crate::plan::Readiness;
 use crate::revision::Revision;
 
 /// Capability ids written in `tasks.capnp` (ADR 0021): the five that name a write.
@@ -89,6 +90,31 @@ pub trait TaskItems: Send + Sync {
         _relation: Relation,
     ) -> Result<TaskEntry> {
         not_possible("relation.create")
+    }
+    /// `relation.create` with a lag (positive) or lead (negative), an ISO 8601 duration such as `P1D` or `-PT4H` (empty =
+    /// none): only for the four temporal relations. A relation that would close a dependency cycle is refused with
+    /// [`Error::Cycle`](crate::Error::Cycle) (`dependency.cycle-check`), also by [`TaskItems::relate`].
+    async fn relate_with_gap(
+        &self,
+        _id: ObjectId,
+        _other_uid: &str,
+        _relation: Relation,
+        _gap: &str,
+    ) -> Result<TaskEntry> {
+        not_possible("relation.create")
+    }
+    /// `dependency.evaluate`: whether the task can be started, from its dependencies.
+    async fn readiness(&self, _id: ObjectId) -> Result<Readiness> {
+        not_possible("dependency.evaluate")
+    }
+    /// `dependency.evaluate`: the unfinished tasks it waits for (and the cancelled or failed ones, which a person must
+    /// decide about).
+    async fn blocked_by(&self, _id: ObjectId) -> Result<Vec<TaskEntry>> {
+        not_possible("dependency.evaluate")
+    }
+    /// `dependency.evaluate`: the tasks that wait for it (reverse edges).
+    async fn dependents(&self, _id: ObjectId) -> Result<Vec<TaskEntry>> {
+        not_possible("dependency.evaluate")
     }
     /// `label.assign`: attach a label.
     async fn label(&self, _id: ObjectId, _label: &str) -> Result<TaskEntry> {

@@ -8,7 +8,8 @@ use capnp::Result;
 use crate::common_capnp;
 use crate::interface::TaskQuery;
 use crate::model::Relation;
-use crate::tasks_capnp::{Relation as Wire, task_filter};
+use crate::plan::Readiness;
+use crate::tasks_capnp::{Readiness as WireReadiness, Relation as Wire, task_filter};
 
 /// Map to the wire enum.
 pub fn relation_to_wire(r: Relation) -> Wire {
@@ -81,5 +82,30 @@ pub fn read_filter(f: task_filter::Reader<'_>) -> Result<TaskQuery> {
         label: text(f.get_label()?)?,
         term: text(f.get_term()?)?,
         open: f.get_open(),
+        ready: None,
     })
+}
+
+/// A readiness as the wire has it: the enum value and the `uid`s the state is about (`ReadinessReport.by`).
+pub fn readiness_to_wire(r: &Readiness) -> (WireReadiness, &[String]) {
+    match r {
+        Readiness::Ready => (WireReadiness::Ready, &[]),
+        Readiness::Done => (WireReadiness::Done, &[]),
+        Readiness::Blocked(by) => (WireReadiness::Blocked, by),
+        Readiness::Unknown(by) => (WireReadiness::Unknown, by),
+        Readiness::DependencyCancelled(by) => (WireReadiness::DependencyCancelled, by),
+        Readiness::Conflict(by) => (WireReadiness::Conflict, by),
+    }
+}
+
+/// A readiness from the wire.
+pub fn readiness_from_wire(w: WireReadiness, by: Vec<String>) -> Readiness {
+    match w {
+        WireReadiness::Ready => Readiness::Ready,
+        WireReadiness::Done => Readiness::Done,
+        WireReadiness::Blocked => Readiness::Blocked(by),
+        WireReadiness::Unknown => Readiness::Unknown(by),
+        WireReadiness::DependencyCancelled => Readiness::DependencyCancelled(by),
+        WireReadiness::Conflict => Readiness::Conflict(by),
+    }
 }

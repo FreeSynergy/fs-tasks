@@ -48,6 +48,10 @@ pub enum Error {
     /// The operation conflicts with the current state (the uid of a task cannot change, ...).
     #[error("{0}")]
     Conflict(String),
+    /// The relation would close a dependency cycle: the `uid`s along the way round, from the successor of the new
+    /// edge back to its predecessor. Nothing was written. Counts as a conflict ([`Error::is_conflict`]).
+    #[error("this relation would close a dependency cycle: {}", .0.join(" -> "))]
+    Cycle(Vec<String>),
     /// A task with this uid exists already; the id is the existing task's, so a caller can open it
     /// instead of parsing a sentence. Counts as a conflict ([`Error::is_conflict`]).
     #[error("a task with this uid exists: {0}")]
@@ -62,7 +66,7 @@ impl Error {
     /// Whether the operation clashes with what is stored: `Conflict` or `Exists`.
     #[must_use]
     pub fn is_conflict(&self) -> bool {
-        matches!(self, Self::Conflict(_) | Self::Exists(_))
+        matches!(self, Self::Conflict(_) | Self::Exists(_) | Self::Cycle(_))
     }
 }
 

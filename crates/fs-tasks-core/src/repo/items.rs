@@ -16,6 +16,7 @@ use crate::interface::{
     TaskPage, TaskQuery,
 };
 use crate::model::{Relation, Task};
+use crate::plan::Readiness;
 use crate::revision::Revision;
 
 #[async_trait]
@@ -59,7 +60,36 @@ impl TaskItems for TaskRepo {
     async fn relate(&self, id: ObjectId, other_uid: &str, relation: Relation) -> Result<TaskEntry> {
         let uid = other_uid.to_string();
         let _one_at_a_time = self.writes.lock().await;
+        let holder = self.entry(id).await?.ok_or(Error::NotFound(id))?;
+        self.check_no_cycle(&holder.task, &uid, relation).await?;
         self.modify(id, move |t| t.relate(&uid, relation)).await
+    }
+    async fn relate_with_gap(
+        &self,
+        id: ObjectId,
+        other_uid: &str,
+        relation: Relation,
+        gap: &str,
+    ) -> Result<TaskEntry> {
+        let (uid, gap) = (other_uid.to_string(), gap.to_string());
+        let _one_at_a_time = self.writes.lock().await;
+        let holder = self.entry(id).await?.ok_or(Error::NotFound(id))?;
+        // The gap is checked before anything is written (and before the graph is read).
+        holder.task.clone().relate_with_gap(&uid, relation, &gap)?;
+        self.check_no_cycle(&holder.task, &uid, relation).await?;
+        let stored = self.stored(id).await?.ok_or(Error::NotFound(id))?;
+        let mut task = super::crud::entry_of(stored)?.task;
+        task.relate_with_gap(&uid, relation, &gap)?;
+        self.edit_inner(id, task).await
+    }
+    async fn readiness(&self, id: ObjectId) -> Result<Readiness> {
+        self.readiness_inner(id).await
+    }
+    async fn blocked_by(&self, id: ObjectId) -> Result<Vec<TaskEntry>> {
+        self.blocked_by_inner(id).await
+    }
+    async fn dependents(&self, id: ObjectId) -> Result<Vec<TaskEntry>> {
+        self.dependents_inner(id).await
     }
     async fn label(&self, id: ObjectId, label: &str) -> Result<TaskEntry> {
         let label = label.to_string();
@@ -83,7 +113,10 @@ impl TaskItems for TaskRepo {
         self.query_inner(&TaskQuery::new()).await
     }
     async fn query(&self, query: &TaskQuery) -> Result<Vec<TaskEntry>> {
-        self.query_inner(query).await
+        match query.ready {
+            Some(wanted) => self.query_ready(query, wanted).await,
+            None => self.query_inner(query).await,
+        }
     }
     async fn page(
         &self,
@@ -91,7 +124,10 @@ impl TaskItems for TaskRepo {
         after: Option<&Place>,
         size: usize,
     ) -> Result<TaskPage> {
-        self.page_inner(query, after, size).await
+        match query.ready {
+            Some(wanted) => self.page_ready(query, wanted, after, size).await,
+            None => self.page_inner(query, after, size).await,
+        }
     }
     async fn import_ics(&self, text: &str) -> Result<ImportReport> {
         let _one_at_a_time = self.writes.lock().await;
@@ -122,6 +158,8 @@ fn capabilities() -> Capabilities {
         "task.import",
         "task.export",
         "task.subscribe",
+        "dependency.evaluate",
+        "dependency.cycle-check",
     ] {
         caps.supported(id);
     }

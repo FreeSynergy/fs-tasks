@@ -12,7 +12,10 @@ use fs_tasks_core::{TaskItems, TaskQuery};
 
 use crate::errors::rpc_error;
 use crate::paging::{read_page, write_page};
-use crate::wire::{filter_of, read_ids, read_task, required, write_report, write_task};
+use crate::wire::{
+    count, filter_of, read_ids, read_task, required, tasks_weight, write_readiness, write_report,
+    write_task, write_tasks,
+};
 
 pub(crate) struct ItemsImpl {
     pub(crate) items: Arc<dyn TaskItems>,
@@ -92,6 +95,60 @@ impl items::Server for ItemsImpl {
             .await?
             .map_err(rpc_error)?;
         write_task(results.get().init_task(), &entry);
+        Ok(())
+    }
+
+    async fn create_relation_with_gap(
+        self: Rc<Self>,
+        params: items::CreateRelationWithGapParams,
+        mut results: items::CreateRelationWithGapResults,
+    ) -> Done {
+        let p = params.get()?;
+        let id = read_object_id(p.get_id()?)?;
+        let relation = relation_from_wire(p.get_relation()?);
+        let other = required(p.get_other_uid()?, "otherUid")?;
+        let gap = p.get_gap()?.to_str()?;
+        check_intake(gap.len())?;
+        let (items, other, gap) = (self.items.clone(), other.to_string(), gap.to_string());
+        let entry =
+            run_to_end(async move { items.relate_with_gap(id, &other, relation, &gap).await })
+                .await?
+                .map_err(rpc_error)?;
+        write_task(results.get().init_task(), &entry);
+        Ok(())
+    }
+
+    async fn readiness(
+        self: Rc<Self>,
+        params: items::ReadinessParams,
+        mut results: items::ReadinessResults,
+    ) -> Done {
+        let id = read_object_id(params.get()?.get_id()?)?;
+        let readiness = self.items.readiness(id).await.map_err(rpc_error)?;
+        write_readiness(results.get().init_report(), &readiness)
+    }
+
+    async fn blocked_by(
+        self: Rc<Self>,
+        params: items::BlockedByParams,
+        mut results: items::BlockedByResults,
+    ) -> Done {
+        let id = read_object_id(params.get()?.get_id()?)?;
+        let entries = self.items.blocked_by(id).await.map_err(rpc_error)?;
+        check_answer(tasks_weight(&entries))?;
+        write_tasks(results.get().init_tasks(count(entries.len())?), &entries);
+        Ok(())
+    }
+
+    async fn dependents(
+        self: Rc<Self>,
+        params: items::DependentsParams,
+        mut results: items::DependentsResults,
+    ) -> Done {
+        let id = read_object_id(params.get()?.get_id()?)?;
+        let entries = self.items.dependents(id).await.map_err(rpc_error)?;
+        check_answer(tasks_weight(&entries))?;
+        write_tasks(results.get().init_tasks(count(entries.len())?), &entries);
         Ok(())
     }
 

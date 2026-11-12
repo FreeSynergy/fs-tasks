@@ -16,6 +16,9 @@ pub enum TaskChange {
     Updated(ObjectId),
     /// A task was deleted.
     Deleted(ObjectId),
+    /// A task became ready to start because the task it waited for was completed: the trigger of anyone who takes
+    /// ready tasks (a runner). Comes after the `Updated` of the task that was completed.
+    Unblocked(ObjectId),
 }
 
 /// Receives changes. Called on the thread that made the change: keep it short, hand work off.

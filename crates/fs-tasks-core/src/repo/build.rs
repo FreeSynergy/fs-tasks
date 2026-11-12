@@ -6,6 +6,7 @@
 use fs_objects::{Blob, Envelope, ObjectId, StoredObject};
 
 use super::consts::{CONTENT_TYPE, CONTEXT, DESCRIPTION, ID_KEY, NO_DUE, ORDER_KEY, TASK_TYPE};
+use super::deps::{DEPENDS_ON, PRECEDES, REL_INDEX};
 use super::handle::TaskRepo;
 use super::span::index_time;
 use crate::error::{Error, MAX_TASK_BYTES, Result};
@@ -67,6 +68,15 @@ impl TaskRepo {
         }
         for label in task.keywords.iter().filter(|(_, on)| **on).map(|(k, _)| k) {
             put("label", label.clone());
+        }
+        // The dependency fields: who is a successor of this task, and what it depends on, so a reverse lookup is a query.
+        put(REL_INDEX, "1".into());
+        for (other, relation) in task.relations() {
+            if relation.is_temporal() {
+                put(PRECEDES, other);
+            } else if relation == crate::model::Relation::DependsOn {
+                put(DEPENDS_ON, other);
+            }
         }
         for p in task.participants.values() {
             if let Some(m) = p.email.as_deref().or(p.calendar_address.as_deref()) {

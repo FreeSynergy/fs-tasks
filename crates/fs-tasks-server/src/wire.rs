@@ -17,7 +17,7 @@ use fs_tasks_core::{ImportReport, Revision, Task, TaskEntry, TaskQuery};
 
 use crate::errors::{invalid, rpc_error};
 
-fn count(n: usize) -> capnp::Result<u32> {
+pub(crate) fn count(n: usize) -> capnp::Result<u32> {
     u32::try_from(n).map_err(|_| capnp::Error::failed("list too long".into()))
 }
 
@@ -115,4 +115,37 @@ pub(crate) fn read_ids(
     list: capnp::struct_list::Reader<'_, common_capnp::uuid::Owned>,
 ) -> capnp::Result<Vec<ObjectId>> {
     list.iter().map(read_object_id).collect()
+}
+
+/// Write a readiness report.
+pub(crate) fn write_readiness(
+    mut out: tasks_capnp::readiness_report::Builder<'_>,
+    readiness: &fs_tasks_core::plan::Readiness,
+) -> capnp::Result<()> {
+    let (value, by) = fs_tasks_core::contract::readiness_to_wire(readiness);
+    out.set_readiness(value);
+    let mut list = out.init_by(count(by.len())?);
+    for (i, uid) in (0u32..).zip(by) {
+        list.set(i, capped(uid));
+    }
+    Ok(())
+}
+
+/// The size an answer with these tasks would have, for `check_answer`.
+pub(crate) fn tasks_weight(entries: &[TaskEntry]) -> usize {
+    entries
+        .iter()
+        .map(|e| e.task.to_value().to_string().len() + e.task.display_title().len() + 256)
+        .sum()
+}
+
+/// Write a list of tasks (the caller has checked that they fit an answer).
+pub(crate) fn write_tasks(
+    out: capnp::struct_list::Builder<'_, tasks_capnp::task::Owned>,
+    entries: &[TaskEntry],
+) {
+    let mut out = out;
+    for (i, entry) in (0u32..).zip(entries) {
+        write_task(out.reborrow().get(i), entry);
+    }
 }

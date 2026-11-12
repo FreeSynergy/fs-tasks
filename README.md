@@ -8,7 +8,7 @@ What is different here: a task follows the open JSCalendar standard (RFC 8984), 
 
 ## What it can do today
 
-Version 0.0.4 (`v0.0.4`).
+Version 0.0.5 (in progress). Latest tag: `v0.0.4`.
 
 - Create, edit, assign, label, relate, list and delete tasks. Find them by due date range, progress, label, or a word in the title or description.
 - Import and export iCalendar tasks (VTODO). Events in the same file are left for the calendar.
@@ -20,6 +20,15 @@ Version 0.0.4 (`v0.0.4`).
 - The calendar already shows tasks through this interface.
 
 **Not done:** the window calls the core in process, not over the socket, so it has no version handshake with the server yet; that comes with a window over RPC.
+
+## Notes for 0.0.5
+
+- **Check your relations:** the documentation of the relation types `finishtostart`, `finishtofinish`, `starttostart` and `starttofinish` was reversed until 0.0.4. As in RFC 9253 section 4, **the task that holds the relation is the predecessor** (the other task cannot start or finish until this one does); `depends-on` is held by the dependent task. Relations created over the interface in the old, reversed sense have to be checked and swapped.
+- **Readiness:** a task now says whether it can be started: `ready`, `blocked` (by which tasks), `done`, `unknown` (a dependency this store does not hold), `dependencyCancelled` (a task it waits for was cancelled or failed: a person decides, nothing frees it by itself) and `conflict` (it is part of a dependency cycle). New calls `readiness`, `blockedBy`, `dependents`.
+- **Cycles:** `createRelation` refuses a relation that would close a dependency cycle (problem type `tasks/cycle`, status 409, the way round in the extension `path`). A cycle that arrives some other way (an edit, an import) is shown as `conflict`, not refused.
+- **Gap:** `createRelationWithGap` sets a lag (`P1D`) or lead (`-PT4H`) on a temporal relation. It is kept as the member `freesynergy.net:gap` and written to iCalendar as the RFC 9253 `GAP` parameter; an imported `GAP` is read into it.
+- **Schedule and ready filter:** the core can plan tasks with their durations and dependencies (earliest and latest start, slack), and the list can be limited to ready tasks (core only, not on the wire yet). The event "became ready" is sent as an update of the task.
+- On first start the index of older tasks is completed (new fields for the reverse lookup).
 
 ## Notes for 0.0.4
 

@@ -7,6 +7,7 @@ mod backend;
 mod build;
 mod consts;
 mod crud;
+mod deps;
 mod edit;
 mod handle;
 mod items;

@@ -15,12 +15,24 @@ pub(crate) const TIME: &str = "time";
 /// `kind` of an iCalendar text that could not be read or written.
 pub(crate) const ICALENDAR: &str = "icalendar";
 
+/// Extension of a cycle problem: the `uid`s of the way round, one value each.
+pub(crate) const PATH: &str = "path";
+/// Most `uid`s of a cycle one problem names (an extension list is bounded; the rest is in the detail text).
+const MAX_PATH: usize = 32;
+
 /// `problem` with every fact the core error `e` knows.
 pub(crate) fn with_facts(problem: Problem, e: &Error) -> Problem {
     match e {
         Error::NotFound(id) | Error::Changed(id) | Error::Exists(id) => problem
             .with_ext(keys::ID, &id.to_string())
             .with_ext(keys::KIND, TASK),
+        // One extension `path` for every uid of the cycle, in order (as many as an answer can carry).
+        Error::Cycle(path) => path
+            .iter()
+            .take(MAX_PATH)
+            .fold(problem.with_ext(keys::KIND, TASK), |p, uid| {
+                p.with_ext(PATH, uid)
+            }),
         Error::Store(StoreError::NotFound(id)) => problem.with_ext(keys::ID, &id.to_string()),
         Error::Invalid(issues) => issues.iter().fold(problem, |p, issue| {
             p.with_ext(keys::ISSUE, &issue.to_string())

@@ -35,6 +35,10 @@ pub struct TaskQuery {
     /// Only tasks that are not finished: `progress` `needs-action` or `in-process` (a task without
     /// `progress` counts as `needs-action`).
     pub open: bool,
+    /// `Some(true)`: only tasks that are ready to start (nothing they wait for is unfinished; finished tasks are
+    /// left out); `Some(false)`: only tasks that are not (blocked, waiting on a cancelled task, unknown, in a cycle,
+    /// or finished). Not on the wire yet: `TaskFilter` has no such member.
+    pub ready: Option<bool>,
 }
 
 impl TaskQuery {
@@ -69,6 +73,13 @@ impl TaskQuery {
     #[must_use]
     pub fn matching(mut self, term: impl Into<String>) -> Self {
         self.term = Some(term.into());
+        self
+    }
+
+    /// Only tasks that are ready to start (`true`) or only those that are not (`false`).
+    #[must_use]
+    pub fn only_ready(mut self, ready: bool) -> Self {
+        self.ready = Some(ready);
         self
     }
 

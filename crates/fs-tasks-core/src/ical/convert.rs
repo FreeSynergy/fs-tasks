@@ -20,15 +20,33 @@ pub fn parse_ics(text: &str) -> Result<(Vec<Task>, Vec<String>)> {
     let (entries, notes) = ical::parse_entries(text, Task::TYPE)?;
     let tasks = entries
         .into_iter()
-        .map(Task::from_value)
+        .map(|v| {
+            let mut task = Task::from_value(v)?;
+            task.adopt_converted_gaps();
+            Ok(task)
+        })
         .collect::<fs_jscalendar::Result<_>>()?;
     Ok((tasks, notes))
 }
 
 /// Export tasks as one iCalendar stream of `VTODO`s.
 pub fn to_ics(tasks: &[Task]) -> Result<String> {
+    // The member `freesynergy.net:gap` is the truth; the conversion writes `GAP` from its own record of the parameter.
+    let values = tasks.iter().map(|t| {
+        let mut t = t.clone();
+        let with_gap: Vec<String> = t
+            .related_to
+            .iter()
+            .filter(|(_, v)| v.get(crate::model::GAP_KEY).is_some())
+            .map(|(uid, _)| uid.clone())
+            .collect();
+        for uid in with_gap {
+            t.mirror_gap(&uid);
+        }
+        t.to_value()
+    });
     Ok(ical::write_ics(
-        tasks.iter().map(Task::to_value),
+        values,
         "-//FreeSynergy//fs-tasks-core//EN",
     )?)
 }

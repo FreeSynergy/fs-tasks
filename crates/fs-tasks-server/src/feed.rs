@@ -40,7 +40,10 @@ async fn notice(items: &dyn TaskItems, change: TaskChange) -> Result<Option<Noti
     };
     Ok(match change {
         TaskChange::Created(id) => envelope(id).await?.map(Notice::Created),
-        TaskChange::Updated(id) => envelope(id).await?.map(Notice::Updated),
+        // A task that became ready is a changed task for a consumer that knows only created, updated and deleted.
+        TaskChange::Updated(id) | TaskChange::Unblocked(id) => {
+            envelope(id).await?.map(Notice::Updated)
+        }
         TaskChange::Deleted(id) => Some(Notice::Deleted(id)),
     })
 }

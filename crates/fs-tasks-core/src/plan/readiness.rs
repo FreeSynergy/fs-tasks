@@ -36,7 +36,7 @@ enum Stage {
 }
 
 fn stage(task: &Task) -> Stage {
-    match task.progress.as_deref() {
+    match Some(task.effective_progress()) {
         Some("completed") => Stage::Completed,
         Some("cancelled" | "failed") => Stage::Stopped,
         Some("in-process") => Stage::Started,

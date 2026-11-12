@@ -6,6 +6,7 @@
 use fs_jscalendar::model::{Participant, next_participant_key};
 use serde_json::{Value, json};
 
+use super::gap::{GAP_KEY, parse_gap};
 use super::relation::Relation;
 use super::task::Task;
 
@@ -86,6 +87,105 @@ impl Task {
                 return;
             }
             map.insert(relation.as_str().to_string(), Value::Bool(true));
+        }
+    }
+
+    /// Like [`Task::relate`], with a lag (positive) or lead (negative) between the two tasks, an ISO 8601 duration such as
+    /// `P1D` or `-PT4H`, kept as the member `freesynergy.net:gap` of the relation and mirrored where the iCalendar
+    /// conversion keeps the `GAP` parameter, so the export writes it. Empty = no gap (any earlier one stays).
+    ///
+    /// # Errors
+    /// The gap is not a duration or is too large, or the relation is not one of the four temporal ones.
+    pub fn relate_with_gap(
+        &mut self,
+        uid: &str,
+        relation: Relation,
+        gap: &str,
+    ) -> crate::Result<()> {
+        if gap.is_empty() {
+            self.relate(uid, relation);
+            return Ok(());
+        }
+        if !relation.is_temporal() {
+            return Err(crate::Error::Conflict(format!(
+                "a gap means something only for the temporal relations, not for {}",
+                relation.as_str()
+            )));
+        }
+        parse_gap(gap)?;
+        self.relate(uid, relation);
+        if let Some(entry) = self.related_to.get_mut(uid).and_then(Value::as_object_mut) {
+            entry.insert(GAP_KEY.into(), json!(gap));
+        }
+        self.mirror_gap(uid);
+        Ok(())
+    }
+
+    /// The gap of the relation to `uid` (zero if there is none or it cannot be read).
+    pub fn relation_gap(&self, uid: &str) -> chrono::Duration {
+        self.related_to
+            .get(uid)
+            .and_then(|v| v.get(GAP_KEY))
+            .and_then(Value::as_str)
+            .and_then(|g| parse_gap(g).ok())
+            .unwrap_or_else(chrono::Duration::zero)
+    }
+
+    /// Put the gap of the relation to `uid` where the iCalendar conversion keeps parameters
+    /// (`iCalendar.convertedProperties["relatedTo/<uid>"].parameters.gap`).
+    pub(crate) fn mirror_gap(&mut self, uid: &str) {
+        let Some(gap) = self
+            .related_to
+            .get(uid)
+            .and_then(|v| v.get(GAP_KEY))
+            .cloned()
+        else {
+            return;
+        };
+        let ical = self
+            .extra
+            .entry("iCalendar".to_string())
+            .or_insert_with(|| json!({"name": "vtodo"}));
+        if let Some(obj) = ical.as_object_mut() {
+            let converted = obj
+                .entry("convertedProperties")
+                .or_insert_with(|| json!({}));
+            if let Some(c) = converted.as_object_mut() {
+                let slot = c
+                    .entry(format!("relatedTo/{uid}"))
+                    .or_insert_with(|| json!({}));
+                if let Some(slot) = slot.as_object_mut() {
+                    let parameters = slot.entry("parameters").or_insert_with(|| json!({}));
+                    if let Some(p) = parameters.as_object_mut() {
+                        p.insert("gap".into(), gap);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Read the gaps the iCalendar conversion kept as parameters into the member `freesynergy.net:gap` of each
+    /// relation (import), so the member is the one place a reader looks.
+    pub(crate) fn adopt_converted_gaps(&mut self) {
+        let found: Vec<(String, String)> = self
+            .extra
+            .get("iCalendar")
+            .and_then(|i| i.get("convertedProperties"))
+            .and_then(Value::as_object)
+            .into_iter()
+            .flatten()
+            .filter_map(|(k, v)| {
+                let uid = k.strip_prefix("relatedTo/")?;
+                let gap = v.get("parameters")?.get("gap")?.as_str()?;
+                Some((uid.to_string(), gap.to_string()))
+            })
+            .collect();
+        for (uid, gap) in found {
+            if let Some(entry) = self.related_to.get_mut(&uid).and_then(Value::as_object_mut) {
+                entry
+                    .entry(GAP_KEY.to_string())
+                    .or_insert_with(|| json!(gap));
+            }
         }
     }
 

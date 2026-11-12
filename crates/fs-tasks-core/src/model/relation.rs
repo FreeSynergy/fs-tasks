@@ -41,6 +41,14 @@ impl Relation {
         Self::StartToFinish,
     ];
 
+    /// Is it one of the four temporal relations of RFC 9253 section 4 (the ones a gap means something for)?
+    pub const fn is_temporal(self) -> bool {
+        matches!(
+            self,
+            Self::FinishToStart | Self::FinishToFinish | Self::StartToStart | Self::StartToFinish
+        )
+    }
+
     /// The JSCalendar key.
     pub const fn as_str(self) -> &'static str {
         match self {

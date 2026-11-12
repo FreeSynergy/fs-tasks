@@ -2,7 +2,7 @@
 //!
 //! Pattern: Template method (a forward and a backward pass over the topological order). Pure; the times are computed,
 //! never stored. Calendar time only: working days and holidays are not known here (an availability source is a
-//! later, separate step).
+//! later, separate step). A `gap` of an edge (lag or lead, RFC 9253) moves the successor's bound by that much.
 
 use std::collections::BTreeMap;
 
@@ -73,7 +73,7 @@ pub fn schedule(items: &[Item], edges: &[Edge]) -> Result<Vec<Planned>, Schedule
                 EdgeKind::StartToStart => p_start,
                 EdgeKind::FinishToFinish => p_end - item.duration,
                 EdgeKind::StartToFinish => p_start - item.duration,
-            };
+            } + e.gap;
             start = Some(start.map_or(bound, |s| s.max(bound)));
         }
         if let Some(s) = start {
@@ -105,7 +105,7 @@ pub fn schedule(items: &[Item], edges: &[Edge]) -> Result<Vec<Planned>, Schedule
                 EdgeKind::StartToStart => s_late,
                 EdgeKind::FinishToFinish => s_late + s.duration - item.duration,
                 EdgeKind::StartToFinish => s_late + s.duration,
-            };
+            } - e.gap;
             latest = latest.min(bound);
         }
         late.insert(item.uid.as_str(), latest);

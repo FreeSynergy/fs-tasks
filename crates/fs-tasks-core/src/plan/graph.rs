@@ -7,6 +7,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use chrono::Duration;
+
 use crate::model::{Relation, Task};
 
 /// How the successor is tied to its predecessor (the four temporal relations of RFC 9253; `depends-on` is a
@@ -39,12 +41,19 @@ pub struct Edge {
     pub to: String,
     /// The tie.
     pub kind: EdgeKind,
+    /// Lag (positive) or lead (negative) between the predecessor and the successor (RFC 9253 `GAP`); zero for none.
+    pub gap: Duration,
 }
 
 impl Edge {
-    /// The edge a relation held by `holder` towards `other` means, `None` for the relations that are no dependency
-    /// (`first`, `next`, `child`, `parent`).
-    pub fn of_relation(holder: &str, other: &str, relation: Relation) -> Option<Self> {
+    /// The edge a relation held by `holder` towards `other` means, with `gap`; `None` for the relations that are no
+    /// dependency (`first`, `next`, `child`, `parent`).
+    pub fn of_relation(
+        holder: &str,
+        other: &str,
+        relation: Relation,
+        gap: Duration,
+    ) -> Option<Self> {
         let (from, to, kind) = match relation {
             Relation::DependsOn => (other, holder, EdgeKind::FinishToStart),
             Relation::FinishToStart => (holder, other, EdgeKind::FinishToStart),
@@ -57,6 +66,7 @@ impl Edge {
             from: from.to_string(),
             to: to.to_string(),
             kind,
+            gap,
         })
     }
 }
@@ -66,9 +76,9 @@ pub fn edges_of(tasks: &[Task]) -> Vec<Edge> {
     let all: BTreeSet<Edge> = tasks
         .iter()
         .flat_map(|t| {
-            t.relations()
-                .into_iter()
-                .filter_map(|(other, r)| Edge::of_relation(&t.uid, &other, r))
+            t.relations().into_iter().filter_map(|(other, r)| {
+                Edge::of_relation(&t.uid, &other, r, t.relation_gap(&other))
+            })
         })
         .collect();
     all.into_iter().collect()
