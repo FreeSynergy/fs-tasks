@@ -66,8 +66,8 @@ impl TaskRepo {
         let Ok(mut entries) = self.entries_by_uids(&names).await else {
             return;
         };
-        if let Some(new) = new {
-            if names.contains(&new.task.uid) && !entries.iter().any(|e| e.id == new.id) {
+        if let Some(new) = new.filter(|n| names.contains(&n.task.uid)) {
+            if !entries.iter().any(|e| e.id == new.id) {
                 entries.push(new.clone());
             }
         }
