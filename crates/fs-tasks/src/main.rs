@@ -28,6 +28,11 @@ fn dispatch(words: &[String]) -> i32 {
             fs_tasks_server::serve_command(rest.iter().map(OsString::from))
         }
         Some((first, rest)) if first == "app" => window(rest),
+        // The version, for people and for the package smoke test (`fs-tasks --version`): name, version, exit 0.
+        Some((first, _)) if first == "--version" || first == "-V" => {
+            println!("fs-tasks {}", env!("CARGO_PKG_VERSION"));
+            0
+        }
         None => window(&[]),
         // The window's own options may stand without the word `app` (`fs-tasks --size 1000x640`).
         Some((first, _)) if WINDOW_OPTIONS.contains(&first.as_str()) => window(words),
