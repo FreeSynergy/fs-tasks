@@ -28,8 +28,8 @@ impl TaskItems for TaskRepo {
         self.info.as_ref().map(|info| info.identity())
     }
     async fn create(&self, task: Task) -> Result<TaskEntry> {
-        let _one_at_a_time = self.writes.lock().await;
-        self.create_inner(task, None).await
+        self.writing(async || self.create_inner(task, None).await)
+            .await
     }
     async fn edit(&self, id: ObjectId, task: Task) -> Result<TaskEntry> {
         self.writing(async || self.edit_inner(id, task).await).await
@@ -177,8 +177,8 @@ impl TaskItems for TaskRepo {
         }
     }
     async fn import_ics(&self, text: &str) -> Result<ImportReport> {
-        let _one_at_a_time = self.writes.lock().await;
-        self.import_ics_inner(text).await
+        self.writing(async || self.import_ics_inner(text).await)
+            .await
     }
     async fn export_ics(&self, ids: &[ObjectId]) -> Result<String> {
         self.export_ics_inner(ids).await

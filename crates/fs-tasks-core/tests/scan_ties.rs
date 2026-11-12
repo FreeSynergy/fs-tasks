@@ -71,3 +71,33 @@ async fn ties_in_the_middle_of_other_tasks_and_a_chunk_that_cuts_them() {
         assert_eq!(counts(6, 4, chunk).await, (10, 10, 10), "chunk {chunk}");
     }
 }
+
+/// Tasks of one instant that lack the id key (written before 0.7.0) cannot be read by id: the scan says so, with the way
+/// out, instead of ending short.
+#[tokio::test]
+async fn ties_without_an_id_key_are_an_error_with_the_hint_not_a_short_scan() {
+    let source: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let plain = TaskRepo::new(source.clone(), ME);
+    for i in 0..5 {
+        let mut t = Task::new(format!("t{i}"));
+        t.uid = format!("t{i}");
+        plain.create(t).await.unwrap();
+    }
+    let objects = source.query(&Query::new().of_type("Task")).await.unwrap();
+    let fixed = objects[0].envelope.published;
+    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    for mut o in objects {
+        o.envelope.published = fixed;
+        o.index.remove("id_key");
+        store.put(o, ME).await.unwrap();
+    }
+    let repo = TaskRepo::new(store, ME).with_scan_chunk(2);
+    let err = repo
+        .page(&TaskQuery::new().only_ready(true), None, 100)
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(&err, fs_tasks_core::Error::Stored(m) if m.contains("upgrade_index")),
+        "{err}"
+    );
+}

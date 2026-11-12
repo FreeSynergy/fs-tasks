@@ -10,11 +10,15 @@
 
 use std::collections::BTreeMap;
 
+use super::deps::DEPENDS_ON;
 use super::graph_load::Preds;
 use super::handle::TaskRepo;
 use crate::interface::{TaskChange, TaskEntry};
 use crate::model::Task;
 use crate::plan::{Readiness, edges_of, readiness_of};
+
+/// Created tasks asked one by one through the index up to this many, more by one scan of the graph.
+const SMALL_CREATED: usize = 20;
 
 /// Can `old` becoming `new` (an edit) or `old` going (`new` is `None`) free anybody? A change of progress can, a deletion
 /// can, and a relation that is taken away can. A title or a label cannot, and neither can a relation that is only added
@@ -54,11 +58,16 @@ fn freed(before: &BTreeMap<String, Readiness>, after: &BTreeMap<String, Readines
         .collect()
 }
 
-/// A change waiting to be judged: the task as it was before the change. What it is now is read from the store when the
-/// change is judged (a later write may have changed it again).
+/// A change waiting to be judged: the task as it was before the change (`None`: it was just created), and its `uid`. What it
+/// is now is read from the store when the change is judged (a later write may have changed it again).
 pub(crate) struct Pending {
-    old: Task,
+    old: Option<Task>,
+    uid: String,
 }
+
+/// Announced ready and not seen waiting since: a second judgement of the same freeing (two writers freeing one task at
+/// once, each judged against the store as it is) does not announce it again. Cleared when it grows past this many.
+const MAX_ANNOUNCED: usize = 10_000;
 
 impl TaskRepo {
     /// Run a write under the write turn; afterwards, with the turn given back, judge and announce who became ready.
@@ -77,12 +86,27 @@ impl TaskRepo {
     /// Queue a change for [`Self::flush_unblocked`] if it can change anybody's readiness. Called under the write turn.
     pub(super) fn queue_unblocked(&self, old: &Task, new: Option<&TaskEntry>) {
         if may_change_readiness(old, new.map(|e| &e.task)) {
-            let mut pending = self
-                .pending
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner);
-            pending.push(Pending { old: old.clone() });
+            self.push_pending(Pending {
+                old: Some(old.clone()),
+                uid: old.uid.clone(),
+            });
         }
+    }
+
+    /// Queue a task that was just created: a task that named it as a dependency may be free now. Whether any does is
+    /// asked when the changes are judged (in one scan for an import), not for each created task.
+    pub(super) fn queue_created(&self, uid: &str) {
+        self.push_pending(Pending {
+            old: None,
+            uid: uid.to_string(),
+        });
+    }
+
+    fn push_pending(&self, change: Pending) {
+        self.pending
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(change);
     }
 
     /// Judge and announce every queued change. One flush at a time: a call that queued a change returns only after the
@@ -96,46 +120,94 @@ impl TaskRepo {
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
             std::mem::take(&mut *pending)
         };
-        for change in queued {
-            self.announce_unblocked(&change.old).await;
+        let (created, changed): (Vec<Pending>, Vec<Pending>) =
+            queued.into_iter().partition(|c| c.old.is_none());
+        for change in changed {
+            self.announce_unblocked(change.old.as_ref(), &change.uid)
+                .await;
+        }
+        if created.is_empty() {
+            return;
+        }
+        let uids: Vec<String> = created.into_iter().map(|c| c.uid).collect();
+        let Ok(named) = self.named_as_dependency(&uids).await else {
+            return;
+        };
+        for uid in named {
+            self.announce_unblocked(None, &uid).await;
         }
     }
 
-    /// Announce the tasks that were waiting when `old` was the task and are ready in the store as it is now (the task
-    /// changed, or deleted). "Now" is read here, not taken from the writer: of two writers the later one decides. A
-    /// failed lookup tells nothing: the write is done, and the readiness of each task can still be asked.
-    pub(super) async fn announce_unblocked(&self, old: &Task) {
-        let Ok(now) = self.entries_by_uids(std::slice::from_ref(&old.uid)).await else {
+    /// Of these `uid`s, those that some stored task depends on (`depends-on`): creating such a task can free the one that
+    /// waited. A few are asked one by one through the index, many by one scan of the graph.
+    async fn named_as_dependency(&self, uids: &[String]) -> crate::error::Result<Vec<String>> {
+        if uids.len() <= SMALL_CREATED {
+            let mut out = Vec::new();
+            for uid in uids {
+                if !self.tasks_with(DEPENDS_ON, uid).await?.is_empty() {
+                    out.push(uid.clone());
+                }
+            }
+            return Ok(out);
+        }
+        let wanted: std::collections::BTreeSet<&str> = uids.iter().map(String::as_str).collect();
+        let named: std::collections::BTreeSet<String> = self
+            .scan_graph()
+            .await?
+            .values()
+            .flat_map(|t| t.relations())
+            .filter(|(_, r)| *r == crate::model::Relation::DependsOn)
+            .map(|(other, _)| other)
+            .collect();
+        Ok(uids
+            .iter()
+            .filter(|u| wanted.contains(u.as_str()) && named.contains(*u))
+            .cloned()
+            .collect())
+    }
+
+    /// Announce the tasks that were waiting when `old` was the task (`None`: it did not exist) and are ready in the store
+    /// as it is now (the task changed, was created or deleted). "Now" is read here, not taken from the writer: of two
+    /// writers the later one decides. A failed lookup tells nothing: the write is done, and the readiness of each task can
+    /// still be asked.
+    pub(super) async fn announce_unblocked(&self, old: Option<&Task>, uid: &str) {
+        let Ok(now) = self.entries_by_uids(&[uid.to_string()]).await else {
             return;
         };
         let current = now.into_iter().next();
+        let Some(start) = old.or(current.as_ref().map(|c| &c.task)) else {
+            return;
+        };
         let Ok(mut graph) = self
-            .load_graph_of(std::slice::from_ref(old), Preds::All)
+            .load_graph_of(std::slice::from_ref(start), Preds::All)
             .await
         else {
             return;
         };
         // the closure of the new relations too, if the task has others than it had
-        if let Some(c) = &current
+        if let (Some(c), Some(old)) = (&current, old)
             && edges_of(std::slice::from_ref(&c.task)) != edges_of(std::slice::from_ref(old))
             && let Ok(more) = self
                 .load_graph_of(std::slice::from_ref(&c.task), Preds::All)
                 .await
         {
-            for (uid, task) in more {
-                graph.entry(uid).or_insert(task);
+            for (u, task) in more {
+                graph.entry(u).or_insert(task);
             }
         }
-        // before: the task as it was; after: the store as it is
-        graph.insert(old.uid.clone(), old.clone());
+        // before: the task as it was (or not there); after: the store as it is
+        match old {
+            Some(o) => graph.insert(uid.to_string(), o.clone()),
+            None => graph.remove(uid),
+        };
         let before_tasks: Vec<Task> = graph.values().cloned().collect();
         match &current {
-            Some(c) => graph.insert(c.task.uid.clone(), c.task.clone()),
-            None => graph.remove(&old.uid),
+            Some(c) => graph.insert(uid.to_string(), c.task.clone()),
+            None => graph.remove(uid),
         };
         let after_tasks: Vec<Task> = graph.values().cloned().collect();
         let (before, after) = (readiness_of(&before_tasks), readiness_of(&after_tasks));
-        let names = freed(&before, &after);
+        let names = self.not_announced(freed(&before, &after), &after, uid, current.is_none());
         if names.is_empty() {
             return;
         }
@@ -145,5 +217,31 @@ impl TaskRepo {
         for entry in entries {
             self.feed.notify(&TaskChange::Unblocked(entry.id));
         }
+    }
+
+    /// Of the freed tasks, those not announced already; remembers them. A task seen waiting in `after` (or the task that
+    /// is gone) is forgotten, so freeing it again later is announced again.
+    fn not_announced(
+        &self,
+        freed: Vec<String>,
+        after: &BTreeMap<String, Readiness>,
+        changed: &str,
+        gone: bool,
+    ) -> Vec<String> {
+        let mut announced = self
+            .announced_ready
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if announced.len() > MAX_ANNOUNCED {
+            announced.clear();
+        }
+        announced.retain(|u| after.get(u) == Some(&Readiness::Ready));
+        if gone {
+            announced.remove(changed);
+        }
+        freed
+            .into_iter()
+            .filter(|u| announced.insert(u.clone()))
+            .collect()
     }
 }

@@ -35,6 +35,8 @@ pub struct TaskRepo {
     pub(crate) pending: Arc<std::sync::Mutex<Vec<super::unblocked::Pending>>>,
     /// One judgement of queued changes at a time (see `unblocked.rs`).
     pub(crate) flush_turn: Arc<tokio::sync::Mutex<()>>,
+    /// Tasks announced as ready and not seen waiting since (see `unblocked.rs`).
+    pub(crate) announced_ready: Arc<std::sync::Mutex<std::collections::BTreeSet<String>>>,
 }
 
 impl TaskRepo {
@@ -65,6 +67,7 @@ impl TaskRepo {
             scan_chunk: super::graph_load::DEFAULT_SCAN_CHUNK,
             pending: Arc::default(),
             flush_turn: Arc::default(),
+            announced_ready: Arc::default(),
         }
     }
 

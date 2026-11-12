@@ -1,7 +1,8 @@
 #![allow(clippy::pedantic)]
-//! `Unblocked`: against the expectation "ready now and not ready before" on random graphs, for a change of progress, a
-//! removed relation and a deleted task (also a cycle that is resolved, and no second announcement for a task that was
-//! ready already).
+//! `Unblocked` against the expectation "ready now and not ready before" on random graphs, for seven kinds of change: a
+//! progress, a relation taken away, a deleted task, the KIND of a relation changed, a relation added, the progress that
+//! comes from the participants, and the creation of a task that a relation already named (also a cycle that is resolved,
+//! and no second announcement for a task that was ready already).
 
 mod common;
 
@@ -40,7 +41,7 @@ async fn unblocked_runs(seed: u64, runs: usize) -> Vec<String> {
         let _sub = r.subscribe(log.clone());
         let target = format!("u{}", rng.below(n));
         let te = &stored[&target];
-        let op = rng.below(3);
+        let op = rng.below(7);
         let opname;
         match op {
             0 => {
@@ -74,9 +75,63 @@ async fn unblocked_runs(seed: u64, runs: usize) -> Vec<String> {
                     r.edit(te.id, t).await.unwrap();
                 }
             }
-            _ => {
+            2 => {
                 opname = "delete".into();
                 r.delete(te.id).await.unwrap();
+            }
+            3 => {
+                let mut t = te.task.clone();
+                let keys: Vec<String> = t.related_to.keys().cloned().collect();
+                if keys.is_empty() {
+                    opname = "noop".into();
+                } else {
+                    let k = keys[rng.below(keys.len())].clone();
+                    t.related_to.remove(&k);
+                    let rel = common::random::RELS[rng.below(9)];
+                    t.relate(&k, rel);
+                    opname = format!(
+                        "KIND relation to {k} -> {rel:?} (was {:?})",
+                        te.task.relations()
+                    );
+                    r.edit(te.id, t).await.unwrap();
+                }
+            }
+            4 => {
+                let mut t = te.task.clone();
+                let other = format!("u{}", rng.below(n + ghosts));
+                let rel = common::random::RELS[rng.below(9)];
+                t.relate(&other, rel);
+                opname = format!("ADD relation {other} {rel:?}");
+                r.edit(te.id, t).await.unwrap();
+            }
+            5 => {
+                let mut t = te.task.clone();
+                t.progress = None;
+                t.participants.clear();
+                for k in 0..1 + rng.below(3) {
+                    let key = t.assign(&format!("p{k}"), &format!("p{k}@x.invalid"));
+                    let p = ["completed", "in-process", "needs-action", "failed"][rng.below(4)];
+                    if let Some(part) = t.participants.get_mut(&key) {
+                        part.extra.insert("progress".into(), serde_json::json!(p));
+                    }
+                }
+                opname = format!(
+                    "PARTICIPANTS {:?}->{:?}",
+                    te.task.effective_progress(),
+                    t.effective_progress()
+                );
+                r.edit(te.id, t).await.unwrap();
+            }
+            _ => {
+                if ghosts == 0 {
+                    opname = "noop".into();
+                } else {
+                    let mut t = Task::new("ghost".to_string());
+                    t.uid = format!("u{n}");
+                    t.progress = common::random::PROG[rng.below(7)].map(str::to_string);
+                    opname = format!("CREATE ghost u{n} {:?}", t.progress);
+                    r.create(t).await.unwrap();
+                }
             }
         }
         let after_tasks: Vec<Task> = r
@@ -92,7 +147,7 @@ async fn unblocked_runs(seed: u64, runs: usize) -> Vec<String> {
             .collect();
         let mut expected: BTreeSet<String> = BTreeSet::new();
         for (u, a) in &after {
-            let b = &before[u];
+            let Some(b) = before.get(u) else { continue };
             if a == "Ready" && b != "Ready" && !(u == &target && b == "Done") {
                 expected.insert(u.clone());
             }
@@ -107,14 +162,16 @@ async fn unblocked_runs(seed: u64, runs: usize) -> Vec<String> {
             .unwrap()
             .iter()
             .filter_map(|c| match c {
-                TaskChange::Unblocked(id) => Some(by_id[id].clone()),
+                TaskChange::Unblocked(id) => {
+                    Some(by_id.get(id).cloned().unwrap_or_else(|| "NEW".into()))
+                }
                 _ => None,
             })
             .collect();
         let got_set: BTreeSet<String> = got.iter().cloned().collect();
         if got_set != expected || got.len() != got_set.len() {
             let cyc = cycles(&edges_of(&all));
-            if findings.len() < 12 {
+            if findings.len() < 400 {
                 findings.push(format!(
                     "[UNBLOCKED] seed {seed} run {run} op {opname} on {target}: expected {expected:?} got {got:?}; before {before:?} after {after:?} cycles {cyc:?}"
                 ));
@@ -125,7 +182,7 @@ async fn unblocked_runs(seed: u64, runs: usize) -> Vec<String> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn unblocked_matches_the_expectation() {
+async fn unblocked_matches_the_expectation_for_every_kind_of_change() {
     let runs: usize = std::env::var("REV_RUNS")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -143,7 +200,7 @@ async fn unblocked_matches_the_expectation() {
         findings.extend(h.await.unwrap());
     }
     eprintln!("UNBLOCKED runs {runs}: findings {}", findings.len());
-    for f in findings.iter().take(24) {
+    for f in findings.iter() {
         eprintln!("{f}");
     }
     assert!(findings.is_empty());

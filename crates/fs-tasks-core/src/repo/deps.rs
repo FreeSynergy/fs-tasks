@@ -28,7 +28,7 @@ pub(super) const DEPENDS_ON: &str = "depends_on";
 pub(super) const REL_INDEX: &str = "rel_index";
 
 impl TaskRepo {
-    async fn tasks_with(&self, field: &str, uid: &str) -> Result<Vec<TaskEntry>> {
+    pub(super) async fn tasks_with(&self, field: &str, uid: &str) -> Result<Vec<TaskEntry>> {
         let q = Query::new()
             .of_type(TASK_TYPE)
             .in_context(CONTEXT)

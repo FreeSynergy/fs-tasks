@@ -155,3 +155,51 @@ async fn a_call_returns_only_after_its_own_announcement_was_sent() {
         }
     }
 }
+
+/// Two writers each complete one of the two tasks that `z` waits for, at the same moment. Each change is judged against
+/// the store as it is, so both would find `z` freed: it is announced once.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn two_writers_freeing_one_task_announce_it_once() {
+    for _round in 0..8 {
+        let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+        let fast = TaskRepo::new(store.clone(), ME);
+        let mut xs = Vec::new();
+        for name in ["x", "y"] {
+            let mut t = Task::new(name);
+            t.uid = name.into();
+            t.relate("z", Relation::FinishToStart);
+            xs.push(fast.create(t).await.unwrap());
+        }
+        let mut z = Task::new("z");
+        z.uid = "z".into();
+        let z = fast.create(z).await.unwrap();
+        let slow = TaskRepo::with_backend(
+            Arc::new(Plain(store.clone())),
+            Arc::new(Slow(store, Duration::from_millis(10))),
+            ME,
+        );
+        let log = Arc::new(Log(Mutex::new(Vec::new())));
+        let _sub = slow.subscribe(log.clone());
+        let mut handles = Vec::new();
+        for x in xs {
+            let repo = slow.clone();
+            handles.push(tokio::spawn(async move {
+                let mut done = x.task.clone();
+                done.progress = Some("completed".into());
+                repo.edit(x.id, done).await.unwrap();
+            }));
+        }
+        for h in handles {
+            h.await.unwrap();
+        }
+        let count = log
+            .0
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|c| **c == TaskChange::Unblocked(z.id))
+            .count();
+        assert_eq!(count, 1, "z announced {count} times");
+        assert_eq!(slow.readiness(z.id).await.unwrap(), Readiness::Ready);
+    }
+}
