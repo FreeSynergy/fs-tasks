@@ -83,6 +83,7 @@ pub fn read_filter(f: task_filter::Reader<'_>) -> Result<TaskQuery> {
         term: text(f.get_term()?)?,
         open: f.get_open(),
         ready: None,
+        assignee_actor: None,
     })
 }
 

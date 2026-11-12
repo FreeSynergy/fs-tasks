@@ -78,6 +78,9 @@ impl TaskRepo {
                 put(DEPENDS_ON, other);
             }
         }
+        for actor in task.actors() {
+            put("assignee_actor", actor.to_string());
+        }
         for p in task.participants.values() {
             if let Some(m) = p.email.as_deref().or(p.calendar_address.as_deref()) {
                 put(

@@ -15,7 +15,7 @@ use crate::interface::{
     CAPABILITIES, ImportReport, Place, Subscription, TaskEntry, TaskFeed, TaskItems, TaskListener,
     TaskPage, TaskQuery,
 };
-use crate::model::{Relation, Task};
+use crate::model::{ActorType, Relation, Task};
 use crate::plan::Readiness;
 use crate::revision::Revision;
 
@@ -68,6 +68,31 @@ impl TaskItems for TaskRepo {
             self.modify(id, move |t| t.relate(&uid, relation)).await
         })
         .await
+    }
+    async fn assign_actor(
+        &self,
+        id: ObjectId,
+        actor: &str,
+        kind: ActorType,
+        name: &str,
+    ) -> Result<TaskEntry> {
+        let (actor, name) = (actor.to_string(), name.to_string());
+        let _one_at_a_time = self.writes.lock().await;
+        self.modify(id, move |t| {
+            t.assign_actor(&actor, kind, &name);
+        })
+        .await
+    }
+    async fn claim(
+        &self,
+        id: ObjectId,
+        by: &str,
+        until: chrono::DateTime<chrono::Utc>,
+    ) -> Result<TaskEntry> {
+        self.claim_inner(id, by, until).await
+    }
+    async fn release_claim(&self, id: ObjectId, by: &str) -> Result<TaskEntry> {
+        self.release_inner(id, by).await
     }
     async fn relate_with_gap(
         &self,
@@ -180,6 +205,7 @@ fn capabilities() -> Capabilities {
         "task.subscribe",
         "dependency.evaluate",
         "dependency.cycle-check",
+        "task.claim",
     ] {
         caps.supported(id);
     }
