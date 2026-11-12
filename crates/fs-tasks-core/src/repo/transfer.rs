@@ -88,6 +88,7 @@ impl TaskRepo {
         let comments = take_comments(&mut task);
         match self.store_new(task, Some(original.clone())).await {
             Ok(e) => {
+                self.queue_created(&e.task);
                 known.add(uid.clone());
                 report.created.push(e.id);
                 self.import_comments(&e, &comments, &uid, report).await;

@@ -23,7 +23,17 @@ impl TaskRepo {
         if let Some(existing) = self.stored_by_uid(&task.uid).await? {
             return Err(Error::Exists(existing.envelope.id));
         }
-        self.store_new(task, original).await
+        let entry = self.store_new(task, original).await?;
+        // Does a task name it as a dependency? Then it may free that one. (An import does not ask for each task: it
+        // queues them all and the judgement asks once, see `unblocked.rs`.)
+        if !self
+            .tasks_with(super::deps::DEPENDS_ON, &entry.task.uid)
+            .await?
+            .is_empty()
+        {
+            self.queue_created(&entry.task);
+        }
+        Ok(entry)
     }
 
     /// Store a task whose `uid` the caller has found free (`create_inner` asked the store; an import
@@ -50,7 +60,6 @@ impl TaskRepo {
         }
         self.objects.put(o, &self.actor).await?;
         self.feed.notify(&TaskChange::Created(id));
-        self.queue_created(&task);
         self.entry(id).await?.ok_or(Error::NotFound(id))
     }
 

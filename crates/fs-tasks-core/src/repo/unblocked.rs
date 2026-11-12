@@ -75,11 +75,20 @@ impl TaskRepo {
         &self,
         run: impl AsyncFnOnce() -> crate::error::Result<T>,
     ) -> crate::error::Result<T> {
-        let out = {
+        let (out, queued_any) = {
             let _turn = self.writes.lock().await;
-            run().await
+            let before = self.queued.load(std::sync::atomic::Ordering::SeqCst);
+            let out = run().await;
+            // the turn is ours: every change queued meanwhile was queued by this call
+            (
+                out,
+                self.queued.load(std::sync::atomic::Ordering::SeqCst) != before,
+            )
         };
-        self.flush_unblocked().await;
+        // a write that queued nothing has nothing to wait for (and does not wait for a judgement of somebody else)
+        if queued_any {
+            self.flush_unblocked().await;
+        }
         out
     }
 
@@ -134,6 +143,8 @@ impl TaskRepo {
     }
 
     fn push_pending(&self, change: Pending) {
+        self.queued
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         self.pending
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)

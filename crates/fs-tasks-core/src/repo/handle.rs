@@ -34,6 +34,8 @@ pub struct TaskRepo {
     /// Changes whose "who became ready" has not been judged yet: written under the write turn, judged after it.
     pub(crate) pending: Arc<std::sync::Mutex<Vec<super::unblocked::Pending>>>,
     /// One judgement of queued changes at a time (see `unblocked.rs`).
+    /// How many changes were ever queued (a write sees whether it queued any).
+    pub(crate) queued: Arc<std::sync::atomic::AtomicU64>,
     pub(crate) flush_turn: Arc<tokio::sync::Mutex<()>>,
     /// Tasks announced as ready and not seen waiting since (see `unblocked.rs`).
     pub(crate) announced_ready: Arc<std::sync::Mutex<std::collections::BTreeSet<String>>>,
@@ -66,6 +68,7 @@ impl TaskRepo {
             max_scanned: super::graph_load::DEFAULT_MAX_SCANNED,
             scan_chunk: super::graph_load::DEFAULT_SCAN_CHUNK,
             pending: Arc::default(),
+            queued: Arc::default(),
             flush_turn: Arc::default(),
             announced_ready: Arc::default(),
         }
