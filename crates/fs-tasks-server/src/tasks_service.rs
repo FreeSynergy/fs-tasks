@@ -55,7 +55,7 @@ impl tasks::Server for TasksServer {
         _: tasks::CapabilitiesParams,
         mut results: tasks::CapabilitiesResults,
     ) -> Done {
-        let report = self.items.capabilities();
+        let report = crate::wire_caps::wire_capabilities(self.items.as_ref());
         report.write_list(CONTRACT_VERSION, results.get().init_capabilities());
         Ok(())
     }
@@ -97,7 +97,7 @@ impl tasks::Server for TasksServer {
         _: tasks::SupportReportParams,
         mut results: tasks::SupportReportResults,
     ) -> Done {
-        let report = self.items.capabilities();
+        let report = crate::wire_caps::wire_capabilities(self.items.as_ref());
         let mut out = results.get().init_report();
         report.write(CONTRACT_VERSION, out.reborrow());
         // The store's id, as the store says it: empty where the provider has no store.
