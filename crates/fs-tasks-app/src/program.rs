@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::args::{Args, HELP, Plan, parse};
 use crate::day::Day;
-use crate::plan_view::{Board, Cache, Layout, Next, PlanSource};
+use crate::plan_view::{Board, BoardScreen, Cache, Layout, Next, PlanSource};
 use crate::sample::by_name as sample_by_name;
 use crate::{TaskAdapter, export_all, import_file, labels, labels_next, screen_widget};
 use fs_components_app::{Status, WindowOptions, launch};
@@ -126,6 +126,7 @@ fn show(
     today: Day,
 ) -> Result<(), String> {
     let widget = match args.plan {
+        Some(Plan::Board2) => return show_board2(args, items, handle, today),
         Some(plan) => plan_widget(plan, items, handle, today, args.snapshot.is_some()),
         None => TasksWidget::new(Arc::new(TaskAdapter::new(items, handle)), labels()),
     };
@@ -170,6 +171,7 @@ fn plan_widget(
     let (layout, words, view): (Box<dyn Layout>, _, _) = match plan {
         Plan::Board => (Box::new(Board), labels(), TaskView::Status),
         Plan::Next => (Box::new(Next), labels_next(), TaskView::List),
+        Plan::Board2 => unreachable!("drawn by show_board2"),
     };
     let source = PlanSource::new(adapter, Arc::clone(&cache), layout);
     let widget = TasksWidget::new(Arc::new(source), words);
@@ -183,4 +185,45 @@ fn plan_widget(
         again.refresh();
     });
     widget
+}
+
+/// The board drawn by the plan widgets: no workbench, the screen is the whole window.
+fn show_board2(
+    args: &Args,
+    items: Arc<dyn TaskItems>,
+    handle: tokio::runtime::Handle,
+    today: Day,
+) -> Result<(), String> {
+    let adapter = Arc::new(TaskAdapter::new(Arc::clone(&items), handle.clone()));
+    let cache = Cache::start(items, handle, today);
+    if args.snapshot.is_some() {
+        cache.wait(std::time::Duration::from_secs(600));
+    }
+    let screen = Arc::new(BoardScreen::new(adapter, Arc::clone(&cache)));
+    if let Some(part) = &args.open {
+        cache.wait(std::time::Duration::from_secs(600));
+        screen.select_title(part);
+    }
+    let shell = fs_components_app::AppWidget::new(
+        crate::words::TITLE,
+        vec![fs_components_app::Screen::new(
+            "tasks",
+            crate::words::TITLE,
+            screen,
+        )],
+    )
+    .map_err(|e| e.to_string())?;
+    cache.on_change(fs_components_widgets::plan::redraw);
+    let (width, height) = args.size;
+    if let Some(file) = &args.snapshot {
+        shell
+            .picture(width, height, file)
+            .map_err(|e| e.to_string())?;
+        eprintln!("wrote {}", file.display());
+        return Ok(());
+    }
+    let mut options = WindowOptions::default();
+    options.width = width;
+    options.height = height;
+    launch(options, shell).map_err(|e| e.to_string())
 }

@@ -35,7 +35,7 @@ pub(super) fn push(out: &mut String, p: &Part) {
         let _ = write!(
             out,
             "ATTENDEE;CN={who};ROLE=REQ-PARTICIPANT:mailto:{}@example.org\r\n",
-            who.to_lowercase()
+            who.to_lowercase().replace(' ', ".")
         );
     }
     if let Some(priority) = p.priority {

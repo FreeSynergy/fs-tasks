@@ -21,7 +21,7 @@ pub(super) fn due_text(task: &Task) -> String {
 }
 
 /// The labels in a stable order: those switched on.
-pub(super) fn label_list(task: &Task) -> Vec<String> {
+pub(crate) fn label_list(task: &Task) -> Vec<String> {
     task.keywords
         .iter()
         .filter(|(_, on)| **on)

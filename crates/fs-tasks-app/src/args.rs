@@ -14,6 +14,8 @@ use crate::day::Day;
 pub enum Plan {
     /// A: columns by status, cards.
     Board,
+    /// A, drawn by the plan widgets (`--plan board2`).
+    Board2,
     /// B: Today, Ready, Blocked.
     Next,
 }
@@ -41,6 +43,8 @@ pub struct Args {
     pub sample: Option<String>,
     /// The day that is "today" for the plan views (default: the system's).
     pub today: Option<Day>,
+    /// Choose the task whose title holds this text (a picture of the open panel).
+    pub open: Option<String>,
     /// `--help` was given.
     pub help: bool,
 }
@@ -58,6 +62,7 @@ impl Default for Args {
             plan: None,
             sample: None,
             today: None,
+            open: None,
             help: false,
         }
     }
@@ -85,6 +90,7 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
             "--size" => out.size = parse_size(&value("--size")?)?,
             "--view" => out.view = Some(view(&value("--view")?)?),
             "--plan" => out.plan = Some(plan(&value("--plan")?)?),
+            "--open" => out.open = Some(value("--open")?),
             "--sample" => out.sample = Some(value("--sample")?),
             "--today" => out.today = Some(Day::parse(&value("--today")?)?),
             "-h" | "--help" => out.help = true,
@@ -100,6 +106,7 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
 fn plan(text: &str) -> Result<Plan, String> {
     match text {
         "board" => Ok(Plan::Board),
+        "board2" => Ok(Plan::Board2),
         "next" => Ok(Plan::Next),
         other => Err(format!("--plan wants board or next, not {other}")),
     }

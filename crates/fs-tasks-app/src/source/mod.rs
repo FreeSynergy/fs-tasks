@@ -18,4 +18,4 @@ pub(crate) use adapter::reason_text;
 pub use apply::apply_draft;
 pub use draft::is_series;
 pub use marks::is_marked;
-pub(crate) use rows::{is_open, matches, row_of};
+pub(crate) use rows::{is_open, label_list, matches, row_of};
