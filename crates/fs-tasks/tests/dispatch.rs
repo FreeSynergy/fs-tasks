@@ -55,3 +55,15 @@ fn without_the_gui_the_bare_command_prints_help() {
     assert_eq!(code, Some(0));
     assert!(out.contains("fs-tasks serve"), "{out}");
 }
+
+#[test]
+fn the_version_is_the_name_and_the_package_version_with_exit_0() {
+    for flag in ["--version", "-V"] {
+        let (code, out, err) = run(&[flag]);
+        assert_eq!(code, Some(0), "{flag}: {err}");
+        assert_eq!(
+            out.trim(),
+            format!("fs-tasks {}", env!("CARGO_PKG_VERSION"))
+        );
+    }
+}

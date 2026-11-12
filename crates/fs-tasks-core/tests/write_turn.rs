@@ -92,6 +92,19 @@ async fn another_write_does_not_wait_for_the_judgement_of_a_change() {
     );
 }
 
+/// Counts the queries made, so a judgement (which reads the graph) shows.
+struct Counting(Arc<dyn Store>, Arc<std::sync::atomic::AtomicUsize>);
+#[async_trait]
+impl ObjectQuery for Counting {
+    async fn query(&self, q: &Query) -> fs_objects::Result<Vec<StoredObject>> {
+        self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.0.query(q).await
+    }
+    async fn count(&self, q: &Query) -> fs_objects::Result<usize> {
+        self.0.count(q).await
+    }
+}
+
 /// Taking a relation away can free a task, so it is judged; adding one, changing its gap or a title cannot, so none of
 /// those reads the graph (a new task in front of a long chain is not made to scan it).
 #[tokio::test]
@@ -105,17 +118,6 @@ async fn only_a_change_that_can_free_somebody_is_judged() {
         ids.push(plain.create(t).await.unwrap().id);
     }
     // count the queries of each kind of write: a judgement adds many
-    struct Counting(Arc<dyn Store>, Arc<std::sync::atomic::AtomicUsize>);
-    #[async_trait]
-    impl ObjectQuery for Counting {
-        async fn query(&self, q: &Query) -> fs_objects::Result<Vec<StoredObject>> {
-            self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            self.0.query(q).await
-        }
-        async fn count(&self, q: &Query) -> fs_objects::Result<usize> {
-            self.0.count(q).await
-        }
-    }
     let queries = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let repo = TaskRepo::with_backend(
         Arc::new(Plain(store.clone())),
