@@ -105,7 +105,7 @@ impl TaskRepo {
 
     pub(super) async fn readiness_inner(&self, id: ObjectId) -> Result<Readiness> {
         let entry = self.entry(id).await?.ok_or(Error::NotFound(id))?;
-        Ok(self.readiness_of_entry(&entry).await?)
+        self.readiness_of_entry(&entry).await
     }
 
     pub(super) async fn readiness_of_entry(&self, entry: &TaskEntry) -> Result<Readiness> {
@@ -125,9 +125,10 @@ impl TaskRepo {
     }
 
     pub(super) async fn blocked_by_inner(&self, id: ObjectId) -> Result<Vec<TaskEntry>> {
-        let by = match self.readiness_inner(id).await? {
-            Readiness::Blocked(by) | Readiness::DependencyCancelled(by) => by,
-            _ => return Ok(Vec::new()),
+        let (Readiness::Blocked(by) | Readiness::DependencyCancelled(by)) =
+            self.readiness_inner(id).await?
+        else {
+            return Ok(Vec::new());
         };
         let mut out = Vec::new();
         for uid in by {
