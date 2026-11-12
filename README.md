@@ -30,7 +30,7 @@ Version 0.0.5 (in progress). Latest tag: `v0.0.4`.
 - **Schedule and ready filter:** the core can plan tasks with their durations and dependencies (earliest and latest start, slack), and the list can be limited to ready tasks (core only, not on the wire yet). The event "became ready" is sent as an update of the task.
 - The index of older tasks is completed (new fields for the reverse lookup) when the **server or the window** opens the store (`fs-tasks serve`, `fs-tasks`); the command line talks to the server. Until then a task of 0.0.4 or older shows too few dependents and may look ready.
 - `blockedBy` also returns the tasks a task waits for that were cancelled or failed (the contract text says "unfinished"); those are the ones a person must decide about.
-- Limits of the dependency check (see DESIGN.md): it reads the task and everything reachable behind it, at most 5000 tasks, and is slow on long chains.
+- Limits of the dependency check (see DESIGN.md): measured on a chain of 5000 tasks (release build), a `ready` page takes 0.22 s and a `relate` in front of the chain 19 ms; a store above 100 000 tasks or a graph above 20 000 tasks is refused for these questions.
 
 ## Notes for 0.0.4
 

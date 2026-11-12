@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use super::graph::{Edge, EdgeKind, cycles, edges_of};
+use super::graph::{Edge, cycles, edges_of};
 use crate::model::Task;
 
 /// The state of a task as far as its dependencies say.
@@ -48,6 +48,11 @@ fn stage(task: &Task) -> Stage {
 pub fn readiness_of(tasks: &[Task]) -> BTreeMap<String, Readiness> {
     let edges = edges_of(tasks);
     let by_uid: BTreeMap<&str, &Task> = tasks.iter().map(|t| (t.uid.as_str(), t)).collect();
+    // The edges that block a start, by their successor: each task looks only at its own.
+    let mut incoming: BTreeMap<&str, Vec<&Edge>> = BTreeMap::new();
+    for edge in edges.iter().filter(|e| e.kind.blocks_start()) {
+        incoming.entry(edge.to.as_str()).or_default().push(edge);
+    }
     let in_cycle: BTreeMap<String, Vec<String>> = cycles(&edges)
         .into_iter()
         .flat_map(|group| {
@@ -61,7 +66,8 @@ pub fn readiness_of(tasks: &[Task]) -> BTreeMap<String, Readiness> {
     tasks
         .iter()
         .map(|t| {
-            let state = judge(t, &edges, &by_uid, &in_cycle);
+            let own = incoming.get(t.uid.as_str()).map_or(&[][..], Vec::as_slice);
+            let state = judge(t, own, &by_uid, &in_cycle);
             (t.uid.clone(), state)
         })
         .collect()
@@ -69,7 +75,7 @@ pub fn readiness_of(tasks: &[Task]) -> BTreeMap<String, Readiness> {
 
 fn judge(
     task: &Task,
-    edges: &[Edge],
+    edges: &[&Edge],
     by_uid: &BTreeMap<&str, &Task>,
     in_cycle: &BTreeMap<String, Vec<String>>,
 ) -> Readiness {
@@ -81,19 +87,15 @@ fn judge(
         return Readiness::Conflict(group.clone());
     }
     let (mut waiting, mut stopped, mut missing) = (Vec::new(), Vec::new(), Vec::new());
-    for edge in edges
-        .iter()
-        .filter(|e| e.to == task.uid && e.kind.blocks_start())
-    {
+    for edge in edges {
         let Some(pred) = by_uid.get(edge.from.as_str()) else {
             missing.push(edge.from.clone());
             continue;
         };
-        match (edge.kind, stage(pred)) {
-            (_, Stage::Stopped) => stopped.push(edge.from.clone()),
-            (EdgeKind::FinishToStart, Stage::Completed)
-            | (EdgeKind::StartToStart, Stage::Started | Stage::Completed) => {}
-            _ => waiting.push(edge.from.clone()),
+        if stage(pred) == Stage::Stopped {
+            stopped.push(edge.from.clone());
+        } else if !edge.kind.satisfied_by(pred.effective_progress()) {
+            waiting.push(edge.from.clone());
         }
     }
     for list in [&mut waiting, &mut stopped, &mut missing] {

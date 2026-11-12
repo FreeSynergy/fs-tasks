@@ -107,6 +107,16 @@ pub trait TaskItems: Send + Sync {
     async fn readiness(&self, _id: ObjectId) -> Result<Readiness> {
         not_possible("dependency.evaluate")
     }
+    /// `dependency.evaluate` for many tasks at once: one value for each id, in the order asked. The graph around them is
+    /// read in batches and the cycles are found once, so the cost does not grow with every task by a full walk
+    /// (a store-backed provider; the default asks one by one). Not on the wire yet.
+    async fn readiness_many(&self, ids: &[ObjectId]) -> Result<Vec<(ObjectId, Readiness)>> {
+        let mut out = Vec::with_capacity(ids.len());
+        for id in ids {
+            out.push((*id, self.readiness(*id).await?));
+        }
+        Ok(out)
+    }
     /// `dependency.evaluate`: the unfinished tasks it waits for (and the cancelled or failed ones, which a person must
     /// decide about).
     async fn blocked_by(&self, _id: ObjectId) -> Result<Vec<TaskEntry>> {

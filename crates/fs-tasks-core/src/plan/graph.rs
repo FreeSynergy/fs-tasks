@@ -30,6 +30,17 @@ impl EdgeKind {
     pub const fn blocks_start(self) -> bool {
         matches!(self, Self::FinishToStart | Self::StartToStart)
     }
+
+    /// Is the start of the successor free of this tie when the predecessor has `progress`? A finish-to-start tie is
+    /// free when the predecessor is completed, a start-to-start tie when it has started (or is completed); the ties
+    /// that do not block the start are always free.
+    pub fn satisfied_by(self, progress: &str) -> bool {
+        match self {
+            Self::FinishToStart => progress == "completed",
+            Self::StartToStart => matches!(progress, "in-process" | "completed"),
+            Self::FinishToFinish | Self::StartToFinish => true,
+        }
+    }
 }
 
 /// `from` (predecessor) to `to` (successor), by `uid`.

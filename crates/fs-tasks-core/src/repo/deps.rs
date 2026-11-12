@@ -4,7 +4,7 @@
 //! predecessors, what is reachable behind it) through the index fields `precedes` and `depends_on`, and hands them to
 //! `plan`. The index is what makes a reverse lookup ("who waits for this task?") a query and not a scan.
 
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet};
 
 use fs_objects::{ObjectId, Query};
 
@@ -12,9 +12,12 @@ use super::consts::{CONTEXT, TASK_TYPE};
 use super::crud::entry_of;
 use super::handle::TaskRepo;
 use crate::error::{Error, Result};
-use crate::interface::{Place, Placed, TaskEntry, TaskPage, TaskQuery};
+use crate::interface::TaskEntry;
 use crate::model::{Relation, Task};
 use crate::plan::{Edge, Readiness, edges_of, path_closing_cycle, readiness_of};
+
+/// Index lookups the quick search for a cycle may use before the graph is read as a whole.
+const SEARCH_BUDGET: usize = 60;
 
 /// Index field: the `uid`s of the successors named by the temporal relations a task holds.
 pub(super) const PRECEDES: &str = "precedes";
@@ -22,11 +25,6 @@ pub(super) const PRECEDES: &str = "precedes";
 pub(super) const DEPENDS_ON: &str = "depends_on";
 /// Index field present on every task whose dependency fields are written (older tasks lack it; `upgrade_index`).
 pub(super) const REL_INDEX: &str = "rel_index";
-
-/// Most tasks one question about the graph reads; more is refused, so a huge or hostile graph cannot hold the store.
-const MAX_GRAPH: usize = 5000;
-/// Tasks read per round when the `ready` filter fills a page.
-const CHUNK: usize = 50;
 
 impl TaskRepo {
     async fn tasks_with(&self, field: &str, uid: &str) -> Result<Vec<TaskEntry>> {
@@ -64,8 +62,13 @@ impl TaskRepo {
         Ok(found.into_values().collect())
     }
 
-    /// The tasks `task` waits for (its predecessors): what it depends on, and the tasks that hold a temporal relation
-    /// to it. Predecessors that are not in this store are not here (readiness names them as unknown).
+    pub(super) async fn readiness_inner(&self, id: ObjectId) -> Result<Readiness> {
+        let entry = self.entry(id).await?.ok_or(Error::NotFound(id))?;
+        self.readiness_of_entry(&entry).await
+    }
+
+    /// The tasks `task` waits for (its predecessors): what it depends on, and the tasks that hold a temporal relation to
+    /// it. Predecessors that are not in this store are not here.
     pub(super) async fn predecessors(&self, task: &Task) -> Result<Vec<TaskEntry>> {
         let mut found: BTreeMap<String, TaskEntry> = BTreeMap::new();
         for edge in edges_of(std::slice::from_ref(task))
@@ -82,44 +85,27 @@ impl TaskRepo {
         Ok(found.into_values().collect())
     }
 
-    /// `start` and everything that waits for it, directly or not.
-    async fn reachable(&self, start: &TaskEntry) -> Result<BTreeMap<String, TaskEntry>> {
-        let mut seen: BTreeMap<String, TaskEntry> = BTreeMap::new();
-        seen.insert(start.task.uid.clone(), start.clone());
-        let mut work = VecDeque::from([start.clone()]);
-        while let Some(entry) = work.pop_front() {
-            for next in self.successors(&entry.task).await? {
-                if !seen.contains_key(&next.task.uid) {
-                    if seen.len() >= MAX_GRAPH {
-                        return Err(Error::Conflict(format!(
-                            "the dependency graph behind this task has more than {MAX_GRAPH} tasks"
-                        )));
-                    }
-                    seen.insert(next.task.uid.clone(), next.clone());
-                    work.push_back(next);
-                }
-            }
+    /// The readiness of every task in `entries` at once: the graph around them is loaded in batches, the cycles are found
+    /// once, and each task is judged against what was loaded. The answer has one value for each `uid`.
+    pub(super) async fn readiness_many_entries(
+        &self,
+        entries: &[TaskEntry],
+    ) -> Result<BTreeMap<String, Readiness>> {
+        if entries.is_empty() {
+            return Ok(BTreeMap::new());
         }
-        Ok(seen)
-    }
-
-    pub(super) async fn readiness_inner(&self, id: ObjectId) -> Result<Readiness> {
-        let entry = self.entry(id).await?.ok_or(Error::NotFound(id))?;
-        self.readiness_of_entry(&entry).await
+        let loaded = self.load_graph(entries, true).await?;
+        let all: Vec<Task> = loaded.into_values().collect();
+        let mut judged = readiness_of(&all);
+        let wanted: BTreeSet<&str> = entries.iter().map(|e| e.task.uid.as_str()).collect();
+        judged.retain(|uid, _| wanted.contains(uid.as_str()));
+        Ok(judged)
     }
 
     pub(super) async fn readiness_of_entry(&self, entry: &TaskEntry) -> Result<Readiness> {
-        let mut tasks: BTreeMap<String, Task> = self
-            .reachable(entry)
+        Ok(self
+            .readiness_many_entries(std::slice::from_ref(entry))
             .await?
-            .into_iter()
-            .map(|(uid, e)| (uid, e.task))
-            .collect();
-        for p in self.predecessors(&entry.task).await? {
-            tasks.entry(p.task.uid.clone()).or_insert(p.task);
-        }
-        let all: Vec<Task> = tasks.into_values().collect();
-        Ok(readiness_of(&all)
             .remove(&entry.task.uid)
             .unwrap_or(Readiness::Ready))
     }
@@ -157,88 +143,73 @@ impl TaskRepo {
         else {
             return Ok(());
         };
-        let mut edges: Vec<Edge> = Vec::new();
-        if let Some(start) = self.entry_by_uid(&new.to).await? {
-            let behind = self.reachable(&start).await?;
-            let mut seen = BTreeSet::new();
-            for entry in behind.values() {
-                for edge in edges_of(std::slice::from_ref(&entry.task)) {
-                    if edge.from == entry.task.uid && seen.insert(edge.clone()) {
-                        edges.push(edge);
-                    }
-                }
-                for dependent in self.tasks_with(DEPENDS_ON, &entry.task.uid).await? {
-                    for edge in edges_of(std::slice::from_ref(&dependent.task)) {
-                        if edge.from == entry.task.uid && seen.insert(edge.clone()) {
-                            edges.push(edge);
-                        }
-                    }
-                }
-            }
+        if new.from != new.to && !self.may_close_cycle(&new).await? {
+            return Ok(());
         }
+        // A cycle is possible (or the search was too long to be sure): the graph is read as a whole, which also gives the
+        // way round for the error.
+        let graph: Vec<Task> = self.scan_graph().await?.into_values().collect();
+        let edges = edges_of(&graph);
         match path_closing_cycle(&edges, &new) {
             Some(path) => Err(Error::Cycle(path)),
             None => Ok(()),
         }
     }
 
-    /// Is the task ready (`wanted = true`) or not (`false`)?
-    async fn matches_ready(&self, entry: &TaskEntry, wanted: bool) -> Result<bool> {
-        Ok((self.readiness_of_entry(entry).await? == Readiness::Ready) == wanted)
-    }
-
-    /// The tasks of a query with `ready` set: the store query without it, then each task asked.
-    pub(super) async fn query_ready(
-        &self,
-        query: &TaskQuery,
-        wanted: bool,
-    ) -> Result<Vec<TaskEntry>> {
-        let inner = inner_query(query, wanted);
-        let mut out = Vec::new();
-        for entry in self.query_inner(&inner).await? {
-            if self.matches_ready(&entry, wanted).await? {
-                out.push(entry);
+    /// A search from both ends: forward from the successor of `new` and backward from its predecessor, one step at a time
+    /// on the side with fewer open ends. If one side runs out of tasks, no cycle can be closed (a new task in front of a
+    /// long chain has nothing behind it and is answered at once); if the two sides meet, or the budget of index lookups
+    /// is spent, a cycle is possible and the caller reads the whole graph.
+    async fn may_close_cycle(&self, new: &Edge) -> Result<bool> {
+        let (Some(from), Some(to)) = (
+            self.entry_by_uid(&new.from).await?,
+            self.entry_by_uid(&new.to).await?,
+        ) else {
+            return Ok(false); // an end the store does not hold has no way on from it
+        };
+        let mut forward: (BTreeSet<String>, Vec<TaskEntry>) =
+            (BTreeSet::from([to.task.uid.clone()]), vec![to]);
+        let mut backward: (BTreeSet<String>, Vec<TaskEntry>) =
+            (BTreeSet::from([from.task.uid.clone()]), vec![from]);
+        let mut lookups = 0;
+        let mut forward_turn = true;
+        while !forward.1.is_empty() && !backward.1.is_empty() {
+            if forward.0.intersection(&backward.0).next().is_some() {
+                return Ok(true);
             }
-        }
-        Ok(out)
-    }
-
-    /// A page of a query with `ready` set: reads the store's pages in chunks and keeps the matching tasks until the
-    /// page is full, so the place a page ends at is still a place in the store's order.
-    pub(super) async fn page_ready(
-        &self,
-        query: &TaskQuery,
-        wanted: bool,
-        place: Option<&Place>,
-        size: usize,
-    ) -> Result<TaskPage> {
-        let inner = inner_query(query, wanted);
-        let mut cursor: Option<Place> = place.cloned();
-        let mut items: Vec<Placed> = Vec::new();
-        loop {
-            let page = self.page_inner(&inner, cursor.as_ref(), CHUNK).await?;
-            for placed in page.items {
-                cursor = Some(placed.place.clone());
-                if self.matches_ready(&placed.entry, wanted).await? {
-                    if items.len() == size {
-                        return Ok(TaskPage { items, more: true });
+            if lookups >= SEARCH_BUDGET {
+                return Ok(true);
+            }
+            // the side with fewer open ends goes first; when they are equal the sides take turns
+            let step_forward = match forward.1.len().cmp(&backward.1.len()) {
+                std::cmp::Ordering::Less => true,
+                std::cmp::Ordering::Greater => false,
+                std::cmp::Ordering::Equal => {
+                    forward_turn = !forward_turn;
+                    forward_turn
+                }
+            };
+            let side = if step_forward {
+                &mut forward
+            } else {
+                &mut backward
+            };
+            let open = std::mem::take(&mut side.1);
+            for entry in open {
+                let next = if step_forward {
+                    self.successors(&entry.task).await?
+                } else {
+                    self.predecessors(&entry.task).await?
+                };
+                lookups += 1 + entry.task.related_to.len();
+                for n in next {
+                    if side.0.insert(n.task.uid.clone()) {
+                        side.1.push(n);
                     }
-                    items.push(placed);
                 }
             }
-            if !page.more {
-                return Ok(TaskPage { items, more: false });
-            }
         }
+        // one side has run out: it was explored completely, so the two sides met or no cycle is possible
+        Ok(!forward.0.is_disjoint(&backward.0))
     }
-}
-
-/// The query as the store sees it: no `ready`, and only open tasks when ready ones are wanted (a finished task is not).
-fn inner_query(query: &TaskQuery, wanted: bool) -> TaskQuery {
-    let mut inner = query.clone();
-    inner.ready = None;
-    if wanted {
-        inner.open = true;
-    }
-    inner
 }
