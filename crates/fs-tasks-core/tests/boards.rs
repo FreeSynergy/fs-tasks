@@ -66,7 +66,7 @@ fn the_standard_board_puts_a_card_where_its_progress_says_and_a_place_wins() {
     b.move_card("a", "todo", None).unwrap();
     let l = b.layout(&t);
     assert_eq!(cards(&l, "todo"), ["c", "a", "f"]);
-    assert!(cards(&l, "done").is_empty());
+    assert_eq!(cards(&l, "done").len(), 0);
     // moving it again leaves it in one place only
     b.move_card("c", "doing", Some(0)).unwrap();
     assert_eq!(cards(&b.layout(&t), "doing"), ["c", "b"]);
@@ -187,7 +187,7 @@ async fn a_full_column_is_reported_and_never_refuses_a_card() {
         .find(|c| c.column.id == "doing")
         .unwrap();
     assert_eq!(doing.cards.len(), 5);
-    assert!(layout.columns.iter().filter(|c| c.over_limit).count() == 1);
+    assert_eq!(layout.columns.iter().filter(|c| c.over_limit).count(), 1);
 }
 
 #[tokio::test]

@@ -25,6 +25,19 @@ impl ObjectQuery for Slow {
     }
 }
 
+struct Counting(Arc<dyn Store>, Arc<std::sync::atomic::AtomicUsize>);
+
+#[async_trait]
+impl ObjectQuery for Counting {
+    async fn query(&self, q: &Query) -> fs_objects::Result<Vec<StoredObject>> {
+        self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        self.0.query(q).await
+    }
+    async fn count(&self, q: &Query) -> fs_objects::Result<usize> {
+        self.0.count(q).await
+    }
+}
+
 struct Plain(Arc<dyn Store>);
 
 #[async_trait]
@@ -105,17 +118,6 @@ async fn only_a_change_that_can_free_somebody_is_judged() {
         ids.push(plain.create(t).await.unwrap().id);
     }
     // count the queries of each kind of write: a judgement adds many
-    struct Counting(Arc<dyn Store>, Arc<std::sync::atomic::AtomicUsize>);
-    #[async_trait]
-    impl ObjectQuery for Counting {
-        async fn query(&self, q: &Query) -> fs_objects::Result<Vec<StoredObject>> {
-            self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            self.0.query(q).await
-        }
-        async fn count(&self, q: &Query) -> fs_objects::Result<usize> {
-            self.0.count(q).await
-        }
-    }
     let queries = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let repo = TaskRepo::with_backend(
         Arc::new(Plain(store.clone())),
