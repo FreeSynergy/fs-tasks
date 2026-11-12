@@ -153,3 +153,29 @@ fn the_fields_survive_the_json_round_trip_and_name_what_the_ical_does_with_them(
     assert_eq!(actor_type_of(p), Some(ActorType::Application));
     assert!(is_non_human(p));
 }
+
+/// Two actors claim the same task at the same moment: the first wins, the second gets a conflict that names the holder,
+/// and the task carries exactly the winner's claim.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn of_two_simultaneous_claims_one_wins_and_the_other_is_told_who_holds_it() {
+    for _round in 0..25 {
+        let r = repo().await;
+        let t = r.create(Task::new("Take me")).await.unwrap();
+        let until = Utc::now() + Duration::minutes(10);
+        let (a, b) = (r.clone(), r.clone());
+        let id = t.id;
+        let first = tokio::spawn(async move { a.claim(id, RUNNER, until).await });
+        let second = tokio::spawn(async move { b.claim(id, ADA, until).await });
+        let results = [first.await.unwrap(), second.await.unwrap()];
+        let wins: Vec<_> = results.iter().filter(|r| r.is_ok()).collect();
+        assert_eq!(wins.len(), 1, "exactly one claim wins");
+        let winner = if results[0].is_ok() { RUNNER } else { ADA };
+        let loser = results.iter().find_map(|r| r.as_ref().err()).unwrap();
+        match loser {
+            Error::Conflict(m) => assert!(m.contains(winner), "the conflict names the holder: {m}"),
+            other => panic!("{other:?}"),
+        }
+        let held = r.get(id).await.unwrap().unwrap().task.claim().unwrap();
+        assert_eq!(held.by, winner);
+    }
+}
