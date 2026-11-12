@@ -36,7 +36,9 @@ fn after(base: Query, place: &Place) -> Vec<Query> {
     ]
 }
 
-fn placed(object: StoredObject) -> Result<Placed> {
+/// Where an object stands in the order: its order key, name and id. A task without an order key (written before 0.7.0)
+/// has none.
+pub(super) fn place_of(object: &StoredObject) -> Result<Place> {
     let id = object.envelope.id;
     let order = object
         .index
@@ -44,11 +46,15 @@ fn placed(object: StoredObject) -> Result<Placed> {
         .and_then(|values| values.first())
         .cloned()
         .ok_or_else(|| Error::Stored(format!("task {id} has no {ORDER_KEY}; write it again")))?;
-    let place = Place {
+    Ok(Place {
         order,
         name: object.envelope.name.clone(),
         id,
-    };
+    })
+}
+
+pub(super) fn placed(object: StoredObject) -> Result<Placed> {
+    let place = place_of(&object)?;
     Ok(Placed {
         entry: entry_of(object)?,
         place,
@@ -59,7 +65,7 @@ impl TaskRepo {
     /// The first page checks that every task has a place in the order. One that has not (written
     /// before 0.7.0, or not repairable) would be sorted last by the store and then be skipped by every
     /// later page; so it is said here, with the way out, and nothing is cut short unnoticed.
-    async fn check_places(&self) -> Result<()> {
+    pub(super) async fn check_places(&self) -> Result<()> {
         let all = Query::new().of_type(TASK_TYPE).in_context(CONTEXT);
         let placed = all.clone().index_op(ORDER_KEY, Op::Ge, "");
         let (all, placed) = (

@@ -85,6 +85,20 @@ impl TaskItems for TaskRepo {
     async fn readiness(&self, id: ObjectId) -> Result<Readiness> {
         self.readiness_inner(id).await
     }
+    async fn readiness_many(&self, ids: &[ObjectId]) -> Result<Vec<(ObjectId, Readiness)>> {
+        let mut entries = Vec::with_capacity(ids.len());
+        for id in ids {
+            entries.push(self.entry(*id).await?.ok_or(Error::NotFound(*id))?);
+        }
+        let judged = self.readiness_many_entries(&entries).await?;
+        Ok(entries
+            .iter()
+            .map(|e| {
+                let r = judged.get(&e.task.uid).cloned().unwrap_or(Readiness::Ready);
+                (e.id, r)
+            })
+            .collect())
+    }
     async fn blocked_by(&self, id: ObjectId) -> Result<Vec<TaskEntry>> {
         self.blocked_by_inner(id).await
     }
