@@ -16,6 +16,7 @@ mod known;
 mod page;
 mod queries;
 mod ready;
+mod scan;
 mod span;
 mod transfer;
 mod unblocked;
