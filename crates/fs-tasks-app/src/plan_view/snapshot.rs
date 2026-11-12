@@ -20,6 +20,7 @@ pub struct Snapshot {
     ready: HashMap<String, Readiness>,
     titles: HashMap<String, String>,
     index: HashMap<String, usize>,
+    numbers: HashMap<String, usize>,
 }
 
 impl Snapshot {
@@ -54,12 +55,20 @@ impl Snapshot {
             .enumerate()
             .map(|(i, e)| (e.id.to_string(), i))
             .collect();
+        let mut ids: Vec<String> = entries.iter().map(|e| e.id.to_string()).collect();
+        ids.sort();
+        let numbers = ids
+            .into_iter()
+            .enumerate()
+            .map(|(i, id)| (id, i + 1))
+            .collect();
         Self {
             entries,
             today,
             ready,
             titles,
             index,
+            numbers,
         }
     }
 
@@ -68,6 +77,12 @@ impl Snapshot {
     #[must_use]
     pub fn readiness(&self, key: &str) -> Option<&Readiness> {
         self.ready.get(key)
+    }
+
+    /// The number of the task in the order it was made (the ids are time-ordered), from 1: `FS-12` is the 12th.
+    #[must_use]
+    pub fn number(&self, key: &str) -> usize {
+        self.numbers.get(key).copied().unwrap_or(0)
     }
 
     /// The task with this key.

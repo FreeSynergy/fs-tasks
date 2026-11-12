@@ -59,20 +59,20 @@ fn groups(rows: &[TaskRow]) -> Vec<(String, Vec<String>)> {
 
 #[test]
 fn a_long_chain_is_read_once_and_only_its_head_is_ready() {
-    let n: usize = std::env::var("FS_TASKS_APP_CHAIN")
+    let len: usize = std::env::var("FS_TASKS_APP_CHAIN")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(1500);
-    let w = world_with(&sample_chain(n, today()));
+    let w = world_with(&sample_chain(len, today()));
     let started = Instant::now();
     let (s, cache) = source(&w, Box::new(Next));
     let loaded = started.elapsed();
     let t = Instant::now();
     let rows = s.rows(&RowQuery::default(), 0, 200).unwrap();
     let draw = t.elapsed();
-    eprintln!("chain {n}: picture {loaded:?}, one page of the list {draw:?}");
+    eprintln!("chain {len}: picture {loaded:?}, one page of the list {draw:?}");
     let g = groups(&all(&s));
-    assert_eq!(g.iter().map(|(_, t)| t.len()).sum::<usize>(), n);
+    assert_eq!(g.iter().map(|(_, t)| t.len()).sum::<usize>(), len);
     let ready: usize = g
         .iter()
         .filter(|(h, _)| !h.starts_with("BLOCKED"))
@@ -91,8 +91,8 @@ fn a_long_chain_is_read_once_and_only_its_head_is_ready() {
 
 #[test]
 fn a_big_store_is_renewed_in_the_background_and_the_old_picture_serves_meanwhile() {
-    let n = 700; // above the size that is renewed at once
-    let w = world_with(&sample_chain(n, today()));
+    let big = 700; // above the size that is renewed at once
+    let w = world_with(&sample_chain(big, today()));
     let (s, cache) = source(&w, Box::new(Board));
     let told = Arc::new(AtomicUsize::new(0));
     let t = told.clone();
@@ -113,5 +113,5 @@ fn a_big_store_is_renewed_in_the_background_and_the_old_picture_serves_meanwhile
         std::thread::sleep(Duration::from_millis(50));
     }
     assert_eq!(told.load(Ordering::SeqCst), 1, "the window is told once");
-    assert_eq!(cache.current().unwrap().entries.len(), n + 1);
+    assert_eq!(cache.current().unwrap().entries.len(), big + 1);
 }

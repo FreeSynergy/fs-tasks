@@ -77,25 +77,28 @@ fn what_next_has_three_groups_cut_by_readiness_and_today() {
     let names: Vec<&str> = g.iter().map(|(n, _)| n.as_str()).collect();
     assert_eq!(names, ["TODAY  (5)", "READY  (15)", "BLOCKED  (9)"]);
     // overdue first, then those of today
-    assert_eq!(g[0].1[0], "Reply to the landlord");
+    assert_eq!(g[0].1[0], "Reply to the landlord about the rent review");
     for t in [
-        "Book the train to Berlin",
-        "Send the invoice for October",
-        "Small errand 1",
+        "Book train tickets for the Berlin workshop",
+        "Send the October invoice to Brightwave",
+        "Prepare the agenda for the Monday meeting",
     ] {
         assert!(g[0].1.contains(&t.to_string()), "{t}");
     }
     // a started task nothing blocks is ready, and a finished task is not shown at all
-    assert!(g[1].1.contains(&"Build the first version".to_string()));
+    assert!(
+        g[1].1
+            .contains(&"Build the first version of the portal".to_string())
+    );
     assert!(
         !g.iter()
-            .any(|(_, t)| t.contains(&"Renew the domain".to_string()))
+            .any(|(_, t)| t.contains(&"Renew the domain registration".to_string()))
     );
     for t in [
-        "Test the first version",
-        "Confirm the catering for the fair",
-        "Ask legal about the new terms",
-        "Agree on the budget",
+        "Test the portal with three pilot customers",
+        "Confirm the catering for the autumn fair",
+        "Ask legal about the new terms of service",
+        "Agree on the budget for next year",
     ] {
         assert!(g[2].1.contains(&t.to_string()), "{t} is blocked");
     }
@@ -111,28 +114,28 @@ fn a_blocked_line_says_why_in_its_own_words() {
         (row.cells[1].clone(), row.marks.clone())
     };
     assert_eq!(
-        why("Test the first version"),
+        why("Test the portal with three pilot customers"),
         (
-            "waits for Build the first version".into(),
+            "waits for Build the first version of the portal".into(),
             vec!["BLOCKED".into()]
         )
     );
     assert!(
-        why("Confirm the catering for the fair")
+        why("Confirm the catering for the autumn fair")
             .0
             .contains("stopped task: Get a quote from the caterer")
     );
     assert!(
-        why("Ask legal about the new terms")
+        why("Ask legal about the new terms of service")
             .0
             .contains("not here: unknown-ticket")
     );
     assert!(
-        why("Agree on the budget")
+        why("Agree on the budget for next year")
             .0
             .starts_with("is in a cycle with")
     );
-    assert_eq!(why("Agree on the budget").1, ["CYCLE"]);
+    assert_eq!(why("Agree on the budget for next year").1, ["CYCLE"]);
 }
 
 #[test]
@@ -143,39 +146,39 @@ fn the_board_marks_blocked_cards_and_leaves_finished_ones_unmarked() {
     assert_eq!(rows.len(), 35);
     let card = |t: &str| rows.iter().find(|r| r.title == t).unwrap().clone();
     assert!(
-        card("Test the first version")
+        card("Test the portal with three pilot customers")
             .marks
             .contains(&"BLOCKED".to_string())
     );
     assert!(
-        card("Confirm the catering for the fair")
+        card("Confirm the catering for the autumn fair")
             .marks
             .contains(&"BLOCKED: STOPPED".to_string())
     );
     assert!(
-        card("Ask legal about the new terms")
+        card("Ask legal about the new terms of service")
             .marks
             .contains(&"BLOCKED: UNKNOWN".to_string())
     );
     assert!(
-        card("Agree on the schedule")
+        card("Agree on the schedule for next year")
             .marks
             .contains(&"CYCLE".to_string())
     );
     assert!(
-        card("Reply to the landlord")
+        card("Reply to the landlord about the rent review")
             .marks
             .contains(&"OVERDUE".to_string())
     );
-    let done = card("Renew the domain");
+    let done = card("Renew the domain registration");
     assert!(
         done.marks.is_empty() && !done.tags.contains(&"ready".to_string()),
         "{done:?}"
     );
-    let ready = card("Book the train to Berlin");
+    let ready = card("Book train tickets for the Berlin workshop");
     assert!(ready.tags.contains(&"ready".to_string()));
     assert!(ready.lines.contains(&"Due: today 17:00".to_string()));
-    assert!(ready.lines.contains(&"Assigned: Ben".to_string()));
+    assert!(ready.lines.contains(&"Assigned: Ben Okafor".to_string()));
     assert_eq!(ready.column, "needs-action");
 }
 
@@ -184,7 +187,7 @@ fn search_and_paging_work_across_headings() {
     let w = world_with(&sample_demo(today()));
     let (s, _) = source(&w, Box::new(Next));
     let mut q = RowQuery::default();
-    q.term = "errand".into();
+    q.term = "the".into();
     let rows = s.rows(&q, 0, 100).unwrap();
     assert_eq!(
         rows.iter().filter(|r| r.key.starts_with("group:")).count(),
@@ -206,7 +209,7 @@ fn a_move_on_the_board_renews_the_picture_at_once_for_a_small_store() {
     let (s, cache) = source(&w, Box::new(Board));
     let key = all(&s)
         .iter()
-        .find(|r| r.title == "Test the first version")
+        .find(|r| r.title == "Test the portal with three pilot customers")
         .unwrap()
         .key
         .clone();
@@ -230,7 +233,7 @@ fn the_sheet_of_a_task_carries_its_readiness() {
     let (s, _) = source(&w, Box::new(Board));
     let key = all(&s)
         .iter()
-        .find(|r| r.title == "Agree on the budget")
+        .find(|r| r.title == "Agree on the budget for next year")
         .unwrap()
         .key
         .clone();

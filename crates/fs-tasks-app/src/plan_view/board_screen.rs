@@ -40,7 +40,7 @@ fn held(s: &Mutex<State>) -> std::sync::MutexGuard<'_, State> {
 
 impl BoardScreen {
     /// The board over `cache`; creating a task goes through `adapter`.
-    pub fn new(adapter: Arc<TaskAdapter>, cache: Arc<Cache>) -> Self {
+    pub fn new(adapter: Arc<TaskAdapter>, cache: Arc<Cache>, mode: Arc<super::mode::Mode>) -> Self {
         let state = Arc::new(Mutex::new(State::default()));
         let mut events = Events::default();
         let s = Arc::clone(&state);
@@ -54,11 +54,27 @@ impl BoardScreen {
                 st.selected = (st.selected.as_deref() != Some(key)).then(|| key.to_string());
             }
         }));
+        events.tab = Some(Arc::new(move |key| {
+            if key == "list" {
+                mode.set_list(true);
+            }
+        }));
+        let (a, c) = (Arc::clone(&adapter), Arc::clone(&cache));
+        events.act = Some(Arc::new(move |key, to| {
+            let Some(entry) = c.current().and_then(|p| p.entry(key).cloned()) else {
+                return;
+            };
+            if a.move_to(key, to, crate::source::row_of(&entry).revision.as_deref())
+                .is_ok()
+            {
+                c.changed();
+            }
+        }));
         let s = Arc::clone(&state);
         events.close = Some(Arc::new(move || held(&s).selected = None));
         let s = Arc::clone(&state);
         events.create = Some(Arc::new(move |col| {
-            held(&s).creating = Some(col.to_string())
+            held(&s).creating = Some(col.to_string());
         }));
         let (a, c) = (Arc::clone(&adapter), Arc::clone(&cache));
         events.enter = Some(Arc::new(move |col, text| {
@@ -162,7 +178,7 @@ impl Surface for BoardScreen {
             .map(|e| panel(&snapshot, e));
         let tabs = [
             Tab::new("board", "Board"),
-            Tab::new("list", "List").locked(),
+            Tab::new("list", "List"),
             Tab::new("calendar", "Calendar").locked(),
             Tab::new("timeline", "Timeline").locked(),
         ];

@@ -5,6 +5,22 @@
 use super::parts::{HEAD, Part, push};
 use crate::day::Day;
 
+/// Titles of the small errands.
+const ERRANDS: [&str; 12] = [
+    "Prepare the agenda for the Monday meeting",
+    "Order coffee and oatmilk for the kitchen",
+    "Back up the laptops of the new colleagues",
+    "Renew the accessibility statement",
+    "Reply to the press enquiry from Kurier",
+    "Check the fire extinguisher dates",
+    "Collect receipts for the expense report",
+    "Update the opening hours on the website",
+    "Send the thank-you notes after the fair",
+    "Proofread the newsletter for December",
+    "Book the meeting room for the review",
+    "Print the visitor badges for Thursday",
+];
+
 /// About forty tasks around `today`: ready ones due today, overdue and later, some started, chains that wait,
 /// a task behind a cancelled one, one that names a task nobody holds, two in a cycle, finished and cancelled ones.
 #[must_use]
@@ -214,20 +230,6 @@ pub fn demo(today: Day) -> String {
         push(&mut out, part);
     }
     // More of the same kind, so a column has to scroll: a dozen small ones, a few due, a few waiting.
-    const ERRANDS: [&str; 12] = [
-        "Prepare the agenda for the Monday meeting",
-        "Order coffee and oatmilk for the kitchen",
-        "Back up the laptops of the new colleagues",
-        "Renew the accessibility statement",
-        "Reply to the press enquiry from Kurier",
-        "Check the fire extinguisher dates",
-        "Collect receipts for the expense report",
-        "Update the opening hours on the website",
-        "Send the thank-you notes after the fair",
-        "Proofread the newsletter for December",
-        "Book the meeting room for the review",
-        "Print the visitor badges for Thursday",
-    ];
     for i in 0..12_u8 {
         let title = ERRANDS[usize::from(i)].to_string();
         let uid = format!("e{i}");

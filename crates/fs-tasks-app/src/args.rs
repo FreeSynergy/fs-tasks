@@ -16,6 +16,8 @@ pub enum Plan {
     Board,
     /// A, drawn by the plan widgets (`--plan board2`).
     Board2,
+    /// B, drawn by the plan widgets (`--plan next2`).
+    Next2,
     /// B: Today, Ready, Blocked.
     Next,
 }
@@ -107,6 +109,7 @@ fn plan(text: &str) -> Result<Plan, String> {
     match text {
         "board" => Ok(Plan::Board),
         "board2" => Ok(Plan::Board2),
+        "next2" => Ok(Plan::Next2),
         "next" => Ok(Plan::Next),
         other => Err(format!("--plan wants board or next, not {other}")),
     }

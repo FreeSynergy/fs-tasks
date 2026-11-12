@@ -3,7 +3,7 @@
 //! Pattern: Adapter — the picture's task, its readiness and today in; the widget's plain data out. The words and
 //! the tones are decided here (a late due date is danger, today is accent), not in the widget.
 
-use fs_components_widgets::plan::{Chip, Detail, Panel, PlanCard, Tone};
+use fs_components_widgets::plan::{Chip, Detail, Panel, PlanCard, Tab, Tone};
 use fs_tasks_core::{Task, TaskEntry};
 
 use super::look::{Standing, Urgency, people, standing, urgency, why};
@@ -45,23 +45,23 @@ pub fn card(snapshot: &Snapshot, entry: &TaskEntry, selected: bool) -> PlanCard 
     let key = entry.id.to_string();
     let mut card = PlanCard::new(&key, &task.display_title());
     card.selected = selected;
+    card.code = format!("FS-{}", snapshot.number(&key));
     card.people = people(task);
     card.due = due_chip(task, snapshot.today);
     card.chips = label_names(task)
         .into_iter()
         .map(|l| Chip::new(l, Tone::Neutral))
         .collect();
-    if let Some((mark, reason)) = snapshot.readiness(&key).and_then(|r| why(snapshot, r)) {
-        if standing(snapshot, entry) == Standing::Blocked {
-            let tone = if mark == "CYCLE" {
-                Tone::Danger
-            } else {
-                Tone::Warning
-            };
-            card.chips.insert(0, Chip::new(mark, tone));
-            card.note = Some(reason);
-            card.muted = true;
-        }
+    let why_it_waits = snapshot.readiness(&key).and_then(|r| why(snapshot, r));
+    if let (Some((mark, reason)), Standing::Blocked) = (why_it_waits, standing(snapshot, entry)) {
+        let tone = if mark == "CYCLE" {
+            Tone::Danger
+        } else {
+            Tone::Warning
+        };
+        card.chips.insert(0, Chip::new(mark, tone));
+        card.note = Some(reason);
+        card.muted = true;
     }
     card
 }
@@ -80,6 +80,7 @@ pub fn panel(snapshot: &Snapshot, entry: &TaskEntry) -> Panel {
             details.push(Detail::new(label, &value));
         }
     };
+    add("Key", format!("FS-{}", snapshot.number(&key)));
     add("Due", super::look::due_phrase(task, snapshot.today));
     add("Assigned", people(task).join(", "));
     add(
@@ -97,7 +98,15 @@ pub fn panel(snapshot: &Snapshot, entry: &TaskEntry) -> Panel {
         }
         .to_string(),
     );
+    let here = task.effective_progress().to_string();
+    let moves = fs_tasks_core::validate::PROGRESS
+        .iter()
+        .map(|p| Tab::new(p, progress_title(p)))
+        .collect();
     Panel {
+        key: key.clone(),
+        moves,
+        here,
         title: task.display_title(),
         note: snapshot
             .readiness(&key)
