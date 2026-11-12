@@ -23,7 +23,7 @@ pub const MAX_COMMENT_BYTES: usize = 64 * 1024;
 /// Most comments one task has (live ones and tombstones).
 pub const MAX_COMMENTS_PER_TASK: usize = 5000;
 
-fn read(object: StoredObject) -> Result<Comment> {
+fn read(object: StoredObject) -> Comment {
     let body = object
         .content
         .get("body")
@@ -36,13 +36,13 @@ fn read(object: StoredObject) -> Result<Comment> {
         .get("deleted")
         .and_then(Value::as_str)
         .map(str::to_string);
-    Ok(Comment {
+    Comment {
         id: object.envelope.id,
         envelope: object.envelope,
         body,
         tombstone,
         deleted,
-    })
+    }
 }
 
 fn checked_body(body: &str) -> Result<&str> {
@@ -115,7 +115,7 @@ impl TaskRepo {
             .await?
             .into_iter()
             .map(read)
-            .collect::<Result<_>>()?;
+            .collect();
         // a reply follows the comment it answers
         let mut out = Vec::with_capacity(comments.len());
         for top in comments.iter().filter(|c| c.in_reply_to().is_none()) {
@@ -186,7 +186,7 @@ impl TaskRepo {
             task: task.id,
             comment: id,
         });
-        read(stored)
+        Ok(read(stored))
     }
 
     pub(super) async fn comment_add_inner(
@@ -218,7 +218,7 @@ impl TaskRepo {
                 "only the author may edit a comment".into(),
             ));
         }
-        if read(object.clone())?.revision() != revision {
+        if read(object.clone()).revision() != revision {
             return Err(Error::Changed(id));
         }
         object.envelope.name = name_of(body);
@@ -226,14 +226,14 @@ impl TaskRepo {
         self.objects.put(object, &self.actor).await?;
         let stored = self.comment_object(id).await?.ok_or(Error::NotFound(id))?;
         self.announce_comment(&stored).await;
-        read(stored)
+        Ok(read(stored))
     }
 
     pub(super) async fn comment_delete_inner(&self, id: ObjectId) -> Result<Comment> {
         let _one_at_a_time = self.writes.lock().await;
         let mut object = self.comment_object(id).await?.ok_or(Error::NotFound(id))?;
         if object.envelope.object_type == TOMBSTONE {
-            return read(object);
+            return Ok(read(object));
         }
         let context = object.envelope.context.clone().unwrap_or_default();
         let owner = self
@@ -255,7 +255,7 @@ impl TaskRepo {
         self.objects.put(object, &self.actor).await?;
         let stored = self.comment_object(id).await?.ok_or(Error::NotFound(id))?;
         self.announce_comment(&stored).await;
-        read(stored)
+        Ok(read(stored))
     }
 
     async fn announce_comment(&self, object: &StoredObject) {
