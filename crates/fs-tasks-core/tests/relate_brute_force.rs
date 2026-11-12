@@ -63,10 +63,11 @@ async fn relate_runs(seed: u64, runs: usize) -> Vec<String> {
                 r.relate(he.id, &other, rel).await
             };
             let refused = matches!(res, Err(Error::Cycle(_)));
-            if let Err(e) = &res {
-                if !refused && findings.len() < 10 {
-                    findings.push(format!("[ERR] seed {seed} run {run}: {e:?}"));
-                }
+            if let Err(e) = &res
+                && !refused
+                && findings.len() < 10
+            {
+                findings.push(format!("[ERR] seed {seed} run {run}: {e:?}"));
             }
             if refused {
                 let after = r.get(he.id).await.unwrap().unwrap();
@@ -126,7 +127,7 @@ async fn relate_refuses_exactly_the_cycles() {
     let mut handles = Vec::new();
     for p in 0..parts {
         handles.push(tokio::spawn(relate_runs(
-            0xD1B5_4A32_D192_ED03 ^ (p as u64 + 3) * 104_729,
+            0xD1B5_4A32_D192_ED03 ^ ((p as u64 + 3) * 104_729),
             runs / parts,
         )));
     }
