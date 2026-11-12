@@ -108,10 +108,7 @@ async fn a_chain_is_judged_as_a_whole_in_batches() {
         page_time.as_millis() < 1000 * room * (n as u128).max(1000) / 5000,
         "{page_time:?}"
     );
-    assert!(
-        relate_time.as_millis() < 100 * room * (n as u128).max(1000) / 1000,
-        "{relate_time:?}"
-    );
+    assert!(relate_time.as_millis() < 100 * room, "{relate_time:?}");
     assert!(
         whole.as_millis() < 2000 * room * (n as u128).max(1000) / 5000,
         "{whole:?}"

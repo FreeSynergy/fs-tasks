@@ -91,3 +91,61 @@ async fn another_write_does_not_wait_for_the_judgement_of_a_change() {
         "the create ({other_done:?}) waited for the whole edit ({edit_done:?}) including its judgement"
     );
 }
+
+/// Taking a relation away can free a task, so it is judged; adding one, changing its gap or a title cannot, so none of
+/// those reads the graph (a new task in front of a long chain is not made to scan it).
+#[tokio::test]
+async fn only_a_change_that_can_free_somebody_is_judged() {
+    let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
+    let plain = TaskRepo::new(store.clone(), ME);
+    let mut ids = Vec::new();
+    for i in 0..4 {
+        let mut t = Task::new(format!("t{i}"));
+        t.uid = format!("t{i}");
+        ids.push(plain.create(t).await.unwrap().id);
+    }
+    // count the queries of each kind of write: a judgement adds many
+    struct Counting(Arc<dyn Store>, Arc<std::sync::atomic::AtomicUsize>);
+    #[async_trait]
+    impl ObjectQuery for Counting {
+        async fn query(&self, q: &Query) -> fs_objects::Result<Vec<StoredObject>> {
+            self.1.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            self.0.query(q).await
+        }
+        async fn count(&self, q: &Query) -> fs_objects::Result<usize> {
+            self.0.count(q).await
+        }
+    }
+    let queries = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let repo = TaskRepo::with_backend(
+        Arc::new(Plain(store.clone())),
+        Arc::new(Counting(store, queries.clone())),
+        ME,
+    );
+    let used = |f: &std::sync::atomic::AtomicUsize| f.swap(0, std::sync::atomic::Ordering::SeqCst);
+    // adding a relation: the check for a cycle asks a few things, nothing is judged
+    repo.relate(ids[0], "t1", Relation::FinishToStart)
+        .await
+        .unwrap();
+    let adding = used(&queries);
+    // the same relation with a gap: only the gap changes
+    repo.relate_with_gap(ids[0], "t1", Relation::FinishToStart, "P1D")
+        .await
+        .unwrap();
+    let gap = used(&queries);
+    // a title
+    let mut t = repo.get(ids[0]).await.unwrap().unwrap().task;
+    t.title = Some("other".into());
+    repo.edit(ids[0], t).await.unwrap();
+    let title = used(&queries);
+    // taking the relation away: judged
+    let mut t = repo.get(ids[0]).await.unwrap().unwrap().task;
+    t.related_to.clear();
+    used(&queries);
+    repo.edit(ids[0], t).await.unwrap();
+    let removing = used(&queries);
+    assert!(
+        removing > adding.max(gap).max(title),
+        "adding {adding}, gap {gap}, title {title}, removing {removing}"
+    );
+}

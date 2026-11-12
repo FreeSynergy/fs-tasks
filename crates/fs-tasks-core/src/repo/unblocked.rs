@@ -16,16 +16,21 @@ use crate::interface::{TaskChange, TaskEntry};
 use crate::model::Task;
 use crate::plan::{Readiness, edges_of, readiness_of};
 
-/// Can `old` becoming `new` (an edit) or `old` going (`new` is `None`) change anybody's readiness? A title or a label
-/// cannot, so those edits cost nothing here.
+/// Can `old` becoming `new` (an edit) or `old` going (`new` is `None`) free anybody? A change of progress can, a deletion
+/// can, and a relation that is taken away can. A title or a label cannot, and neither can a relation that is only added
+/// (it can only make a task wait) or whose gap changes (the gap does not decide readiness): those edits cost nothing here.
 fn may_change_readiness(old: &Task, new: Option<&Task>) -> bool {
-    match new {
-        None => true,
-        Some(new) => {
-            old.effective_progress() != new.effective_progress()
-                || edges_of(std::slice::from_ref(old)) != edges_of(std::slice::from_ref(new))
-        }
+    let Some(new) = new else { return true };
+    if old.effective_progress() != new.effective_progress() {
+        return true;
     }
+    let ties = |t: &Task| -> std::collections::BTreeSet<(String, String, crate::plan::EdgeKind)> {
+        edges_of(std::slice::from_ref(t))
+            .into_iter()
+            .map(|e| (e.from, e.to, e.kind))
+            .collect()
+    };
+    !ties(old).is_subset(&ties(new))
 }
 
 /// The tasks that were waiting (blocked, unknown, in a cycle or behind a cancelled task) in `before` and are ready in
