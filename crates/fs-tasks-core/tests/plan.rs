@@ -284,3 +284,24 @@ fn the_gap_of_a_relation_is_read_from_its_member() {
             .is_err()
     );
 }
+
+#[test]
+fn durations_that_leave_the_range_of_dates_are_an_error_not_a_panic() {
+    let huge = Duration::days(100_000_000);
+    let items = [
+        Item {
+            uid: "a".into(),
+            duration: huge,
+            fixed_start: Some(at(0)),
+        },
+        Item {
+            uid: "b".into(),
+            duration: huge,
+            fixed_start: None,
+        },
+    ];
+    assert_eq!(
+        schedule(&items, &[e("a", "b", EdgeKind::FinishToStart)]),
+        Err(ScheduleError::OutOfRange)
+    );
+}

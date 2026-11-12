@@ -28,7 +28,9 @@ Version 0.0.5 (in progress). Latest tag: `v0.0.4`.
 - **Cycles:** `createRelation` refuses a relation that would close a dependency cycle (problem type `tasks/cycle`, status 409, the way round in the extension `path`). A cycle that arrives some other way (an edit, an import) is shown as `conflict`, not refused.
 - **Gap:** `createRelationWithGap` sets a lag (`P1D`) or lead (`-PT4H`) on a temporal relation. It is kept as the member `freesynergy.net:gap` and written to iCalendar as the RFC 9253 `GAP` parameter; an imported `GAP` is read into it.
 - **Schedule and ready filter:** the core can plan tasks with their durations and dependencies (earliest and latest start, slack), and the list can be limited to ready tasks (core only, not on the wire yet). The event "became ready" is sent as an update of the task.
-- On first start the index of older tasks is completed (new fields for the reverse lookup).
+- The index of older tasks is completed (new fields for the reverse lookup) when the **server or the window** opens the store (`fs-tasks serve`, `fs-tasks`); the command line talks to the server. Until then a task of 0.0.4 or older shows too few dependents and may look ready.
+- `blockedBy` also returns the tasks a task waits for that were cancelled or failed (the contract text says "unfinished"); those are the ones a person must decide about.
+- Limits of the dependency check (see DESIGN.md): it reads the task and everything reachable behind it, at most 5000 tasks, and is slow on long chains.
 
 ## Notes for 0.0.4
 

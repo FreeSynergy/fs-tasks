@@ -65,7 +65,19 @@ fn run(argv: &[String]) -> Result<(), String> {
         })
         .map(|s| Arc::new(s) as Arc<dyn Store>)
         .map_err(|e| format!("cannot open the store: {e}"))?;
-    let items: Arc<dyn TaskItems> = Arc::new(TaskRepo::new(store, ACTOR));
+    let repo = TaskRepo::new(store, ACTOR);
+    // Tasks stored by 0.0.4 or before have no dependency fields in their index (and 0.6.0 ones no order key): complete
+    // them as the server does, so the window sees the same readiness; what cannot be repaired is named.
+    let report = runtime
+        .block_on(repo.upgrade_index())
+        .map_err(|e| format!("cannot complete the index: {e}"))?;
+    if report.rewritten > 0 {
+        eprintln!("fs-tasks: index completed for {} tasks", report.rewritten);
+    }
+    for failed in &report.failed {
+        eprintln!("fs-tasks: task not repaired: {failed}");
+    }
+    let items: Arc<dyn TaskItems> = Arc::new(repo);
     let handle = runtime.handle().clone();
 
     let mut status = None;

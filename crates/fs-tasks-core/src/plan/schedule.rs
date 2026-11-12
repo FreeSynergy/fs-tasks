@@ -39,17 +39,35 @@ pub struct Planned {
 pub enum ScheduleError {
     /// These tasks (sorted `uid`s of the first group) are in a dependency cycle.
     Cycle(Vec<String>),
+    /// The times and durations add up to a date outside the range that can be represented.
+    OutOfRange,
 }
 
 /// Plan `items` with `edges`. A task with no fixed start and no placed predecessor is not placed (it is left out of
 /// the result, not guessed). Edges that name a task not in `items` are ignored.
 ///
 /// # Errors
-/// [`ScheduleError::Cycle`] when the edges contain a cycle.
+/// [`ScheduleError::Cycle`] when the edges contain a cycle; [`ScheduleError::OutOfRange`] when the sums of times and
+/// durations leave the range of dates (no panic, whatever the durations are).
 pub fn schedule(items: &[Item], edges: &[Edge]) -> Result<Vec<Planned>, ScheduleError> {
     if let Some(group) = cycles(edges).into_iter().next() {
         return Err(ScheduleError::Cycle(group));
     }
+    plan(items, edges).ok_or(ScheduleError::OutOfRange)
+}
+
+/// `t + d`, `None` when the result is not a date.
+fn plus(t: DateTime<Utc>, d: Duration) -> Option<DateTime<Utc>> {
+    t.checked_add_signed(d)
+}
+
+/// `t - d`, `None` when the result is not a date.
+fn minus(t: DateTime<Utc>, d: Duration) -> Option<DateTime<Utc>> {
+    t.checked_sub_signed(d)
+}
+
+/// The forward and the backward pass; `None` if a date overflows.
+fn plan(items: &[Item], edges: &[Edge]) -> Option<Vec<Planned>> {
     let by_uid: BTreeMap<&str, &Item> = items.iter().map(|i| (i.uid.as_str(), i)).collect();
     let edges: Vec<&Edge> = edges
         .iter()
@@ -67,25 +85,29 @@ pub fn schedule(items: &[Item], edges: &[Edge]) -> Result<Vec<Planned>, Schedule
             else {
                 continue;
             };
-            let p_end = p_start + p.duration;
-            let bound = match e.kind {
+            let p_end = plus(p_start, p.duration)?;
+            let base = match e.kind {
                 EdgeKind::FinishToStart => p_end,
                 EdgeKind::StartToStart => p_start,
-                EdgeKind::FinishToFinish => p_end - item.duration,
-                EdgeKind::StartToFinish => p_start - item.duration,
-            } + e.gap;
+                EdgeKind::FinishToFinish => minus(p_end, item.duration)?,
+                EdgeKind::StartToFinish => minus(p_start, item.duration)?,
+            };
+            let bound = plus(base, e.gap)?;
             start = Some(start.map_or(bound, |s| s.max(bound)));
         }
         if let Some(s) = start {
             early.insert(item.uid.as_str(), s);
         }
     }
-    let Some(plan_end) = order
-        .iter()
-        .filter_map(|i| early.get(i.uid.as_str()).map(|s| *s + i.duration))
-        .max()
-    else {
-        return Ok(Vec::new());
+    let mut plan_end: Option<DateTime<Utc>> = None;
+    for i in &order {
+        if let Some(s) = early.get(i.uid.as_str()) {
+            let end = plus(*s, i.duration)?;
+            plan_end = Some(plan_end.map_or(end, |m| m.max(end)));
+        }
+    }
+    let Some(plan_end) = plan_end else {
+        return Some(Vec::new());
     };
 
     // backward: latest start that keeps every successor and the end of the plan
@@ -94,35 +116,36 @@ pub fn schedule(items: &[Item], edges: &[Edge]) -> Result<Vec<Planned>, Schedule
         if !early.contains_key(item.uid.as_str()) {
             continue;
         }
-        let mut latest = plan_end - item.duration;
+        let mut latest = minus(plan_end, item.duration)?;
         for e in edges.iter().filter(|e| e.from == item.uid) {
             let (Some(&s_late), Some(s)) = (late.get(e.to.as_str()), by_uid.get(e.to.as_str()))
             else {
                 continue;
             };
-            let bound = match e.kind {
-                EdgeKind::FinishToStart => s_late - item.duration,
+            let base = match e.kind {
+                EdgeKind::FinishToStart => minus(s_late, item.duration)?,
                 EdgeKind::StartToStart => s_late,
-                EdgeKind::FinishToFinish => s_late + s.duration - item.duration,
-                EdgeKind::StartToFinish => s_late + s.duration,
-            } - e.gap;
-            latest = latest.min(bound);
+                EdgeKind::FinishToFinish => minus(plus(s_late, s.duration)?, item.duration)?,
+                EdgeKind::StartToFinish => plus(s_late, s.duration)?,
+            };
+            latest = latest.min(minus(base, e.gap)?);
         }
         late.insert(item.uid.as_str(), latest);
     }
-    Ok(order
-        .iter()
-        .filter_map(|i| {
-            let start = *early.get(i.uid.as_str())?;
-            let slack = *late.get(i.uid.as_str())? - start;
-            Some(Planned {
-                uid: i.uid.clone(),
-                start,
-                end: start + i.duration,
-                slack: slack.max(Duration::zero()),
-            })
-        })
-        .collect())
+    let mut out = Vec::new();
+    for i in &order {
+        let (Some(&start), Some(&latest)) = (early.get(i.uid.as_str()), late.get(i.uid.as_str()))
+        else {
+            continue;
+        };
+        out.push(Planned {
+            uid: i.uid.clone(),
+            start,
+            end: plus(start, i.duration)?,
+            slack: (latest - start).max(Duration::zero()),
+        });
+    }
+    Some(out)
 }
 
 /// The items in an order where every predecessor comes first (Kahn; ties by `uid`, so the result is the same each time).
