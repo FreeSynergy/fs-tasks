@@ -76,18 +76,11 @@ impl TaskRepo {
 
     pub(super) async fn delete_inner(&self, id: ObjectId) -> Result<()> {
         let stored = self.stored(id).await?.ok_or(Error::NotFound(id))?;
-        // Those that waited for it are read before it is gone: some of them may be free of it now.
         let gone = entry_of(stored).ok();
-        let successors = match &gone {
-            Some(e) => self.successors(&e.task).await.unwrap_or_default(),
-            None => Vec::new(),
-        };
         self.objects.delete(id, &self.actor).await?;
         self.feed.notify(&TaskChange::Deleted(id));
         if let Some(gone) = gone {
-            let successors = successors.into_iter().map(|e| e.task).collect();
-            self.announce_unblocked(Some(&gone.task), None, successors)
-                .await;
+            self.announce_unblocked(&gone.task, None).await;
         }
         Ok(())
     }
