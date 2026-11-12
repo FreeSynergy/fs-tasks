@@ -40,7 +40,7 @@ async fn readiness_and_the_neighbours_in_the_store() {
     assert_eq!(by.len(), 1);
     assert_eq!(by[0].task.uid, "paint");
     assert_eq!(r.dependents(paint.id).await.unwrap()[0].task.uid, "carpet");
-    assert!(r.blocked_by(paint.id).await.unwrap().is_empty());
+    assert_eq!(r.blocked_by(paint.id).await.unwrap(), []);
     assert!(r.readiness(fs_objects::ObjectId::new()).await.is_err());
 }
 
