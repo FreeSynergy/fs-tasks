@@ -20,6 +20,7 @@ mod paging;
 mod program;
 mod tasks_service;
 mod wire;
+mod wire_caps;
 
 pub use program::serve_command;
 pub use tasks_service::TasksServer;
