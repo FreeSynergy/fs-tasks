@@ -183,6 +183,32 @@ impl TaskItems for TaskRepo {
     }
 }
 
+#[async_trait]
+impl crate::interface::Comments for TaskRepo {
+    async fn comments(&self, context: &str) -> Result<Vec<crate::interface::Comment>> {
+        self.comments_inner(context).await
+    }
+    async fn comment_add(
+        &self,
+        context: &str,
+        body: &str,
+        in_reply_to: Option<&str>,
+    ) -> Result<crate::interface::Comment> {
+        self.comment_add_inner(context, body, in_reply_to).await
+    }
+    async fn comment_edit(
+        &self,
+        id: ObjectId,
+        revision: Revision,
+        body: &str,
+    ) -> Result<crate::interface::Comment> {
+        self.comment_edit_inner(id, revision, body).await
+    }
+    async fn comment_delete(&self, id: ObjectId) -> Result<crate::interface::Comment> {
+        self.comment_delete_inner(id).await
+    }
+}
+
 impl TaskFeed for TaskRepo {
     fn subscribe(&self, listener: Arc<dyn TaskListener>) -> Subscription {
         self.feed.add(listener)
@@ -206,6 +232,10 @@ fn capabilities() -> Capabilities {
         "dependency.evaluate",
         "dependency.cycle-check",
         "task.claim",
+        "comment.list",
+        "comment.add",
+        "comment.edit",
+        "comment.delete",
     ] {
         caps.supported(id);
     }

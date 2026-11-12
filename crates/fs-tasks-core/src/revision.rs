@@ -33,6 +33,19 @@ impl Revision {
         Self(hash)
     }
 
+    /// The revision of any stored object, from its envelope's `updated` and its content as text (a comment, a board).
+    pub fn of_parts(updated: &fs_objects::Timestamp, content: &str) -> Self {
+        let step = |hash: u64, byte: u8| (hash ^ u64::from(byte)).wrapping_mul(0x0100_0000_01b3);
+        let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+        for byte in updated.timestamp_micros().to_le_bytes() {
+            hash = step(hash, byte);
+        }
+        for byte in content.bytes() {
+            hash = step(hash, byte);
+        }
+        Self(hash)
+    }
+
     /// The revision as it travels over a process boundary (`Task.revision`).
     pub fn get(self) -> u64 {
         self.0
