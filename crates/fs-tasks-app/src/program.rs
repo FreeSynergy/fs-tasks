@@ -50,10 +50,7 @@ fn store_file(args: &crate::args::Args) -> Result<Option<std::path::PathBuf>, St
 
 /// The folder of the program's own files: `$XDG_DATA_HOME/freesynergy/tasks`.
 fn data_dir() -> Option<std::path::PathBuf> {
-    crate::face::data_dir_in(
-        std::env::var_os("XDG_DATA_HOME"),
-        std::env::var_os("HOME"),
-    )
+    crate::face::data_dir_in(std::env::var_os("XDG_DATA_HOME"), std::env::var_os("HOME"))
 }
 
 /// Where the choice of the face is kept. A picture or an export neither reads nor writes it.

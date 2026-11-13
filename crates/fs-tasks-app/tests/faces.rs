@@ -183,7 +183,10 @@ fn a_relative_data_home_is_ignored_and_the_choice_is_saved_to_its_place() {
         Some(PathBuf::from("/data/freesynergy/tasks"))
     );
     // relative (and empty) is invalid by the XDG rule: the home is used
-    assert_eq!(data_dir_in(os("rel/dir"), os("/home/u")), Some(home.clone()));
+    assert_eq!(
+        data_dir_in(os("rel/dir"), os("/home/u")),
+        Some(home.clone())
+    );
     assert_eq!(data_dir_in(os(""), os("/home/u")), Some(home.clone()));
     assert_eq!(data_dir_in(None, os("/home/u")), Some(home));
     assert_eq!(data_dir_in(os("rel"), None), None);

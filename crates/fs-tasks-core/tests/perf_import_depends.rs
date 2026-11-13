@@ -71,6 +71,10 @@ async fn importing_a_depends_on_chain_is_not_quadratic_and_announces_the_right_t
     got.sort();
     want.sort();
     assert_eq!(got, want, "exactly the freed tasks, each once");
-    let room = if cfg!(debug_assertions) { 20_000 } else { 5_000 };
+    let room = if cfg!(debug_assertions) {
+        20_000
+    } else {
+        5_000
+    };
     assert!(took.as_millis() < room, "{took:?}");
 }

@@ -32,7 +32,7 @@ impl TaskRepo {
             let waited = t
                 .relations()
                 .iter()
-                .any(|(other, r)| *r ==Relation::DependsOn && new.contains(other.as_str()));
+                .any(|(other, r)| *r == Relation::DependsOn && new.contains(other.as_str()));
             (waited && new.contains(t.uid.as_str()) && after.get(&t.uid) == Some(&Readiness::Ready))
                 .then(|| t.uid.clone())
         }));

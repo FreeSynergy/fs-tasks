@@ -39,7 +39,10 @@ fn may_change_readiness(old: &Task, new: Option<&Task>) -> bool {
 
 /// The tasks that were waiting (blocked, unknown, in a cycle or behind a cancelled task) in `before` and are ready in
 /// `after`.
-pub(super) fn freed(before: &BTreeMap<String, Readiness>, after: &BTreeMap<String, Readiness>) -> Vec<String> {
+pub(super) fn freed(
+    before: &BTreeMap<String, Readiness>,
+    after: &BTreeMap<String, Readiness>,
+) -> Vec<String> {
     after
         .iter()
         .filter(|(_, now)| **now == Readiness::Ready)
