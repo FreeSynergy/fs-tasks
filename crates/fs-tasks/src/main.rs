@@ -87,20 +87,18 @@ mod tests {
 
     #[test]
     fn the_plan_option_of_the_typing_test_goes_to_the_window() {
-        let args = words(&[
-            "--plan",
-            "classic",
-            "--size",
-            "1000x640",
-            "--store",
-            "x.db",
-        ]);
+        let args = words(&["--plan", "classic", "--size", "1000x640", "--store", "x.db"]);
         assert!(routes_to_window(&args));
     }
 
     #[test]
     fn commands_and_the_command_lines_options_stay_with_the_cli() {
-        for args in [&["list"][..], &["add", "x"], &["--socket", "s", "list"], &[]] {
+        for args in [
+            &["list"][..],
+            &["add", "x"],
+            &["--socket", "s", "list"],
+            &[],
+        ] {
             assert!(!routes_to_window(&words(args)), "{args:?}");
         }
     }
