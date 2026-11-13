@@ -82,8 +82,13 @@ impl Inner {
             }
             cache.on_change(fs_components_widgets::plan::redraw);
             if let Some(live) = &self.options.live {
-                let cache = Arc::clone(&cache);
-                live.on_change(move || cache.reload_in_background());
+                // A weak handle: a strong one would make a cycle (changes, callback, cache, items) and the connection thread would never end.
+                let cache = Arc::downgrade(&cache);
+                live.on_change(move || {
+                    if let Some(cache) = cache.upgrade() {
+                        cache.reload_in_background();
+                    }
+                });
             }
             screen
         }))
@@ -155,7 +160,7 @@ impl Frontends {
         });
         inner.show(start);
         if let Some(live) = &inner.options.live {
-            // The classic list reads again when anybody changes a task (a weak handle: the window may be gone).
+            // Limit: `refresh` is only a redraw in fs-components v0.0.13, so the classic frontend reads its list again at its next action, not live (live: board and day list). Weak handle: the window may be gone.
             let weak = Arc::downgrade(&inner);
             live.on_change(move || {
                 if let Some(inner) = weak.upgrade() {

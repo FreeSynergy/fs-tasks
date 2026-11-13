@@ -85,3 +85,19 @@ fn the_counter_test_a_grandchild_left_behind_by_a_finished_check_is_seen_alive()
     let _ = std::process::Command::new("kill").arg(&pid).status();
     assert!(gone(&pid));
 }
+
+#[test]
+fn a_grandchild_that_keeps_the_output_open_does_not_hang_the_check() {
+    // No redirection: the grandchild holds stdout, so reading the output never ends by itself.
+    let dir = tempfile::tempdir().unwrap();
+    let (script, pidfile) = (dir.path().join("hold.sh"), dir.path().join("pid"));
+    std::fs::write(&script, "sleep 300 & echo $! > \"$1\"\n").unwrap();
+    let start = Instant::now();
+    let out = execute(
+        &argv(&["bash", script.to_str().unwrap(), pidfile.to_str().unwrap()]),
+        60,
+    );
+    assert!(start.elapsed() < Duration::from_secs(10), "the check hung");
+    assert!(out.is_err_and(|e| e.contains("keeps its output open")));
+    assert!(gone(&pid_of(&pidfile)), "the grandchild still lives");
+}

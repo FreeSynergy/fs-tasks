@@ -5,11 +5,14 @@
 
 use std::io::Read;
 use std::process::{Child, Command, Stdio};
-use std::thread::JoinHandle;
+use std::sync::mpsc::{Receiver, channel};
 use std::time::{Duration, Instant};
 
 /// How much of the end of the output is kept, in bytes.
 const KEEP: usize = 2048;
+
+/// How long the output is waited for after the child has ended (a grandchild may still hold the pipes).
+const GRACE: Duration = Duration::from_millis(500);
 
 /// How a check ended.
 #[derive(Debug, PartialEq, Eq)]
@@ -25,7 +28,8 @@ pub struct Outcome {
 }
 
 /// Read to the end, keep the last [`KEEP`] bytes; a full pipe never blocks the child.
-fn drain(mut from: impl Read + Send + 'static) -> JoinHandle<Vec<u8>> {
+fn drain(mut from: impl Read + Send + 'static) -> Receiver<Vec<u8>> {
+    let (send, receive) = channel();
     std::thread::spawn(move || {
         let (mut kept, mut chunk) = (Vec::new(), [0u8; 4096]);
         while let Ok(n) = from.read(&mut chunk) {
@@ -37,25 +41,71 @@ fn drain(mut from: impl Read + Send + 'static) -> JoinHandle<Vec<u8>> {
                 kept.drain(..kept.len() - KEEP);
             }
         }
-        kept
-    })
+        let _ = send.send(kept);
+    });
+    receive
 }
 
-/// End the child and everything it started. Unix: the child leads its own process group (`execute` makes it so), and
-/// `kill -s KILL -- -<pgid>` ends the whole group, grandchildren included (`kill(2)` with a negative pid; the tool is
-/// used so that no library is added). Elsewhere (Windows) only the child itself is ended: a documented limit.
-fn stop(child: &mut Child) {
+/// The `kill` tool at its fixed places (never looked up through `PATH`).
+#[cfg(unix)]
+const KILL_TOOLS: [&str; 2] = ["/bin/kill", "/usr/bin/kill"];
+
+/// End the process group `pgid` (Unix: `kill -s KILL -- -<pgid>`, the tool is used so that no library is added).
+/// Elsewhere nothing is done. The error says why the group could not be ended.
+fn kill_group(pgid: u32) -> Result<(), String> {
     #[cfg(unix)]
     {
-        let group = format!("-{}", child.id());
-        let _ = Command::new("kill")
-            .args(["-s", "KILL", "--", &group])
+        let tool = KILL_TOOLS
+            .iter()
+            .find(|t| std::path::Path::new(t).is_file())
+            .ok_or("no kill tool found (/bin/kill, /usr/bin/kill)")?;
+        let status = Command::new(tool)
+            .args(["-s", "KILL", "--", &format!("-{pgid}")])
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
-            .status();
+            .status()
+            .map_err(|e| format!("cannot run {tool}: {e}"))?;
+        status
+            .success()
+            .then_some(())
+            .ok_or_else(|| format!("{tool} failed: {status}"))
     }
+    #[cfg(not(unix))]
+    {
+        let _ = pgid;
+        Ok(())
+    }
+}
+
+/// End the child and everything it started. Unix: the child leads its own process group (`execute` makes it so).
+/// Elsewhere (Windows) only the child itself is ended: a documented limit. A group that could not be ended is an error.
+fn stop(child: &mut Child) -> Result<(), String> {
+    let group = kill_group(child.id());
     let _ = child.kill();
+    group
+}
+
+/// The kept output of both pipes, or an error when a process that outlived the child holds them open (it is ended).
+fn collect(pgid: u32, (out, err): (Receiver<Vec<u8>>, Receiver<Vec<u8>>)) -> Result<String, String> {
+    let end = Instant::now() + GRACE;
+    let mut bytes = Vec::new();
+    for pipe in [out, err] {
+        let wait = end.saturating_duration_since(Instant::now());
+        if let Ok(part) = pipe.recv_timeout(wait) {
+            bytes.extend(part);
+        } else {
+            let ended = kill_group(pgid).map_or_else(|e| format!(" (and it could not be ended: {e})"), |()| String::new());
+            return Err(format!(
+                "the check ended but a process it started keeps its output open; the group was ended{ended}"
+            ));
+        }
+    }
+    let start = bytes.len().saturating_sub(KEEP);
+    Ok(String::from_utf8_lossy(&bytes[start..])
+        .chars()
+        .map(|c| if c.is_control() && c != '\n' { '?' } else { c })
+        .collect())
 }
 
 /// Run `argv` (program first) for at most `seconds`; when the time runs out the whole process group is ended (Unix).
@@ -81,12 +131,14 @@ pub fn execute(argv: &[String], seconds: u64) -> Result<Outcome, String> {
         .take()
         .zip(child.stderr.take())
         .map(|(o, e)| (drain(o), drain(e)));
+    let pgid = child.id();
     let deadline = Instant::now() + Duration::from_secs(seconds);
+    let mut stopped = Ok(());
     let status = loop {
         match child.try_wait().map_err(|e| e.to_string())? {
             Some(s) => break Some(s),
             None if Instant::now() >= deadline => {
-                stop(&mut child);
+                stopped = stop(&mut child);
                 let _ = child.wait();
                 break None;
             }
@@ -94,18 +146,13 @@ pub fn execute(argv: &[String], seconds: u64) -> Result<Outcome, String> {
         }
     };
     // After a kill a grandchild may still hold the pipes: the readers are not waited for then.
-    let tail = match (status.is_some(), readers) {
-        (true, Some((o, e))) => {
-            let mut bytes = o.join().unwrap_or_default();
-            bytes.extend(e.join().unwrap_or_default());
-            let start = bytes.len().saturating_sub(KEEP);
-            String::from_utf8_lossy(&bytes[start..])
-                .chars()
-                .map(|c| if c.is_control() && c != '\n' { '?' } else { c })
-                .collect()
-        }
+    let mut tail = match (status.is_some(), readers) {
+        (true, Some(pipes)) => collect(pgid, pipes)?,
         _ => String::new(),
     };
+    if let Err(why) = stopped {
+        tail.push_str(&format!("\n(the process group could not be ended: {why})"));
+    }
     Ok(Outcome {
         passed: status.is_some_and(|s| s.success()),
         code: status.and_then(|s| s.code()),

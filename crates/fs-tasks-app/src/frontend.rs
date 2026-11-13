@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use serde_json::{Value, json};
 
-/// The key under which versions up to 0.0.8 kept the choice (read once, then migrated to `frontend`).
+/// The key under which versions up to 0.0.7 kept the choice (read once, then migrated to `frontend`).
 const LEGACY_KEY: &str = "face";
 
 /// A frontend of the window.

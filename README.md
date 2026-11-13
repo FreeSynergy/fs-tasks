@@ -8,7 +8,7 @@ What is different here: a task follows the open JSCalendar standard (RFC 8984), 
 
 ## What it can do today
 
-Version 0.0.7 (unreleased until tagged). Latest tag: `v0.0.6`.
+Version 0.0.8 (unreleased until tagged). Latest tag: `v0.0.7`.
 
 - Create, edit, assign, label, relate, list and delete tasks. Find them by due date range, progress, label, or a word in the title or description.
 - Import and export iCalendar tasks (VTODO). Events in the same file are left for the calendar.
@@ -19,7 +19,7 @@ Version 0.0.7 (unreleased until tagged). Latest tag: `v0.0.6`.
 - A window with three frontends, chosen in its menu **Frontend** and remembered: **Board** (columns by status, cards that say what blocks them; the start for a new installation), **Day list** (Today, Upcoming, Anytime, Someday, Logbook, your labels; tick a box to finish) and **Classic** (the first window: a list and a status view, search, create, edit, delete). Import and export work in all of them. `fs-tasks --plan classic|board|next` starts with one frontend this time only.
 - The calendar already shows tasks through this interface.
 
-**Not done:** the window calls the core in process, not over the socket, so it has no version handshake with the server yet; that comes with a window over RPC.
+The window is a client of the server over the socket (it starts the server if none runs). **Not done:** the window does not reconnect if the server dies (restart it); the Classic frontend reads the list again only at its next action, while Board and Day list follow other clients at once.
 
 ## Work board
 
@@ -31,7 +31,14 @@ fs-tasks status <id> in-progress
 fs-tasks status <id> done --note 'built' --report out.md --cost 0.42
 ```
 
-`claim`, `release`, `note`, `check`, `list --project --status`, `add --objective CMD`: see `docs/worker-protocol.md` (EN + DE). A check command is code: it runs only for tasks made on this machine by a trusted actor, for allowed programs, without a shell. One process holds the store; the window answers the command line while it is open.
+`claim`, `release`, `note`, `check`, `list --project --status`, `add --objective CMD`: see `docs/worker-protocol.md` (EN + DE). A check command is code: it runs only for tasks made on this machine by a trusted actor, for allowed programs, without a shell. One process (the server) holds the store; the command line, the window and workers are all its clients, so they work together while the window is open.
+
+## Notes for 0.0.8
+
+- **Work board:** workers work through `fs-tasks` (`claim`, `next`, `status`, `note`, `check`); see above and `docs/worker-protocol.md`.
+- **One store:** the window is a client of the one server, which holds `objects.db`; closing the window leaves the server running.
+- **Renamed:** the menu **Face** is now **Frontend**; the remembered choice moves from the key `face` to `frontend` on its own.
+- **Limits:** no reconnect after the server dies; the Classic frontend does not follow other clients live (needs a reload function in `fs-components`); `check` is code and runs only for local tasks of trusted actors.
 
 ## Notes for 0.0.7
 
