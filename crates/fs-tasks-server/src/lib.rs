@@ -27,6 +27,6 @@ mod wire_caps;
 
 pub use client::{Changes, RemoteItems};
 pub use host::{Hosted, host};
-pub use start::ensure_server;
 pub use program::serve_command;
+pub use start::ensure_server;
 pub use tasks_service::TasksServer;

@@ -41,7 +41,9 @@ pub(super) async fn all(client: items::Client, query: Option<TaskQuery>) -> Resu
             return Ok(out);
         }
         if next == cursor {
-            return Err(Error::Rejected("the server answered the same cursor twice".into()));
+            return Err(Error::Rejected(
+                "the server answered the same cursor twice".into(),
+            ));
         }
         cursor = next;
     }

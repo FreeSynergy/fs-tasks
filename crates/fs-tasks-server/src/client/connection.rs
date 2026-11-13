@@ -149,7 +149,9 @@ async fn serve_jobs(
 ) -> std::result::Result<(), String> {
     ensure_server(socket, data).await?;
     let said = |e: capnp::Error| format!("{}: {e}", socket.display());
-    let connection = connect::<tasks::Client>(socket).await.map_err(|e| format!("{}: {e}", socket.display()))?;
+    let connection = connect::<tasks::Client>(socket)
+        .await
+        .map_err(|e| format!("{}: {e}", socket.display()))?;
     let root = &connection.client;
     let items = root
         .items_request()
@@ -160,7 +162,12 @@ async fn serve_jobs(
         .get()
         .and_then(tasks::items_results::Reader::get_items)
         .map_err(said)?;
-    let answer = root.capabilities_request().send().promise.await.map_err(said)?;
+    let answer = root
+        .capabilities_request()
+        .send()
+        .promise
+        .await
+        .map_err(said)?;
     let ids = answer
         .get()
         .and_then(tasks::capabilities_results::Reader::get_capabilities)

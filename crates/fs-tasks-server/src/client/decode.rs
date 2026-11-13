@@ -2,9 +2,9 @@
 //!
 //! Pattern: Adapter — the JSCalendar text stays authoritative; the envelope is read for the id and the routing data.
 
+use fs_interfaces::Unsupported;
 use fs_interfaces::rpc::{read_envelope, read_object_id};
 use fs_interfaces::tasks_capnp::task;
-use fs_interfaces::Unsupported;
 use fs_objects::ObjectId;
 use fs_tasks_core::{Error, ImportReport, Result, Task, TaskEntry};
 
@@ -46,16 +46,14 @@ pub(super) fn entries(
 
 fn texts(list: capnp::text_list::Reader<'_>) -> Result<Vec<String>> {
     list.iter()
-        .map(|t| {
-            Ok(t.map_err(|e| wire(&e))?
-                .to_string()
-                .unwrap_or_default())
-        })
+        .map(|t| Ok(t.map_err(|e| wire(&e))?.to_string().unwrap_or_default()))
         .collect()
 }
 
 /// The report of an import.
-pub(super) fn report(r: fs_interfaces::tasks_capnp::import_report::Reader<'_>) -> Result<ImportReport> {
+pub(super) fn report(
+    r: fs_interfaces::tasks_capnp::import_report::Reader<'_>,
+) -> Result<ImportReport> {
     let created = r
         .get_created()
         .map_err(|e| wire(&e))?

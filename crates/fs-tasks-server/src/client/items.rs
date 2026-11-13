@@ -15,9 +15,9 @@ use fs_tasks_core::{
     TaskQuery,
 };
 
+use super::connection::RemoteItems;
 use super::decode::{entries, entry, report, strings};
 use super::walk::all;
-use super::connection::RemoteItems;
 
 fn wire(e: &capnp::Error) -> Error {
     super::decode::wire(e)
@@ -85,13 +85,18 @@ impl TaskItems for RemoteItems {
 
     /// The places of a page are the store's own; they do not travel. Read with `list` or `query`.
     async fn page(&self, _: &TaskQuery, _: Option<&Place>, _: usize) -> Result<TaskPage> {
-        Err(Unsupported::new("task.query", "pages by place are not on the wire; use list or query").into())
+        Err(Unsupported::new(
+            "task.query",
+            "pages by place are not on the wire; use list or query",
+        )
+        .into())
     }
 
     async fn create(&self, task: Task) -> Result<TaskEntry> {
         self.call(move |c| async move {
             let mut req = c.create_request();
-            req.get().set_jscalendar(task.to_value().to_string().as_str());
+            req.get()
+                .set_jscalendar(task.to_value().to_string().as_str());
             task_of!(req, items::create_results::Reader::get_task)
         })
         .await
@@ -101,26 +106,42 @@ impl TaskItems for RemoteItems {
         self.call(move |c| async move {
             let mut req = c.edit_request();
             write_uuid(req.get().init_id(), Some(id.as_uuid()));
-            req.get().set_jscalendar(task.to_value().to_string().as_str());
+            req.get()
+                .set_jscalendar(task.to_value().to_string().as_str());
             task_of!(req, items::edit_results::Reader::get_task)
         })
         .await
     }
 
-    async fn edit_checked(&self, id: ObjectId, expected: Revision, task: Task) -> Result<TaskEntry> {
+    async fn edit_checked(
+        &self,
+        id: ObjectId,
+        expected: Revision,
+        task: Task,
+    ) -> Result<TaskEntry> {
         self.call(move |c| async move {
             let mut req = c.edit_if_request();
             write_uuid(req.get().init_id(), Some(id.as_uuid()));
             req.get().set_revision(expected.get());
-            req.get().set_jscalendar(task.to_value().to_string().as_str());
+            req.get()
+                .set_jscalendar(task.to_value().to_string().as_str());
             let answer = req.send().promise.await.map_err(|e| wire(&e))?;
-            match answer.get().and_then(items::edit_if_results::Reader::get_task) {
+            match answer
+                .get()
+                .and_then(items::edit_if_results::Reader::get_task)
+            {
                 Ok(t) => entry(t),
                 Err(e) => Err(wire(&e)),
             }
         })
         .await
-        .map_err(|e| if e.is_conflict() { Error::Changed(id) } else { e })
+        .map_err(|e| {
+            if e.is_conflict() {
+                Error::Changed(id)
+            } else {
+                e
+            }
+        })
     }
 
     async fn assign(&self, id: ObjectId, name: &str, email: &str) -> Result<TaskEntry> {
@@ -161,7 +182,10 @@ impl TaskItems for RemoteItems {
             req.get().set_other_uid(other.as_str());
             req.get().set_relation(related(relation));
             req.get().set_gap(gap.as_str());
-            task_of!(req, items::create_relation_with_gap_results::Reader::get_task)
+            task_of!(
+                req,
+                items::create_relation_with_gap_results::Reader::get_task
+            )
         })
         .await
     }
@@ -253,7 +277,8 @@ impl TaskItems for RemoteItems {
         let ids = ids.to_vec();
         self.call(move |c| async move {
             let mut req = c.export_ics_request();
-            let len = u32::try_from(ids.len()).map_err(|_| Error::Rejected("too many tasks".into()))?;
+            let len =
+                u32::try_from(ids.len()).map_err(|_| Error::Rejected("too many tasks".into()))?;
             let mut list = req.get().init_ids(len);
             for (i, id) in (0u32..).zip(&ids) {
                 write_uuid(list.reborrow().get(i), Some(id.as_uuid()));

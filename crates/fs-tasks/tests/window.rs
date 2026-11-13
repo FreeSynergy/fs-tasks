@@ -69,7 +69,11 @@ fn snapshot(dir: &Path, name: &str) -> Output {
             "board",
         ],
     );
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     assert!(std::fs::metadata(&png).unwrap().len() > 100);
     out
 }
@@ -80,7 +84,13 @@ fn a_window_next_to_a_running_server_opens_without_a_second_lock() {
     let _stop = Cleanup(dir.path());
     let mut server: Child = fs_tasks(
         dir.path(),
-        &["serve", "--socket", &socket(dir.path()), "--data", dir.path().join("data/freesynergy/tasks").to_str().unwrap()],
+        &[
+            "serve",
+            "--socket",
+            &socket(dir.path()),
+            "--data",
+            dir.path().join("data/freesynergy/tasks").to_str().unwrap(),
+        ],
     )
     .stdout(Stdio::null())
     .stderr(Stdio::null())
@@ -90,14 +100,21 @@ fn a_window_next_to_a_running_server_opens_without_a_second_lock() {
     while !Path::new(&socket(dir.path())).exists() && start.elapsed() < Duration::from_secs(10) {
         std::thread::sleep(Duration::from_millis(50));
     }
-    assert!(run(dir.path(), &["add", "Before the window"]).status.success());
+    assert!(
+        run(dir.path(), &["add", "Before the window"])
+            .status
+            .success()
+    );
 
     // The window (a picture) and the command line both work with the server running; no second server starts.
     snapshot(dir.path(), "a.png");
     let listed = run(dir.path(), &["list"]);
     assert!(String::from_utf8_lossy(&listed.stdout).contains("Before the window"));
     assert_eq!(servers(dir.path()).len(), 1);
-    assert!(server.try_wait().unwrap().is_none(), "the server is still there");
+    assert!(
+        server.try_wait().unwrap().is_none(),
+        "the server is still there"
+    );
     let _ = server.kill();
     let _ = server.wait();
 }
@@ -108,9 +125,17 @@ fn a_window_without_a_server_starts_it_and_the_server_stays_for_the_others() {
     let _stop = Cleanup(dir.path());
     snapshot(dir.path(), "b.png");
     // The window has ended; the server it started is the motor and stays, so the command line finds it.
-    assert_eq!(servers(dir.path()).len(), 1, "one server, started by the window");
+    assert_eq!(
+        servers(dir.path()).len(),
+        1,
+        "one server, started by the window"
+    );
     let added = run(dir.path(), &["add", "After the window"]);
-    assert!(added.status.success(), "{}", String::from_utf8_lossy(&added.stderr));
+    assert!(
+        added.status.success(),
+        "{}",
+        String::from_utf8_lossy(&added.stderr)
+    );
     assert_eq!(servers(dir.path()).len(), 1);
     // A second window sees the task the command line made, through the same server.
     snapshot(dir.path(), "c.png");

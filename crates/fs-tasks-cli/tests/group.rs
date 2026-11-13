@@ -13,8 +13,11 @@ fn argv(words: &[&str]) -> Vec<String> {
 
 fn alive(pid: &str) -> bool {
     // A zombie is not alive: its state is `Z`.
-    std::fs::read_to_string(format!("/proc/{pid}/stat"))
-        .is_ok_and(|s| s.rsplit(") ").next().is_some_and(|rest| !rest.starts_with('Z')))
+    std::fs::read_to_string(format!("/proc/{pid}/stat")).is_ok_and(|s| {
+        s.rsplit(") ")
+            .next()
+            .is_some_and(|rest| !rest.starts_with('Z'))
+    })
 }
 
 fn pid_of(file: &Path) -> String {
@@ -70,11 +73,7 @@ fn the_counter_test_a_grandchild_left_behind_by_a_finished_check_is_seen_alive()
     // Without the time limit nothing ends the grandchild: the test above would be blind if `alive` always said no.
     let dir = tempfile::tempdir().unwrap();
     let (script, pidfile) = (dir.path().join("left.sh"), dir.path().join("pid"));
-    std::fs::write(
-        &script,
-        "sleep 300 >/dev/null 2>&1 & echo $! > \"$1\"\n",
-    )
-    .unwrap();
+    std::fs::write(&script, "sleep 300 >/dev/null 2>&1 & echo $! > \"$1\"\n").unwrap();
     let out = execute(
         &argv(&["bash", script.to_str().unwrap(), pidfile.to_str().unwrap()]),
         10,
