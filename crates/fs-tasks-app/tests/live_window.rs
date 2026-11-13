@@ -25,11 +25,14 @@ fn options(live: Option<Arc<fs_tasks_server::Changes>>) -> FrontendOptions {
 }
 
 fn shows(frontends: &Frontends, title: &str) -> bool {
-    frontends.cache().and_then(|c| c.current()).is_some_and(|s| {
-        s.entries
-            .iter()
-            .any(|e| e.task.title.as_deref() == Some(title))
-    })
+    frontends
+        .cache()
+        .and_then(|c| c.current())
+        .is_some_and(|s| {
+            s.entries
+                .iter()
+                .any(|e| e.task.title.as_deref() == Some(title))
+        })
 }
 
 fn wait_for(limit: Duration, mut done: impl FnMut() -> bool) -> bool {
@@ -60,7 +63,13 @@ fn served() -> Served {
     let dir = tempfile::tempdir().unwrap();
     let socket = dir.path().join("run").join("tasks.sock");
     let hosted = host(repo.clone(), socket.clone()).unwrap();
-    Served { rt, repo, socket, _dir: dir, hosted: Some(hosted) }
+    Served {
+        rt,
+        repo,
+        socket,
+        _dir: dir,
+        hosted: Some(hosted),
+    }
 }
 
 fn window(s: &Served, wired: bool) -> Frontends {
@@ -75,9 +84,13 @@ fn the_board_shows_what_another_client_creates() {
     let s = served();
     let (wired, deaf) = (window(&s, true), window(&s, false));
     assert!(!shows(&wired, "from the command line"));
-    s.rt.block_on(s.repo.create(Task::new("from the command line"))).unwrap();
+    s.rt.block_on(s.repo.create(Task::new("from the command line")))
+        .unwrap();
     assert!(
-        wait_for(Duration::from_secs(5), || shows(&wired, "from the command line")),
+        wait_for(Duration::from_secs(5), || shows(
+            &wired,
+            "from the command line"
+        )),
         "the window did not follow within 5 s"
     );
     // Counter test: without the wiring the same window stays as it was.

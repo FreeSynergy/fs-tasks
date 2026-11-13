@@ -9,8 +9,8 @@ use fs_components_workbenches::SourceError;
 use fs_components_workbenches::tasks::{
     RowQuery, TaskCapabilities, TaskColumn, TaskDraft, TaskRow, TaskSheet, TaskSource,
 };
-use fs_tasks_core::{Revision, Task};
 use fs_tasks_core::validate::PROGRESS;
+use fs_tasks_core::{Revision, Task};
 
 use super::adapter::{TaskAdapter, reason};
 use super::apply::{apply_draft, due, set_progress};

@@ -87,7 +87,10 @@ fn stop(child: &mut Child) -> Result<(), String> {
 }
 
 /// The kept output of both pipes, or an error when a process that outlived the child holds them open (it is ended).
-fn collect(pgid: u32, (out, err): (Receiver<Vec<u8>>, Receiver<Vec<u8>>)) -> Result<String, String> {
+fn collect(
+    pgid: u32,
+    (out, err): (Receiver<Vec<u8>>, Receiver<Vec<u8>>),
+) -> Result<String, String> {
     let end = Instant::now() + GRACE;
     let mut bytes = Vec::new();
     for pipe in [out, err] {
@@ -95,7 +98,10 @@ fn collect(pgid: u32, (out, err): (Receiver<Vec<u8>>, Receiver<Vec<u8>>)) -> Res
         if let Ok(part) = pipe.recv_timeout(wait) {
             bytes.extend(part);
         } else {
-            let ended = kill_group(pgid).map_or_else(|e| format!(" (and it could not be ended: {e})"), |()| String::new());
+            let ended = kill_group(pgid).map_or_else(
+                |e| format!(" (and it could not be ended: {e})"),
+                |()| String::new(),
+            );
             return Err(format!(
                 "the check ended but a process it started keeps its output open; the group was ended{ended}"
             ));

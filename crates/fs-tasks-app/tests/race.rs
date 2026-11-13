@@ -27,7 +27,11 @@ struct Racing {
 impl Racing {
     async fn rival(&self, id: ObjectId) {
         if self.rival_acts.swap(false, Ordering::SeqCst) {
-            let mut theirs = TaskItems::get(self.repo.as_ref(), id).await.unwrap().unwrap().task;
+            let mut theirs = TaskItems::get(self.repo.as_ref(), id)
+                .await
+                .unwrap()
+                .unwrap()
+                .task;
             theirs.title = Some("Theirs".into());
             self.repo.edit(id, theirs).await.unwrap();
         }
@@ -58,7 +62,12 @@ impl TaskItems for Racing {
         self.rival(id).await;
         self.repo.edit(id, task).await
     }
-    async fn edit_checked(&self, id: ObjectId, expected: Revision, task: Task) -> Result<TaskEntry> {
+    async fn edit_checked(
+        &self,
+        id: ObjectId,
+        expected: Revision,
+        task: Task,
+    ) -> Result<TaskEntry> {
         self.rival(id).await;
         self.repo.edit_checked(id, expected, task).await
     }

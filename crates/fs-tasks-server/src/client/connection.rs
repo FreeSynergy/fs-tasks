@@ -144,7 +144,12 @@ impl RemoteItems {
             tokio::task::spawn_local(async move {
                 // A server that hangs must not freeze the window: the call ends with a message after `CALL_LIMIT`.
                 let answer = tokio::time::timeout(call_limit, f(client)).await;
-                let _ = tx.send(answer.unwrap_or_else(|_| Err(Error::Rejected(format!("the tasks server did not answer within {} s", call_limit.as_secs_f32())))));
+                let _ = tx.send(answer.unwrap_or_else(|_| {
+                    Err(Error::Rejected(format!(
+                        "the tasks server did not answer within {} s",
+                        call_limit.as_secs_f32()
+                    )))
+                }));
             });
         });
         self.jobs.send(job).map_err(|_| gone())?;
