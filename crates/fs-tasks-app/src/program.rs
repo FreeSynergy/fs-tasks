@@ -42,8 +42,8 @@ fn store_file(args: &crate::args::Args) -> Result<Option<std::path::PathBuf>, St
     if args.snapshot.is_some() || args.export.is_some() {
         return Ok(None);
     }
-    let dir = data_dir()
-        .ok_or("cannot find a data folder (HOME is not set); give --store <file>")?;
+    let dir =
+        data_dir().ok_or("cannot find a data folder (HOME is not set); give --store <file>")?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     Ok(Some(dir.join("app.db")))
 }

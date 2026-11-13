@@ -57,7 +57,11 @@ impl Inner {
     /// The plan faces over one reading of the store, made on first use.
     fn plan(&self) -> Arc<PlanSurface> {
         Arc::clone(self.plan.get_or_init(|| {
-            let cache = Cache::start(Arc::clone(&self.items), self.handle.clone(), self.options.today);
+            let cache = Cache::start(
+                Arc::clone(&self.items),
+                self.handle.clone(),
+                self.options.today,
+            );
             if self.options.wait {
                 cache.wait(FIRST_READING);
             }

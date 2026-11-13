@@ -69,7 +69,14 @@ fn a_broken_file_means_the_default_and_the_next_choice_replaces_it() {
     let dir = Scratch::new();
     let file = dir.file("settings.json");
     let memory = Preference::new(file.clone());
-    for broken in ["", "not json", "[1, 2]", "{\"face\": 7}", "{\"face\": \"cube\"}", "{}"] {
+    for broken in [
+        "",
+        "not json",
+        "[1, 2]",
+        "{\"face\": 7}",
+        "{\"face\": \"cube\"}",
+        "{}",
+    ] {
         std::fs::write(&file, broken).unwrap();
         assert_eq!(memory.load(), Face::Board, "{broken:?}");
     }
@@ -96,7 +103,10 @@ fn the_menu_names_the_faces_and_the_shown_one_cannot_be_chosen() {
     assert_eq!(labels_of(&faces), ["Face", "Classic", "Board", "Day list"]);
     assert!(!faces.app().choose("face-board"), "it is shown already");
     assert!(!faces.app().choose("face-cube"), "no such face");
-    assert!(!faces.app().choose("task-new"), "the classic commands belong to the classic face");
+    assert!(
+        !faces.app().choose("task-new"),
+        "the classic commands belong to the classic face"
+    );
     assert_eq!(faces.face(), Face::Board);
 }
 
@@ -106,7 +116,9 @@ fn the_classic_face_keeps_its_own_menus_beside_the_face_menu() {
     let faces = window(&w, Face::Classic, None);
     assert_eq!(
         labels_of(&faces),
-        ["Task", "New", "View", "List", "Status", "Face", "Classic", "Board", "Day list"]
+        [
+            "Task", "New", "View", "List", "Status", "Face", "Classic", "Board", "Day list"
+        ]
     );
     assert!(faces.app().choose("view-status"));
     assert!(faces.app().choose("task-new"));
@@ -129,7 +141,10 @@ fn choosing_a_face_changes_it_and_the_menus_and_is_remembered() {
     assert_eq!(faces.face(), Face::Classic);
     assert_eq!(memory.load(), Face::Classic);
     assert_eq!(labels_of(&faces).first().map(String::as_str), Some("Task"));
-    assert!(faces.app().choose("view-list"), "the classic commands work again");
+    assert!(
+        faces.app().choose("view-list"),
+        "the classic commands work again"
+    );
 }
 
 #[test]
