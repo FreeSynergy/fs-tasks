@@ -38,7 +38,7 @@ jobs:
       - uses: FreeSynergy/fs-release/actions/typing-test@main
         with:
           app-binary: target/debug/fs-tasks
-          app-args: "--size 1000x640 --store /tmp/typing-test-tasks.db"
+          app-args: "--plan classic --size 1000x640 --store /tmp/typing-test-tasks.db"
           scenario: .github/typing-test/focus.sh
           name: fs-tasks
           layout: ${{ matrix.layout }}

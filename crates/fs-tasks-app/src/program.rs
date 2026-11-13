@@ -7,7 +7,9 @@ use std::sync::Arc;
 
 use crate::args::{Args, HELP, Plan, parse};
 use crate::day::Day;
-use crate::plan_view::{Board, Cache, Layout, Next, PlanSource, PlanSurface};
+use crate::face::{Face, Preference};
+use crate::faces::{FaceOptions, Faces};
+use crate::plan_view::{Board, Cache, Layout, Next, PlanSource};
 use crate::sample::by_name as sample_by_name;
 use crate::{TaskAdapter, export_all, import_file, labels, labels_next, screen_widget};
 use fs_components_app::{Status, WindowOptions, launch};
@@ -40,15 +42,28 @@ fn store_file(args: &crate::args::Args) -> Result<Option<std::path::PathBuf>, St
     if args.snapshot.is_some() || args.export.is_some() {
         return Ok(None);
     }
+    let dir = data_dir()
+        .ok_or("cannot find a data folder (HOME is not set); give --store <file>")?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    Ok(Some(dir.join("app.db")))
+}
+
+/// The folder of the program's own files: `$XDG_DATA_HOME/freesynergy/tasks`.
+fn data_dir() -> Option<std::path::PathBuf> {
     let base = std::env::var_os("XDG_DATA_HOME")
         .map(std::path::PathBuf::from)
         .or_else(|| {
             std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".local/share"))
-        })
-        .ok_or("cannot find a data folder (HOME is not set); give --store <file>")?;
-    let dir = base.join("freesynergy").join("tasks");
-    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-    Ok(Some(dir.join("app.db")))
+        })?;
+    Some(base.join("freesynergy").join("tasks"))
+}
+
+/// Where the choice of the face is kept. A picture or an export neither reads nor writes it.
+fn settings_file(args: &Args) -> Option<std::path::PathBuf> {
+    if args.snapshot.is_some() || args.export.is_some() {
+        return None;
+    }
+    data_dir().map(|dir| dir.join("settings.json"))
 }
 
 fn run(argv: &[String]) -> Result<(), String> {
@@ -129,15 +144,16 @@ fn show(
     status: Option<Status>,
     today: Day,
 ) -> Result<(), String> {
-    let widget = match args.plan {
-        Some(Plan::Board2 | Plan::Next2) => return show_board2(args, items, handle, today),
-        Some(plan) => plan_widget(plan, items, handle, today, args.snapshot.is_some()),
-        None => TasksWidget::new(Arc::new(TaskAdapter::new(items, handle)), labels()),
+    let app = match args.plan {
+        Some(plan @ (Plan::OldBoard | Plan::OldNext)) => {
+            let widget = plan_widget(plan, items, handle, today, args.snapshot.is_some());
+            if let Some(view) = args.view {
+                widget.with_state(|s| s.set_view(view));
+            }
+            screen_widget(widget).map_err(|e| e.to_string())?
+        }
+        _ => faces_window(args, items, handle, today)?,
     };
-    if let Some(view) = args.view {
-        widget.with_state(|s| s.set_view(view));
-    }
-    let app = screen_widget(widget).map_err(|e| e.to_string())?;
     app.set_status(status);
     let (width, height) = args.size;
     if let Some(file) = &args.snapshot {
@@ -173,9 +189,9 @@ fn plan_widget(
         );
     }
     let (layout, words, view): (Box<dyn Layout>, _, _) = match plan {
-        Plan::Board => (Box::new(Board), labels(), TaskView::Status),
-        Plan::Next => (Box::new(Next), labels_next(), TaskView::List),
-        Plan::Board2 | Plan::Next2 => unreachable!("drawn by show_board2"),
+        Plan::OldBoard => (Box::new(Board), labels(), TaskView::Status),
+        Plan::OldNext => (Box::new(Next), labels_next(), TaskView::List),
+        Plan::Classic | Plan::Board | Plan::Next => unreachable!("drawn by faces_window"),
     };
     let source = PlanSource::new(adapter, Arc::clone(&cache), layout);
     let widget = TasksWidget::new(Arc::new(source), words);
@@ -191,50 +207,28 @@ fn plan_widget(
     widget
 }
 
-/// The board drawn by the plan widgets: no workbench, the screen is the whole window.
-fn show_board2(
+/// The window with its three faces. It starts with the face `--plan` names (this time only), else with the one
+/// remembered, else with the default; a choice made in its menu is remembered.
+fn faces_window(
     args: &Args,
     items: Arc<dyn TaskItems>,
     handle: tokio::runtime::Handle,
     today: Day,
-) -> Result<(), String> {
-    let adapter = Arc::new(TaskAdapter::new(Arc::clone(&items), handle.clone()));
-    let cache = Cache::start(items, handle, today);
-    if args.snapshot.is_some() {
-        cache.wait(std::time::Duration::from_secs(600));
-    }
-    let screen = Arc::new(PlanSurface::new(
-        adapter,
-        Arc::clone(&cache),
-        args.plan == Some(Plan::Next2),
-    ));
-    if let Some(list) = &args.list {
-        screen.show_list(list);
-    }
-    if let Some(part) = &args.open {
-        cache.wait(std::time::Duration::from_secs(600));
-        screen.select_title(part);
-    }
-    let shell = fs_components_app::AppWidget::new(
-        crate::words::TITLE,
-        vec![fs_components_app::Screen::new(
-            "tasks",
-            crate::words::TITLE,
-            screen,
-        )],
-    )
-    .map_err(|e| e.to_string())?;
-    cache.on_change(fs_components_widgets::plan::redraw);
-    let (width, height) = args.size;
-    if let Some(file) = &args.snapshot {
-        shell
-            .picture(width, height, file)
-            .map_err(|e| e.to_string())?;
-        eprintln!("wrote {}", file.display());
-        return Ok(());
-    }
-    let mut options = WindowOptions::default();
-    options.width = width;
-    options.height = height;
-    launch(options, shell).map_err(|e| e.to_string())
+) -> Result<fs_components_app::AppWidget, String> {
+    let remember = settings_file(args).map(Preference::new);
+    let start = args
+        .plan
+        .and_then(Plan::face)
+        .or_else(|| remember.as_ref().map(Preference::load))
+        .unwrap_or(Face::DEFAULT);
+    let options = FaceOptions {
+        today,
+        wait: args.snapshot.is_some(),
+        list: args.list.clone(),
+        open: args.open.clone(),
+        view: args.view,
+        remember,
+    };
+    let faces = Faces::new(items, handle, start, options).map_err(|e| e.to_string())?;
+    Ok(faces.app().clone())
 }

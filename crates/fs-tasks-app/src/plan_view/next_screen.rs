@@ -198,6 +198,11 @@ impl PlanSurface {
         }
     }
 
+    /// Show the day list (`true`) or the board.
+    pub fn set_list(&self, list: bool) {
+        self.mode.set_list(list);
+    }
+
     /// Show the day list `list` (for a picture).
     pub fn show_list(&self, list: &str) {
         self.list.show(list);

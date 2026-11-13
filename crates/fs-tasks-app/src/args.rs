@@ -8,18 +8,34 @@ use fs_components_app::parse_size;
 use fs_components_workbenches::tasks::TaskView;
 
 use crate::day::Day;
+use crate::face::Face;
 
-/// The two plan views.
+/// What `--plan` can ask for: a face of the window, or one of the earlier plan views of the workbench.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Plan {
-    /// A: columns by status, cards.
+    /// The classic window (`--plan classic`).
+    Classic,
+    /// A, drawn by the plan widgets (`--plan board`, also `board2`).
     Board,
-    /// A, drawn by the plan widgets (`--plan board2`).
-    Board2,
-    /// B, drawn by the plan widgets (`--plan next2`).
-    Next2,
-    /// B: Today, Ready, Blocked.
+    /// B, drawn by the plan widgets (`--plan next`, also `next2`).
     Next,
+    /// The earlier board on the workbench (`--plan board1`): columns by status, cards.
+    OldBoard,
+    /// The earlier list on the workbench (`--plan next1`): Today, Ready, Blocked.
+    OldNext,
+}
+
+impl Plan {
+    /// The face this asks for; `None` for the earlier workbench views.
+    #[must_use]
+    pub fn face(self) -> Option<Face> {
+        match self {
+            Plan::Classic => Some(Face::Classic),
+            Plan::Board => Some(Face::Board),
+            Plan::Next => Some(Face::Day),
+            Plan::OldBoard | Plan::OldNext => None,
+        }
+    }
 }
 
 /// What was asked for on the command line.
@@ -111,11 +127,12 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
 
 fn plan(text: &str) -> Result<Plan, String> {
     match text {
-        "board" => Ok(Plan::Board),
-        "board2" => Ok(Plan::Board2),
-        "next2" => Ok(Plan::Next2),
-        "next" => Ok(Plan::Next),
-        other => Err(format!("--plan wants board or next, not {other}")),
+        "classic" => Ok(Plan::Classic),
+        "board" | "board2" => Ok(Plan::Board),
+        "next" | "next2" => Ok(Plan::Next),
+        "board1" => Ok(Plan::OldBoard),
+        "next1" => Ok(Plan::OldNext),
+        other => Err(format!("--plan wants classic, board or next, not {other}")),
     }
 }
 
@@ -140,9 +157,11 @@ pub const HELP: &str = "fs-tasks app: the window of the tasks program (options o
   --size <WxH>       window or picture size (default 1300x800)
   --view <list|status>
                      the view to start with (default list)
-  --plan <board|next>
-                     the board (columns by status, cards that say what blocks them) or \"what next\"
-                     (Today, Ready, Blocked); both read the readiness of the core
+  --plan <classic|board|next>
+                     the face to start with, this time only (not remembered): the classic window, the
+                     board (columns by status, cards that say what blocks them) or the day list
+                     (Today, Upcoming, Anytime, labels). Without it the window starts with the face
+                     chosen last in its menu \"Face\" (a new installation: the board)
   --sample <demo|chain:N>
                      put sample tasks in first (a small believable set, or a chain of N tasks)
   --today <YYYY-MM-DD>

@@ -12,6 +12,8 @@
 
 pub mod args;
 mod day;
+mod face;
+mod faces;
 pub mod plan_view;
 mod program;
 mod sample;
@@ -21,6 +23,8 @@ mod transfer;
 mod words;
 
 pub use day::Day;
+pub use face::{Face, Preference};
+pub use faces::{FaceOptions, Faces};
 pub use program::app_command;
 pub use sample::{by_name as sample_by_name, chain as sample_chain, demo as sample_demo};
 pub use source::{TaskAdapter, apply_draft, is_marked, is_series};

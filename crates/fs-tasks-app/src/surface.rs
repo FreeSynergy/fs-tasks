@@ -41,7 +41,7 @@ pub fn screen_widget(widget: TasksWidget) -> Result<AppWidget, AppError> {
 
 /// What `widget` can do from a menu: the compact variant has no second view and changes nothing, and a
 /// source that cannot create is not offered New.
-fn menus_of(widget: &TasksWidget) -> Vec<Menu> {
+pub(crate) fn menus_of(widget: &TasksWidget) -> Vec<Menu> {
     let (variant, can_create) = widget.with_state(|s| (s.variant(), s.can_create()));
     let mut menus = Vec::new();
     if can_create {
@@ -60,7 +60,7 @@ fn menus_of(widget: &TasksWidget) -> Vec<Menu> {
 }
 
 /// One menu entry: runs on the interface thread with no lock of the shell held.
-fn run(widget: &TasksWidget, id: &str) {
+pub(crate) fn run(widget: &TasksWidget, id: &str) {
     match id {
         NEW => {
             widget.with_state(|s| {
