@@ -75,3 +75,16 @@ pub(crate) fn row_of(entry: &TaskEntry) -> TaskRow {
     row.revision = Some(revision_of(entry));
     row
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_search_field_finds_a_project_label() {
+        let mut task = Task::new("Build");
+        task.label("project:demo");
+        assert!(matches(&task, "project:demo"));
+        assert!(!matches(&task, "project:other"));
+    }
+}

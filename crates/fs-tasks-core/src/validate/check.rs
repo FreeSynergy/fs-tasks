@@ -51,7 +51,10 @@ pub fn issues(t: &Task) -> Vec<Issue> {
     {
         c.bad("/progressUpdated", "not a UTCDateTime");
     }
-    for (path, what) in crate::model::exec_issues(t) {
+    for (path, what) in crate::model::exec_issues(t)
+        .into_iter()
+        .chain(crate::model::work_issues(t))
+    {
         c.bad(&path, what);
     }
     shared(&mut c, t);

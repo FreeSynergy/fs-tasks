@@ -42,8 +42,9 @@ fn serve_help_is_the_servers_own() {
 
 #[test]
 fn a_command_reaches_a_missing_server_with_exit_1() {
-    let dir = std::env::temp_dir().join("fs-tasks-no-such.sock");
-    let (code, _, err) = run(&["--socket", dir.to_str().unwrap(), "list"]);
+    // Nobody answers and the server cannot be started there (`/dev/null` is no folder): exit 1 at once, and no
+    // server of the test is left running on the real data folder.
+    let (code, _, err) = run(&["--socket", "/dev/null/no-such.sock", "list"]);
     assert_eq!(code, Some(1));
     assert!(err.contains("fs-tasks:"), "{err}");
 }

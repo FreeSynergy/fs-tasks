@@ -15,6 +15,7 @@ mod edit_if;
 mod errors;
 mod facts;
 mod feed;
+mod host;
 mod items_service;
 mod paging;
 mod program;
@@ -22,5 +23,6 @@ mod tasks_service;
 mod wire;
 mod wire_caps;
 
+pub use host::{Hosted, host};
 pub use program::serve_command;
 pub use tasks_service::TasksServer;

@@ -7,28 +7,37 @@ use fs_interfaces::common_capnp;
 use fs_interfaces::rpc::{read_envelope, write_uuid};
 use fs_interfaces::tasks_capnp::{items, task, tasks};
 use fs_objects::ObjectId;
-use serde_json::{Value, json};
 
 use crate::args::Command;
-use crate::show::{line, pretty};
+use crate::fail::Failure;
+use crate::make::{add, done, list};
+use crate::policy::{Policy, data_dir};
+use crate::show::pretty;
+use crate::work::{id_of, run_work};
 
-type Out = Result<String, String>;
+type Out = Result<String, Failure>;
 
-fn failed(e: &capnp::Error) -> String {
+pub(crate) fn failed(e: &capnp::Error) -> String {
     e.to_string()
 }
 
-fn id_of(text: &str) -> Result<ObjectId, String> {
-    text.trim()
-        .parse()
-        .map_err(|_| format!("{text:?} is not a task id"))
-}
-
-/// Run `command`; the text to print.
+/// Run `command` with the check settings of this user; the text to print.
 ///
 /// # Errors
-/// The server refused (its problem text), or an id or a file could not be read.
+/// The server refused (its problem text), or an id or a file could not be read; a conflict says so.
 pub async fn run(root: &tasks::Client, command: Command) -> Out {
+    run_with(root, command, &Policy::load_from(data_dir().as_deref())).await
+}
+
+/// Like [`run`], with the check settings given (or the reason they cannot be read: then no check runs).
+///
+/// # Errors
+/// As [`run`].
+pub async fn run_with(
+    root: &tasks::Client,
+    command: Command,
+    policy: &Result<Policy, String>,
+) -> Out {
     let items = root
         .items_request()
         .send()
@@ -40,18 +49,14 @@ pub async fn run(root: &tasks::Client, command: Command) -> Out {
         .map_err(|e| failed(&e))?;
     match command {
         Command::Capabilities => capabilities(root).await,
-        Command::List => list(&items).await,
+        Command::List(query) => list(&items, &query).await,
         Command::Show(id) => show(&items, id_of(&id)?).await,
-        Command::Add {
-            title,
-            due,
-            zone,
-            label,
-        } => add(&items, &title, due, zone, label).await,
-        Command::Done(id) => done(&items, id_of(&id)?).await,
+        Command::Add(new) => add(&items, new, policy).await,
+        Command::Done(id) => done(&items, id_of(&id)?, policy).await,
         Command::Delete(id) => delete(&items, id_of(&id)?).await,
         Command::Export => export(&items).await,
         Command::Import(path) => import(&items, &path).await,
+        Command::Work { work, json } => run_work(&items, work, json, policy).await,
     }
 }
 
@@ -79,7 +84,7 @@ async fn capabilities(root: &tasks::Client) -> Out {
     Ok(ids.join("\n"))
 }
 
-fn one(t: task::Reader<'_>) -> Result<(ObjectId, String, u64), String> {
+pub(crate) fn one(t: task::Reader<'_>) -> Result<(ObjectId, String, u64), String> {
     let id = read_envelope(t.get_envelope().map_err(|e| failed(&e))?)
         .map_err(|e| failed(&e))?
         .id;
@@ -92,7 +97,7 @@ fn one(t: task::Reader<'_>) -> Result<(ObjectId, String, u64), String> {
 }
 
 /// Every task, page by page: id, JSCalendar text, revision.
-async fn all(items: &items::Client) -> Result<Vec<(ObjectId, String, u64)>, String> {
+pub(crate) async fn all(items: &items::Client) -> Result<Vec<(ObjectId, String, u64)>, String> {
     let mut found = vec![];
     let mut cursor: Vec<u8> = vec![];
     loop {
@@ -120,16 +125,10 @@ async fn all(items: &items::Client) -> Result<Vec<(ObjectId, String, u64)>, Stri
     }
 }
 
-async fn list(items: &items::Client) -> Out {
-    let lines: Vec<String> = all(items)
-        .await?
-        .iter()
-        .map(|(id, text, _)| line(&id.to_string(), text))
-        .collect();
-    Ok(lines.join("\n"))
-}
-
-async fn fetch(items: &items::Client, id: ObjectId) -> Result<(String, u64), String> {
+pub(crate) async fn fetch(
+    items: &items::Client,
+    id: ObjectId,
+) -> Result<(String, u64), String> {
     let mut req = items.get_request();
     write_uuid(req.get().init_id(), Some(id.as_uuid()));
     let answer = req.send().promise.await.map_err(|e| failed(&e))?;
@@ -143,50 +142,6 @@ async fn fetch(items: &items::Client, id: ObjectId) -> Result<(String, u64), Str
 
 async fn show(items: &items::Client, id: ObjectId) -> Out {
     Ok(pretty(&fetch(items, id).await?.0))
-}
-
-async fn add(
-    items: &items::Client,
-    title: &str,
-    due: Option<String>,
-    zone: Option<String>,
-    label: Option<String>,
-) -> Out {
-    let mut task = json!({
-        "@type": "Task", "version": "2.0",
-        "uid": ObjectId::new().to_string(), "title": title,
-    });
-    if let Some(due) = due {
-        task["due"] = Value::String(due);
-        task["timeZone"] = Value::String(zone.unwrap_or_else(|| "Etc/UTC".into()));
-    }
-    if let Some(label) = label {
-        task["keywords"] = json!({ label: true });
-    }
-    let mut req = items.create_request();
-    req.get().set_jscalendar(task.to_string().as_str());
-    let answer = req.send().promise.await.map_err(|e| failed(&e))?;
-    let (id, text, _) = one(answer
-        .get()
-        .and_then(fs_interfaces::tasks_capnp::items::create_results::Reader::get_task)
-        .map_err(|e| failed(&e))?)?;
-    Ok(line(&id.to_string(), &text))
-}
-
-async fn done(items: &items::Client, id: ObjectId) -> Out {
-    let (text, revision) = fetch(items, id).await?;
-    let mut v: Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-    v["progress"] = Value::String("completed".into());
-    let mut req = items.edit_if_request();
-    write_uuid(req.get().init_id(), Some(id.as_uuid()));
-    req.get().set_revision(revision);
-    req.get().set_jscalendar(v.to_string().as_str());
-    let answer = req.send().promise.await.map_err(|e| failed(&e))?;
-    let (id, text, _) = one(answer
-        .get()
-        .and_then(fs_interfaces::tasks_capnp::items::edit_if_results::Reader::get_task)
-        .map_err(|e| failed(&e))?)?;
-    Ok(line(&id.to_string(), &text))
 }
 
 async fn delete(items: &items::Client, id: ObjectId) -> Out {
@@ -206,12 +161,12 @@ async fn export(items: &items::Client) -> Out {
         write_uuid(list.reborrow().get(i), Some(id.as_uuid()));
     }
     let answer = req.send().promise.await.map_err(|e| failed(&e))?;
-    answer
+    Ok(answer
         .get()
         .and_then(items::export_ics_results::Reader::get_text)
         .map_err(|e| failed(&e))?
         .to_string()
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?)
 }
 
 async fn import(items: &items::Client, path: &std::path::Path) -> Out {
@@ -243,7 +198,7 @@ async fn import(items: &items::Client, path: &std::path::Path) -> Out {
         Ok(summary)
     } else {
         // Something was refused: the reasons go to stderr with a non-zero exit, so a script sees it.
-        Err(format!("{summary}\n{}", failures.join("\n")))
+        Err(format!("{summary}\n{}", failures.join("\n")).into())
     }
 }
 

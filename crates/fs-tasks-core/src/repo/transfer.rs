@@ -73,6 +73,8 @@ impl TaskRepo {
         report: &mut ImportReport,
     ) -> Result<()> {
         task.normalise();
+        // Whatever the text said about its own origin, it came in from outside: a check command in it never runs.
+        task.mark_imported();
         if task.uid.is_empty() {
             report.failed.push("component without uid".into());
             return Ok(());

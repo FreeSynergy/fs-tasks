@@ -21,6 +21,18 @@ Version 0.0.7 (unreleased until tagged). Latest tag: `v0.0.6`.
 
 **Not done:** the window calls the core in process, not over the socket, so it has no version handshake with the server yet; that comes with a window over RPC.
 
+## Work board
+
+Workers (agents, API runs) work through `fs-tasks`; people see it on the Board. No server by hand: the first command starts it.
+
+```
+fs-tasks next --as claude-1 --project demo --json    # take the first ready task (exit 3 = claim lost)
+fs-tasks status <id> in-progress
+fs-tasks status <id> done --note 'built' --report out.md --cost 0.42
+```
+
+`claim`, `release`, `note`, `check`, `list --project --status`, `add --objective CMD`: see `docs/worker-protocol.md` (EN + DE). A check command is code: it runs only for tasks made on this machine by a trusted actor, for allowed programs, without a shell. One process holds the store; the window answers the command line while it is open.
+
 ## Notes for 0.0.7
 
 - **Two new faces for the window** (Board and Day list, on `fs-components` v0.0.13), chosen in the menu **Face**; the choice is kept in `settings.json` in the data folder. What is not there: moving a card with the mouse (use "Move to" in the panel), and no one has run it on Windows. Details and limits in DESIGN.md, "Faces (frontends)".

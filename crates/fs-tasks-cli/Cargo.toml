@@ -14,12 +14,13 @@ name = "fs_tasks_cli"
 [dependencies]
 fs-interfaces = { git = "https://github.com/FreeSynergy/fs-interfaces", tag = "v0.0.19", features = ["rpc"] }
 fs-objects = { git = "https://github.com/FreeSynergy/fs-objects", tag = "v0.0.1" }
+fs-tasks-core = { path = "../fs-tasks-core", features = ["contract"] }
 capnp = "0.27"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 serde_json = "1"
-tokio = { version = "1", features = ["rt", "macros"] }
+tokio = { version = "1", features = ["rt", "macros", "time"] }
 
 [dev-dependencies]
-fs-tasks-core = { path = "../fs-tasks-core", features = ["contract"] }
 fs-tasks-server = { path = "../fs-tasks-server" }
 tempfile = "3"
 tokio = { version = "1", features = ["full"] }

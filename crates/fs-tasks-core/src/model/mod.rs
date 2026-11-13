@@ -11,6 +11,7 @@ mod gap;
 mod ops;
 mod relation;
 mod task;
+mod work;
 
 pub use actor::{
     ACTOR_KEY, ACTOR_TYPE_KEY, AI_KEY, ActorType, MAX_ACTOR_IRI, MAX_ACTOR_NAME, MAX_CLAIM_HOURS,
@@ -29,3 +30,7 @@ pub use gap::{GAP_KEY, MAX_GAP_DAYS, parse_gap};
 pub use ops::TASK_STATUS_KEY;
 pub use relation::Relation;
 pub use task::Task;
+pub use work::{
+    CHECK_KEY, CHECKED_KEY, CREATED_BY_KEY, MAX_NOTE_BYTES, NOTE_KEY, ORIGIN_IMPORTED,
+    ORIGIN_KEY, ORIGIN_LOCAL, work_issues,
+};

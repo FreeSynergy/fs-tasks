@@ -1,48 +1,18 @@
 //! The commands against a real server on a real socket (in this process).
 
-use std::sync::Arc;
+mod common;
 
-use fs_interfaces::rpc::{bind_socket, connect, serve};
-use fs_interfaces::tasks_capnp::tasks;
-use fs_objects::{Store, TursoStore};
-use fs_tasks_cli::{Command, run};
-use fs_tasks_core::TaskRepo;
-use fs_tasks_server::TasksServer;
-
-async fn with_cli<F, Fut>(test: F)
-where
-    F: FnOnce(tasks::Client) -> Fut,
-    Fut: Future<Output = ()>,
-{
-    let local = tokio::task::LocalSet::new();
-    local
-        .run_until(async {
-            let store: Arc<dyn Store> = Arc::new(TursoStore::open_in_memory().await.unwrap());
-            let repo = Arc::new(TaskRepo::new(store, "https://local.invalid/users/owner"));
-            let dir = tempfile::tempdir().unwrap();
-            let path = dir.path().join("tasks.sock");
-            let root = TasksServer::new(repo.clone(), repo).into_client();
-            let bound = bind_socket(&path).await.unwrap();
-            let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
-            let serving = tokio::task::spawn_local(serve(bound, root.client, async {
-                let _ = stopped.await;
-            }));
-            let connection = connect::<tasks::Client>(&path).await.unwrap();
-            test(connection.client.clone()).await;
-            drop(connection);
-            let _ = stop.send(());
-            let _ = serving.await;
-        })
-        .await;
-}
+use common::with_cli;
+use fs_tasks_cli::{Command, NewTask, Query, run};
 
 fn add(title: &str) -> Command {
-    Command::Add {
+    Command::Add(NewTask {
         title: title.into(),
         due: Some("2026-12-01T10:00:00".into()),
         zone: Some("Europe/Berlin".into()),
         label: Some("work".into()),
-    }
+        ..NewTask::default()
+    })
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -52,7 +22,7 @@ async fn add_list_show_done_delete() {
         let id = added.split("  ").next().unwrap().to_string();
         assert!(added.ends_with("  Plan"), "{added}");
 
-        let listed = run(&root, Command::List).await.unwrap();
+        let listed = run(&root, Command::List(Query::default())).await.unwrap();
         assert_eq!(listed, added, "one task, the same line");
 
         let shown = run(&root, Command::Show(id.clone())).await.unwrap();
@@ -64,7 +34,7 @@ async fn add_list_show_done_delete() {
 
         let gone = run(&root, Command::Delete(id.clone())).await.unwrap();
         assert_eq!(gone, format!("deleted {id}"));
-        assert_eq!(run(&root, Command::List).await.unwrap(), "");
+        assert_eq!(run(&root, Command::List(Query::default())).await.unwrap(), "");
         let missing = run(&root, Command::Show(id)).await;
         assert!(missing.is_err());
     })
@@ -103,11 +73,11 @@ async fn an_import_file_that_cannot_be_read_is_an_error_naming_it() {
         let dir = tempfile::tempdir().unwrap();
         let missing = dir.path().join("nope.txt");
         let got = run(&root, Command::Import(missing.clone())).await;
-        assert!(got.unwrap_err().contains("nope.txt"));
+        assert!(got.unwrap_err().text.contains("nope.txt"));
         let binary = dir.path().join("bin.dat");
         std::fs::write(&binary, [0xff, 0xfe, 0x00]).unwrap();
         let got = run(&root, Command::Import(binary)).await;
-        assert!(got.unwrap_err().contains("not UTF-8"));
+        assert!(got.unwrap_err().text.contains("not UTF-8"));
     })
     .await;
 }
