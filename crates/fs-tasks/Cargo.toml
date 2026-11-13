@@ -16,6 +16,8 @@ path = "src/main.rs"
 default = ["gui"]
 # The window. Servers and machines without a screen build with --no-default-features.
 gui = ["dep:fs-tasks-app"]
+# The text of the fields can be read by the typing test (debug builds only, see fs-tasks-app).
+test-access = ["gui", "fs-tasks-app/test-access"]
 
 [dependencies]
 fs-tasks-server = { path = "../fs-tasks-server" }

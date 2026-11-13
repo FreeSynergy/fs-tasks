@@ -7,6 +7,21 @@ use std::path::PathBuf;
 use fs_components_app::parse_size;
 use fs_components_workbenches::tasks::TaskView;
 
+use crate::day::Day;
+
+/// The two plan views.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Plan {
+    /// A: columns by status, cards.
+    Board,
+    /// A, drawn by the plan widgets (`--plan board2`).
+    Board2,
+    /// B, drawn by the plan widgets (`--plan next2`).
+    Next2,
+    /// B: Today, Ready, Blocked.
+    Next,
+}
+
 /// What was asked for on the command line.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Args {
@@ -24,6 +39,16 @@ pub struct Args {
     pub size: (u32, u32),
     /// The view to start with.
     pub view: Option<TaskView>,
+    /// Show the plan view: the board or "what next".
+    pub plan: Option<Plan>,
+    /// Put sample tasks in first: `demo` or `chain:N`.
+    pub sample: Option<String>,
+    /// The day that is "today" for the plan views (default: the system's).
+    pub today: Option<Day>,
+    /// Choose the task whose title holds this text (a picture of the open panel).
+    pub open: Option<String>,
+    /// The day list to show first (`--list today|upcoming|...`).
+    pub list: Option<String>,
     /// `--help` was given.
     pub help: bool,
 }
@@ -38,6 +63,11 @@ impl Default for Args {
             snapshot: None,
             size: (1300, 800),
             view: None,
+            plan: None,
+            sample: None,
+            today: None,
+            open: None,
+            list: None,
             help: false,
         }
     }
@@ -64,6 +94,11 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
             "--snapshot" => out.snapshot = Some(PathBuf::from(value("--snapshot")?)),
             "--size" => out.size = parse_size(&value("--size")?)?,
             "--view" => out.view = Some(view(&value("--view")?)?),
+            "--plan" => out.plan = Some(plan(&value("--plan")?)?),
+            "--open" => out.open = Some(value("--open")?),
+            "--list" => out.list = Some(value("--list")?),
+            "--sample" => out.sample = Some(value("--sample")?),
+            "--today" => out.today = Some(Day::parse(&value("--today")?)?),
             "-h" | "--help" => out.help = true,
             other => return Err(format!("unknown option {other}")),
         }
@@ -72,6 +107,16 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
         return Err("--export-sensitive needs --export".into());
     }
     Ok(out)
+}
+
+fn plan(text: &str) -> Result<Plan, String> {
+    match text {
+        "board" => Ok(Plan::Board),
+        "board2" => Ok(Plan::Board2),
+        "next2" => Ok(Plan::Next2),
+        "next" => Ok(Plan::Next),
+        other => Err(format!("--plan wants board or next, not {other}")),
+    }
 }
 
 fn view(text: &str) -> Result<TaskView, String> {
@@ -94,4 +139,11 @@ pub const HELP: &str = "fs-tasks app: the window of the tasks program (options o
   --snapshot <png>   draw a picture instead of opening a window
   --size <WxH>       window or picture size (default 1300x800)
   --view <list|status>
-                     the view to start with (default list)";
+                     the view to start with (default list)
+  --plan <board|next>
+                     the board (columns by status, cards that say what blocks them) or \"what next\"
+                     (Today, Ready, Blocked); both read the readiness of the core
+  --sample <demo|chain:N>
+                     put sample tasks in first (a small believable set, or a chain of N tasks)
+  --today <YYYY-MM-DD>
+                     the day that is today for --plan (default: the system's, UTC)";

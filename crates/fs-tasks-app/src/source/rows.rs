@@ -21,7 +21,7 @@ pub(super) fn due_text(task: &Task) -> String {
 }
 
 /// The labels in a stable order: those switched on.
-pub(super) fn label_list(task: &Task) -> Vec<String> {
+pub(crate) fn label_list(task: &Task) -> Vec<String> {
     task.keywords
         .iter()
         .filter(|(_, on)| **on)
@@ -34,7 +34,7 @@ pub(super) fn priority_text(task: &Task) -> String {
 }
 
 /// Does `term` (in lower case) occur in what the person reads of this task?
-pub(super) fn matches(task: &Task, term: &str) -> bool {
+pub(crate) fn matches(task: &Task, term: &str) -> bool {
     let has = |text: &str| text.to_lowercase().contains(term);
     term.is_empty()
         || has(&task.display_title())
@@ -43,12 +43,12 @@ pub(super) fn matches(task: &Task, term: &str) -> bool {
 }
 
 /// Is it still to be done?
-pub(super) fn is_open(task: &Task) -> bool {
+pub(crate) fn is_open(task: &Task) -> bool {
     matches!(task.effective_progress(), "needs-action" | "in-process")
 }
 
 /// The row of a stored task.
-pub(super) fn row_of(entry: &TaskEntry) -> TaskRow {
+pub(crate) fn row_of(entry: &TaskEntry) -> TaskRow {
     let task = &entry.task;
     let (title, column) = (task.display_title(), task.effective_progress());
     let (due, priority) = (due_text(task), priority_text(task));

@@ -11,14 +11,19 @@
 #![allow(clippy::must_use_candidate, clippy::module_name_repetitions)]
 
 pub mod args;
+mod day;
+pub mod plan_view;
 mod program;
+mod sample;
 mod source;
 mod surface;
 mod transfer;
 mod words;
 
+pub use day::Day;
 pub use program::app_command;
+pub use sample::{by_name as sample_by_name, chain as sample_chain, demo as sample_demo};
 pub use source::{TaskAdapter, apply_draft, is_marked, is_series};
 pub use surface::{TasksScreen, app_widget, screen_widget};
 pub use transfer::{ExportReport, ImportSummary, export_all, import_file};
-pub use words::labels;
+pub use words::{labels, labels_next};
