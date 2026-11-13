@@ -13,13 +13,20 @@ fn main() {
 }
 
 /// Options only the window has; the command line does not know them.
-const WINDOW_OPTIONS: [&str; 6] = [
+/// Kept in step with `fs-tasks-app/src/args.rs` (all its options except `-h`/`--help`, which the CLI answers too).
+const WINDOW_OPTIONS: [&str; 12] = [
     "--size",
     "--snapshot",
     "--store",
     "--view",
+    "--plan",
+    "--open",
+    "--list",
+    "--sample",
+    "--today",
     "--import",
     "--export",
+    "--export-sensitive",
 ];
 
 fn dispatch(words: &[String]) -> i32 {
@@ -35,9 +42,16 @@ fn dispatch(words: &[String]) -> i32 {
         }
         None => window(&[]),
         // The window's own options may stand without the word `app` (`fs-tasks --size 1000x640`).
-        Some((first, _)) if WINDOW_OPTIONS.contains(&first.as_str()) => window(words),
+        Some(_) if routes_to_window(words) => window(words),
         Some(_) => fs_tasks_cli::cli_command(words),
     }
+}
+
+/// Whether the first word is an option of the window (then the word `app` may be left out).
+fn routes_to_window(words: &[String]) -> bool {
+    words
+        .first()
+        .is_some_and(|first| WINDOW_OPTIONS.contains(&first.as_str()))
 }
 
 #[cfg(feature = "gui")]
@@ -53,5 +67,41 @@ fn window(args: &[String]) -> i32 {
     } else {
         eprintln!("fs-tasks: this build has no window (feature gui)");
         2
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::routes_to_window;
+
+    fn words(list: &[&str]) -> Vec<String> {
+        list.iter().map(|w| (*w).to_string()).collect()
+    }
+
+    #[test]
+    fn every_window_option_as_first_word_goes_to_the_window() {
+        for option in super::WINDOW_OPTIONS {
+            assert!(routes_to_window(&words(&[option, "x"])), "{option}");
+        }
+    }
+
+    #[test]
+    fn the_plan_option_of_the_typing_test_goes_to_the_window() {
+        let args = words(&[
+            "--plan",
+            "classic",
+            "--size",
+            "1000x640",
+            "--store",
+            "x.db",
+        ]);
+        assert!(routes_to_window(&args));
+    }
+
+    #[test]
+    fn commands_and_the_command_lines_options_stay_with_the_cli() {
+        for args in [&["list"][..], &["add", "x"], &["--socket", "s", "list"], &[]] {
+            assert!(!routes_to_window(&words(args)), "{args:?}");
+        }
     }
 }

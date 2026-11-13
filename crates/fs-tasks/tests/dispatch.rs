@@ -56,6 +56,14 @@ fn without_the_gui_the_bare_command_prints_help() {
     assert!(out.contains("fs-tasks serve"), "{out}");
 }
 
+#[cfg(not(feature = "gui"))]
+#[test]
+fn the_plan_option_reaches_the_window_not_the_command_line() {
+    let (code, _, err) = run(&["--plan", "classic", "--size", "1000x640", "--store", "x.db"]);
+    assert_eq!(code, Some(2));
+    assert!(err.contains("no window"), "{err}");
+}
+
 #[test]
 fn the_version_is_the_name_and_the_package_version_with_exit_0() {
     for flag in ["--version", "-V"] {
