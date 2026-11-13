@@ -141,3 +141,31 @@ fn a_window_without_a_server_starts_it_and_the_server_stays_for_the_others() {
     snapshot(dir.path(), "c.png");
     assert_eq!(servers(dir.path()).len(), 1);
 }
+
+#[test]
+fn two_windows_and_two_command_lines_starting_at_once_start_exactly_one_server() {
+    let dir = tempfile::tempdir().unwrap();
+    let _stop = Cleanup(dir.path());
+    let path = dir.path().to_path_buf();
+    let threads: Vec<_> = (0..4)
+        .map(|i| {
+            let path = path.clone();
+            std::thread::spawn(move || {
+                if i % 2 == 0 {
+                    snapshot(&path, &format!("w{i}.png"));
+                } else {
+                    let out = run(&path, &["add", &format!("Task {i}")]);
+                    assert!(
+                        out.status.success(),
+                        "{}",
+                        String::from_utf8_lossy(&out.stderr)
+                    );
+                }
+            })
+        })
+        .collect();
+    for t in threads {
+        t.join().unwrap();
+    }
+    assert_eq!(servers(dir.path()).len(), 1, "exactly one server");
+}

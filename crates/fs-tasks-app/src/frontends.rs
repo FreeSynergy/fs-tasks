@@ -49,6 +49,7 @@ struct Inner {
     options: FrontendOptions,
     classic: TasksWidget,
     plan: OnceLock<Arc<PlanSurface>>,
+    cache: OnceLock<Arc<Cache>>,
     frontend: Mutex<Frontend>,
 }
 
@@ -65,6 +66,7 @@ impl Inner {
                 self.handle.clone(),
                 self.options.today,
             );
+            let _ = self.cache.set(Arc::clone(&cache));
             if self.options.wait {
                 cache.wait(FIRST_READING);
             }
@@ -156,6 +158,7 @@ impl Frontends {
             options,
             classic,
             plan: OnceLock::new(),
+            cache: OnceLock::new(),
             frontend: Mutex::new(start),
         });
         inner.show(start);
@@ -181,6 +184,11 @@ impl Frontends {
     /// The shell to draw or launch.
     pub fn app(&self) -> &AppWidget {
         &self.app
+    }
+
+    /// The reading of the store behind Board and Day list, once one of them has been shown (what they display).
+    pub fn cache(&self) -> Option<Arc<Cache>> {
+        self.inner.cache.get().cloned()
     }
 
     /// The frontend that is shown now.
