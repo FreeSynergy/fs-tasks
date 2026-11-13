@@ -36,7 +36,7 @@ fn is_client(args: &Args) -> bool {
 
 /// The data folder of the program: `$XDG_DATA_HOME/freesynergy/tasks`.
 pub(crate) fn data_dir() -> Option<PathBuf> {
-    crate::face::data_dir_in(std::env::var_os("XDG_DATA_HOME"), std::env::var_os("HOME"))
+    crate::frontend::data_dir_in(std::env::var_os("XDG_DATA_HOME"), std::env::var_os("HOME"))
 }
 
 /// Up to 0.0.7 the window kept its tasks in `app.db`; the server keeps them in `objects.db`. A window that finds

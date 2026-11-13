@@ -50,7 +50,7 @@ pub(crate) mod menu {
     pub const VIEW: &str = "View";
     pub const LIST: &str = "List";
     pub const STATUS: &str = "Status";
-    pub const FACE: &str = "Face";
+    pub const FRONTEND: &str = "Frontend";
 }
 
 /// Headings and labels of what is shown about a task.

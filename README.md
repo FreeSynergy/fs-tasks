@@ -16,7 +16,7 @@ Version 0.0.7 (unreleased until tagged). Latest tag: `v0.0.6`.
 - Refuse an overwrite when someone else changed the task meanwhile (compare-and-set).
 - Tasks marked sensitive are left out of exports unless you release them by name.
 - A small server that offers all of this over a local socket.
-- A window with three faces, chosen in its menu **Face** and remembered: **Board** (columns by status, cards that say what blocks them; the start for a new installation), **Day list** (Today, Upcoming, Anytime, Someday, Logbook, your labels; tick a box to finish) and **Classic** (the first window: a list and a status view, search, create, edit, delete). Import and export work in all of them. `fs-tasks --plan classic|board|next` starts with one face this time only.
+- A window with three frontends, chosen in its menu **Frontend** and remembered: **Board** (columns by status, cards that say what blocks them; the start for a new installation), **Day list** (Today, Upcoming, Anytime, Someday, Logbook, your labels; tick a box to finish) and **Classic** (the first window: a list and a status view, search, create, edit, delete). Import and export work in all of them. `fs-tasks --plan classic|board|next` starts with one frontend this time only.
 - The calendar already shows tasks through this interface.
 
 **Not done:** the window calls the core in process, not over the socket, so it has no version handshake with the server yet; that comes with a window over RPC.
@@ -35,7 +35,7 @@ fs-tasks status <id> done --note 'built' --report out.md --cost 0.42
 
 ## Notes for 0.0.7
 
-- **Two new faces for the window** (Board and Day list, on `fs-components` v0.0.13), chosen in the menu **Face**; the choice is kept in `settings.json` in the data folder. What is not there: moving a card with the mouse (use "Move to" in the panel), and no one has run it on Windows. Details and limits in DESIGN.md, "Faces (frontends)".
+- **Two new frontends for the window** (Board and Day list, on `fs-components` v0.0.13), chosen in the menu **Frontend**; the choice is kept in `settings.json` in the data folder. What is not there: moving a card with the mouse (use "Move to" in the panel), and no one has run it on Windows. Details and limits in DESIGN.md, "Frontends".
 - **Comments do not live in the tasks program** (decided 2026-11-12): they belong to the comment topic (draft in `fs-interfaces`, target chosen by a setting, shown by the messages workbench) and refer to the task by its id. The tasks core has no comments of its own; the `COMMENT` lines of an iCalendar `VTODO` stay in the task as they were read and go out again unchanged.
 - **Boards** (core): a board is its own object with columns (name, limit, the progress values it stands for), the order of the cards in each column, and an optional label that says which tasks are on it. A task can be on several boards. Without a place of its own a card stands in the column its progress names. A column limit is only reported by the layout, a full column never refuses a card.
 - **Actors as assignees:** `assign_actor` assigns a person, an application or a service by its actor IRI (`freesynergy.net:actor`, `freesynergy.net:actorType`); it exports as an attendee of type `RESOURCE` (non-human) or `INDIVIDUAL`, and `tasks` can be asked for what is assigned to an actor.

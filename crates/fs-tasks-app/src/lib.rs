@@ -12,8 +12,8 @@
 
 pub mod args;
 mod day;
-mod face;
-mod faces;
+mod frontend;
+mod frontends;
 mod open;
 pub mod plan_view;
 mod program;
@@ -24,8 +24,8 @@ mod transfer;
 mod words;
 
 pub use day::Day;
-pub use face::{Face, Preference, data_dir_in};
-pub use faces::{FaceOptions, Faces};
+pub use frontend::{Frontend, Preference, data_dir_in};
+pub use frontends::{FrontendOptions, Frontends};
 pub use open::{Opened, open};
 pub use program::app_command;
 pub use sample::{by_name as sample_by_name, chain as sample_chain, demo as sample_demo};

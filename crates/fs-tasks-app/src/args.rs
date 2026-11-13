@@ -8,9 +8,9 @@ use fs_components_app::parse_size;
 use fs_components_workbenches::tasks::TaskView;
 
 use crate::day::Day;
-use crate::face::Face;
+use crate::frontend::Frontend;
 
-/// What `--plan` can ask for: a face of the window, or one of the earlier plan views of the workbench.
+/// What `--plan` can ask for: a frontend of the window, or one of the earlier plan views of the workbench.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Plan {
     /// The classic window (`--plan classic`).
@@ -26,13 +26,13 @@ pub enum Plan {
 }
 
 impl Plan {
-    /// The face this asks for; `None` for the earlier workbench views.
+    /// The frontend this asks for; `None` for the earlier workbench views.
     #[must_use]
-    pub fn face(self) -> Option<Face> {
+    pub fn frontend(self) -> Option<Frontend> {
         match self {
-            Plan::Classic => Some(Face::Classic),
-            Plan::Board => Some(Face::Board),
-            Plan::Next => Some(Face::Day),
+            Plan::Classic => Some(Frontend::Classic),
+            Plan::Board => Some(Frontend::Board),
+            Plan::Next => Some(Frontend::Day),
             Plan::OldBoard | Plan::OldNext => None,
         }
     }
@@ -165,10 +165,10 @@ pub const HELP: &str = "fs-tasks app: the window of the tasks program (options o
   --view <list|status>
                      the view to start with (default list)
   --plan <classic|board|next>
-                     the face to start with, this time only (not remembered): the classic window, the
+                     the frontend to start with, this time only (not remembered): the classic window, the
                      board (columns by status, cards that say what blocks them) or the day list
-                     (Today, Upcoming, Anytime, labels). Without it the window starts with the face
-                     chosen last in its menu \"Face\" (a new installation: the board)
+                     (Today, Upcoming, Anytime, labels). Without it the window starts with the frontend
+                     chosen last in its menu \"Frontend\" (a new installation: the board)
   --sample <demo|chain:N>
                      put sample tasks in first (a small believable set, or a chain of N tasks)
   --today <YYYY-MM-DD>

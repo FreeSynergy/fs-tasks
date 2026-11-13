@@ -1,7 +1,7 @@
 # Worker protocol / Arbeiter-Protokoll
 
 A worker (an agent, an API run) takes a task, shows that it is working, and reports when done. People and the
-strategy see it on the board (window, face *Board*): columns *Needs action / In progress / Completed / Failed*.
+strategy see it on the board (window, frontend *Board*): columns *Needs action / In progress / Completed / Failed*.
 Ein Arbeiter (Agent, API-Lauf) nimmt eine Aufgabe, zeigt, dass er arbeitet, und meldet das Ende. Menschen und
 Strategie sehen es im Kanban (Fenster, Ansicht *Board*).
 

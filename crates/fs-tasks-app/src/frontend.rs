@@ -1,15 +1,18 @@
-//! The face of the window: which of the three screens the person looks at, and the memory of the choice.
+//! The frontend of the window: which of the three screens the person looks at, and the memory of the choice.
 //!
-//! Pattern: Value object (`Face`) + Memento holder (`Preference`, one small file in the data folder). A file that is
+//! Pattern: Value object (`Frontend`) + Memento holder (`Preference`, one small file in the data folder). A file that is
 //! missing, unreadable or broken means the default; a write that fails is reported, never fatal.
 
 use std::path::PathBuf;
 
 use serde_json::{Value, json};
 
-/// A face of the window.
+/// The key under which versions up to 0.0.8 kept the choice (read once, then migrated to `frontend`).
+const LEGACY_KEY: &str = "face";
+
+/// A frontend of the window.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Face {
+pub enum Frontend {
     /// The first window: list and status view.
     Classic,
     /// A: the board, columns by status, cards.
@@ -18,33 +21,33 @@ pub enum Face {
     Day,
 }
 
-impl Face {
+impl Frontend {
     /// What a new installation shows.
-    pub const DEFAULT: Face = Face::Board;
+    pub const DEFAULT: Frontend = Frontend::Board;
 
-    /// All faces, in the order of the menu.
-    pub const ALL: [Face; 3] = [Face::Classic, Face::Board, Face::Day];
+    /// All frontends, in the order of the menu.
+    pub const ALL: [Frontend; 3] = [Frontend::Classic, Frontend::Board, Frontend::Day];
 
     /// The stable name (in the settings file and in the id of the menu entry).
     pub fn id(self) -> &'static str {
         match self {
-            Face::Classic => "classic",
-            Face::Board => "board",
-            Face::Day => "day",
+            Frontend::Classic => "classic",
+            Frontend::Board => "board",
+            Frontend::Day => "day",
         }
     }
 
-    /// The face with this stable name.
-    pub fn from_id(id: &str) -> Option<Face> {
-        Face::ALL.into_iter().find(|f| f.id() == id)
+    /// The frontend with this stable name.
+    pub fn from_id(id: &str) -> Option<Frontend> {
+        Frontend::ALL.into_iter().find(|f| f.id() == id)
     }
 
     /// What the menu says.
     pub fn label(self) -> &'static str {
         match self {
-            Face::Classic => "Classic",
-            Face::Board => "Board",
-            Face::Day => "Day list",
+            Frontend::Classic => "Classic",
+            Frontend::Board => "Board",
+            Frontend::Day => "Day list",
         }
     }
 }
@@ -63,7 +66,7 @@ pub fn data_dir_in(
     Some(base.join("freesynergy").join("tasks"))
 }
 
-/// The remembered face, in one file.
+/// The remembered frontend, in one file.
 #[derive(Clone, Debug)]
 pub struct Preference {
     file: PathBuf,
@@ -75,35 +78,52 @@ impl Preference {
         Self { file }
     }
 
-    /// The remembered face; the default if there is none or the file cannot be understood (a broken file is named on
+    /// The remembered frontend; the default if there is none or the file cannot be understood (a broken file is named on
     /// stderr, and the next choice replaces it).
-    pub fn load(&self) -> Face {
+    pub fn load(&self) -> Frontend {
         let text = match std::fs::read_to_string(&self.file) {
             Ok(text) => text,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Face::DEFAULT,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Frontend::DEFAULT,
             Err(e) => {
                 eprintln!("fs-tasks: cannot read {}: {e}", self.file.display());
-                return Face::DEFAULT;
+                return Frontend::DEFAULT;
             }
         };
-        let face = serde_json::from_str::<Value>(&text)
-            .ok()
-            .and_then(|v| v.get("face")?.as_str().and_then(Face::from_id));
-        face.unwrap_or_else(|| {
+        let value = serde_json::from_str::<Value>(&text).ok();
+        let named = |key: &str| {
+            value
+                .as_ref()
+                .and_then(|v| v.get(key)?.as_str().and_then(Frontend::from_id))
+        };
+        let frontend = named("frontend").or_else(|| {
+            // Migration: an older version kept the choice under the key `face`. Read it, and write it
+            // under `frontend` (the old key stays in the file, so an older program still finds it).
+            let old = named(LEGACY_KEY)?;
+            if let Err(why) = self.write(&json!({ "frontend": old.id(), LEGACY_KEY: old.id() })) {
+                eprintln!("fs-tasks: cannot migrate the remembered frontend: {why}");
+            }
+            Some(old)
+        });
+        frontend.unwrap_or_else(|| {
             eprintln!(
-                "fs-tasks: {} holds no face I know; using the default",
+                "fs-tasks: {} holds no frontend I know; using the default",
                 self.file.display()
             );
-            Face::DEFAULT
+            Frontend::DEFAULT
         })
     }
 
-    /// Remember `face`: written to a new file beside the old one, then put in its place, so a crash leaves the old
+    /// Remember `frontend`: written to a new file beside the old one, then put in its place, so a crash leaves the old
     /// choice or the new one, never half of it.
     ///
     /// # Errors
     /// A message for the person if the folder or the file cannot be written.
-    pub fn save(&self, face: Face) -> Result<(), String> {
+    pub fn save(&self, frontend: Frontend) -> Result<(), String> {
+        self.write(&json!({ "frontend": frontend.id() }))
+    }
+
+    /// Write `value` atomically (temporary file, synced, renamed over the old one).
+    fn write(&self, value: &Value) -> Result<(), String> {
         let name = self
             .file
             .file_name()
@@ -114,7 +134,7 @@ impl Preference {
         let mut temp_name = name.to_os_string();
         temp_name.push(format!(".{}.tmp", std::process::id()));
         let temp = self.file.with_file_name(temp_name);
-        let body = json!({ "face": face.id() }).to_string();
+        let body = value.to_string();
         // on disk before it takes the place of the old file (else a crash may leave an empty file in its place)
         let written = std::fs::File::create(&temp).and_then(|mut f| {
             std::io::Write::write_all(&mut f, body.as_bytes())?;

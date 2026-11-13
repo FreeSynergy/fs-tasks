@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use crate::args::{Args, HELP, Plan, parse};
 use crate::day::Day;
-use crate::face::{Face, Preference};
-use crate::faces::{FaceOptions, Faces};
+use crate::frontend::{Frontend, Preference};
+use crate::frontends::{FrontendOptions, Frontends};
 use crate::open::{data_dir, open};
 use crate::plan_view::{Board, Cache, Layout, Next, PlanSource};
 use crate::sample::by_name as sample_by_name;
@@ -30,7 +30,7 @@ pub fn app_command(argv: &[String]) -> i32 {
     }
 }
 
-/// Where the choice of the face is kept. A picture or an export neither reads nor writes it.
+/// Where the choice of the frontend is kept. A picture or an export neither reads nor writes it.
 fn settings_file(args: &Args) -> Option<std::path::PathBuf> {
     if args.snapshot.is_some() || args.export.is_some() {
         return None;
@@ -104,7 +104,7 @@ fn show(
             }
             screen_widget(widget).map_err(|e| e.to_string())?
         }
-        _ => faces_window(args, items, handle, today, live)?,
+        _ => frontends_window(args, items, handle, today, live)?,
     };
     app.set_status(status);
     let (width, height) = args.size;
@@ -143,7 +143,7 @@ fn plan_widget(
     let (layout, words, view): (Box<dyn Layout>, _, _) = match plan {
         Plan::OldBoard => (Box::new(Board), labels(), TaskView::Status),
         Plan::OldNext => (Box::new(Next), labels_next(), TaskView::List),
-        Plan::Classic | Plan::Board | Plan::Next => unreachable!("drawn by faces_window"),
+        Plan::Classic | Plan::Board | Plan::Next => unreachable!("drawn by frontends_window"),
     };
     let source = PlanSource::new(adapter, Arc::clone(&cache), layout);
     let widget = TasksWidget::new(Arc::new(source), words);
@@ -159,9 +159,9 @@ fn plan_widget(
     widget
 }
 
-/// The window with its three faces. It starts with the face `--plan` names (this time only), else with the one
+/// The window with its three frontends. It starts with the frontend `--plan` names (this time only), else with the one
 /// remembered, else with the default; a choice made in its menu is remembered.
-fn faces_window(
+fn frontends_window(
     args: &Args,
     items: Arc<dyn TaskItems>,
     handle: tokio::runtime::Handle,
@@ -171,10 +171,10 @@ fn faces_window(
     let remember = settings_file(args).map(Preference::new);
     let start = args
         .plan
-        .and_then(Plan::face)
+        .and_then(Plan::frontend)
         .or_else(|| remember.as_ref().map(Preference::load))
-        .unwrap_or(Face::DEFAULT);
-    let options = FaceOptions {
+        .unwrap_or(Frontend::DEFAULT);
+    let options = FrontendOptions {
         today,
         wait: args.snapshot.is_some(),
         list: args.list.clone(),
@@ -183,6 +183,6 @@ fn faces_window(
         remember,
         live,
     };
-    let faces = Faces::new(items, handle, start, options).map_err(|e| e.to_string())?;
-    Ok(faces.app().clone())
+    let frontends = Frontends::new(items, handle, start, options).map_err(|e| e.to_string())?;
+    Ok(frontends.app().clone())
 }
