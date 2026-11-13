@@ -10,6 +10,7 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, PoisonError};
+use std::time::Duration;
 
 use fs_interfaces::common_capnp::change_listener;
 use fs_interfaces::rpc::connect;
@@ -67,10 +68,14 @@ impl change_listener::Server for Listener {
     }
 }
 
+/// How long a call may take before it ends with a message (a hanging server must not freeze the window).
+const CALL_LIMIT: Duration = Duration::from_secs(10);
+
 /// The tasks of a server at a socket, as a [`TaskItems`](fs_tasks_core::TaskItems) provider.
 pub struct RemoteItems {
     jobs: mpsc::UnboundedSender<Job>,
     changes: Arc<Changes>,
+    limit: Duration,
     pub(super) capability_ids: Vec<String>,
 }
 
@@ -104,11 +109,19 @@ impl RemoteItems {
             Ok(Ok(capability_ids)) => Ok(Self {
                 jobs,
                 changes,
+                limit: CALL_LIMIT,
                 capability_ids,
             }),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("the connection thread ended at once".into()),
         }
+    }
+
+    /// The same connection with another time limit for a call (the default is 10 s).
+    #[must_use]
+    pub fn with_call_limit(mut self, limit: Duration) -> Self {
+        self.limit = limit;
+        self
     }
 
     /// The change notices of the server.
@@ -125,10 +138,13 @@ impl RemoteItems {
         Fut: Future<Output = CoreResult<T>> + 'static,
     {
         let gone = || Error::Rejected("the connection to the tasks server is gone".into());
+        let call_limit = self.limit;
         let (tx, rx) = oneshot::channel();
         let job: Job = Box::new(move |client| {
             tokio::task::spawn_local(async move {
-                let _ = tx.send(f(client).await);
+                // A server that hangs must not freeze the window: the call ends with a message after `CALL_LIMIT`.
+                let answer = tokio::time::timeout(call_limit, f(client)).await;
+                let _ = tx.send(answer.unwrap_or_else(|_| Err(Error::Rejected(format!("the tasks server did not answer within {} s", call_limit.as_secs_f32())))));
             });
         });
         self.jobs.send(job).map_err(|_| gone())?;

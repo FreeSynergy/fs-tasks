@@ -9,7 +9,7 @@ use fs_components_workbenches::SourceError;
 use fs_components_workbenches::tasks::{
     RowQuery, TaskCapabilities, TaskColumn, TaskDraft, TaskRow, TaskSheet, TaskSource,
 };
-use fs_tasks_core::Task;
+use fs_tasks_core::{Revision, Task};
 use fs_tasks_core::validate::PROGRESS;
 
 use super::adapter::{TaskAdapter, reason};
@@ -81,10 +81,12 @@ impl TaskSource for TaskAdapter {
 
     fn save(&self, key: &str, draft: &TaskDraft) -> Result<(), SourceError> {
         let entry = self.entry_at(key, draft.revision.as_deref())?;
+        let revision = Revision::of(&entry);
         let mut task = entry.task;
         apply_draft(&mut task, draft)?;
+        // Compare and set: a change made between the reading and the writing (the command line) is a conflict.
         self.runtime
-            .block_on(self.items.edit(entry.id, task))
+            .block_on(self.items.edit_checked(entry.id, revision, task))
             .map(|_| ())
             .map_err(|e| reason(&e))
     }
@@ -117,10 +119,11 @@ impl TaskSource for TaskAdapter {
         if entry.task.effective_progress() == column {
             return Ok(());
         }
+        let revision = Revision::of(&entry);
         let mut task = entry.task;
         set_progress(&mut task, column)?;
         self.runtime
-            .block_on(self.items.edit(entry.id, task))
+            .block_on(self.items.edit_checked(entry.id, revision, task))
             .map(|_| ())
             .map_err(|e| reason(&e))
     }

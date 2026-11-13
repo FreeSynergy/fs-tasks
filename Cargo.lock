@@ -1521,6 +1521,7 @@ dependencies = [
 name = "fs-tasks-app"
 version = "0.0.8"
 dependencies = [
+ "async-trait",
  "fs-components-app",
  "fs-components-render",
  "fs-components-widgets",

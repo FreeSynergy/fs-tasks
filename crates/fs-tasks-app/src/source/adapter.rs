@@ -63,6 +63,7 @@ pub(super) fn reason(error: &Error) -> SourceError {
         Error::Store(fs_objects::Error::EncryptionRequired(_)) => SourceError::failed(format!(
             "this task is marked sensitive and this store is not encrypted, so it was refused ({error})"
         )),
+        Error::Changed(_) => SourceError::conflict(say::CHANGED_SINCE),
         Error::NotFound(_) => SourceError::not_found(error.to_string()),
         Error::Unsupported(_) => SourceError::unsupported(error.to_string()),
         _ => SourceError::failed(error.to_string()),
