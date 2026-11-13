@@ -65,6 +65,42 @@ fn the_plan_option_reaches_the_window_not_the_command_line() {
     assert!(err.contains("no window"), "{err}");
 }
 
+/// Every option the window knows, read from the window's own parser (`args.rs`), so a new one cannot be forgotten.
+fn window_options() -> Vec<String> {
+    let source = include_str!("../../fs-tasks-app/src/args.rs");
+    let mut found = Vec::new();
+    for line in source.lines() {
+        let Some((names, _)) = line.trim().split_once("=>") else {
+            continue;
+        };
+        if !names.trim_start().starts_with("\"--") && !names.trim_start().starts_with("\"-h\"") {
+            continue;
+        }
+        for word in names.split('"').skip(1).step_by(2) {
+            if word.starts_with("--") && word != "--help" {
+                found.push(word.to_string());
+            }
+        }
+    }
+    found
+}
+
+#[test]
+fn every_option_of_the_window_goes_to_the_window_in_the_real_program() {
+    let options = window_options();
+    assert!(options.len() >= 13, "found only {options:?}");
+    for option in &options {
+        // A bad value and an unknown flag after it: the window refuses it (1) before it does anything; the command
+        // line would answer 2 (a mistake in the words).
+        let (code, _, err) = run(&[option, "x", "--no-such-flag"]);
+        if cfg!(feature = "gui") {
+            assert_eq!(code, Some(1), "{option}: {err}");
+        } else {
+            assert!(err.contains("no window"), "{option}: {err}");
+        }
+    }
+}
+
 #[test]
 fn the_version_is_the_name_and_the_package_version_with_exit_0() {
     for flag in ["--version", "-V"] {

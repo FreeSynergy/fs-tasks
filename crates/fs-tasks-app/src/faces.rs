@@ -11,6 +11,7 @@ use std::time::Duration;
 use fs_components_app::{AppError, AppWidget, Element, Menu, MenuEntry, Screen, Surface};
 use fs_components_workbenches::tasks::{TaskView, TasksWidget};
 use fs_tasks_core::TaskItems;
+use fs_tasks_server::Changes;
 use tokio::runtime::Handle;
 
 use crate::day::Day;
@@ -37,6 +38,8 @@ pub struct FaceOptions {
     pub view: Option<TaskView>,
     /// Where a choice made in the window is remembered; `None` remembers nothing.
     pub remember: Option<Preference>,
+    /// Change notices of the server (the window is a client): both faces read again when anybody changes a task.
+    pub live: Option<Arc<Changes>>,
 }
 
 struct Inner {
@@ -78,6 +81,10 @@ impl Inner {
                 screen.select_title(part);
             }
             cache.on_change(fs_components_widgets::plan::redraw);
+            if let Some(live) = &self.options.live {
+                let cache = Arc::clone(&cache);
+                live.on_change(move || cache.reload_in_background());
+            }
             screen
         }))
     }
@@ -147,6 +154,15 @@ impl Faces {
             face: Mutex::new(start),
         });
         inner.show(start);
+        if let Some(live) = &inner.options.live {
+            // The classic list reads again when anybody changes a task (a weak handle: the window may be gone).
+            let weak = Arc::downgrade(&inner);
+            live.on_change(move || {
+                if let Some(inner) = weak.upgrade() {
+                    inner.classic.refresh();
+                }
+            });
+        }
         let screen = Screen::new("tasks", TITLE, Arc::new(FaceSurface(Arc::clone(&inner))));
         let app = AppWidget::new(TITLE, vec![screen])?;
         install(&app, &inner)?;

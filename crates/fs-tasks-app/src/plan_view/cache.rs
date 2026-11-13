@@ -121,7 +121,9 @@ impl Cache {
         self.store(result);
     }
 
-    fn reload_in_background(self: &Arc<Self>) {
+    /// Read the store again on the runtime (several calls while one runs make one more run); the window is told
+    /// when the new picture is there. What a change notice of the server asks for.
+    pub fn reload_in_background(self: &Arc<Self>) {
         if self.loading.swap(true, Ordering::AcqRel) {
             self.again.store(true, Ordering::Release); // the running load may have read the store before this change
             return;

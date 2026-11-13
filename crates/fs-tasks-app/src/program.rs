@@ -1,7 +1,7 @@
 //! The window as a command: what `fs-tasks` and `fs-tasks app` run (ADR 0063).
 //!
-//! Pattern: Facade consumer — parse arguments, open the store, import, then export or show. The runtime
-//! lives as long as the window: the workbench's calls run on it.
+//! Pattern: Facade consumer — parse arguments, get the tasks (from the server, see `open`), import, then export or
+//! show. The runtime lives as long as the window: the workbench's calls run on it.
 
 use std::sync::Arc;
 
@@ -9,16 +9,14 @@ use crate::args::{Args, HELP, Plan, parse};
 use crate::day::Day;
 use crate::face::{Face, Preference};
 use crate::faces::{FaceOptions, Faces};
+use crate::open::{data_dir, open};
 use crate::plan_view::{Board, Cache, Layout, Next, PlanSource};
 use crate::sample::by_name as sample_by_name;
 use crate::{TaskAdapter, export_all, import_file, labels, labels_next, screen_widget};
 use fs_components_app::{Status, WindowOptions, launch};
 use fs_components_workbenches::tasks::{TaskView, TasksWidget};
-use fs_objects::{Store, TursoStore};
-use fs_tasks_core::{TaskItems, TaskRepo};
-
-/// Who acts on this store. Provisional: there is no sign-in yet.
-const ACTOR: &str = "https://localhost/actors/owner";
+use fs_tasks_core::TaskItems;
+use fs_tasks_server::Changes;
 
 /// Open the window (or import, export, take a picture) with `argv`, the words after `app`; the exit code.
 #[must_use]
@@ -32,67 +30,12 @@ pub fn app_command(argv: &[String]) -> i32 {
     }
 }
 
-/// Where the tasks are kept. `--store` wins. A window that is really used (no picture, no export) keeps them in the
-/// data folder (`$XDG_DATA_HOME/freesynergy/tasks/objects.db`, the file of `fs-tasks serve`): a program started from the
-/// store never loses data by default.
-/// Pictures and exports use memory, as before, so they touch nothing.
-fn store_file(args: &crate::args::Args) -> Result<Option<std::path::PathBuf>, String> {
-    if let Some(file) = &args.store {
-        return Ok(Some(file.clone()));
-    }
-    if args.snapshot.is_some() || args.export.is_some() {
-        return Ok(None);
-    }
-    let dir =
-        data_dir().ok_or("cannot find a data folder (HOME is not set); give --store <file>")?;
-    std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-    adopt_legacy_store(&dir)?;
-    Ok(Some(dir.join(SHARED_STORE)))
-}
-
-/// The store the window, `fs-tasks serve` and the command line share: the file the server opens by default.
-const SHARED_STORE: &str = "objects.db";
-
-/// Up to 0.0.7 the window kept its tasks in `app.db`; the server keeps them in `objects.db`. A window that finds
-/// only the old file moves it (with its side files) to the shared name, so nothing is lost and nothing is split.
-fn adopt_legacy_store(dir: &std::path::Path) -> Result<(), String> {
-    if dir.join(SHARED_STORE).exists() || !dir.join("app.db").exists() {
-        return Ok(());
-    }
-    let named = |e: std::io::Error| format!("{}: {e}", dir.display());
-    for entry in std::fs::read_dir(dir).map_err(named)? {
-        let from = entry.map_err(named)?.path();
-        let name = from.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if let Some(rest) = name.strip_prefix("app.db") {
-            std::fs::rename(&from, dir.join(format!("{SHARED_STORE}{rest}"))).map_err(named)?;
-        }
-    }
-    Ok(())
-}
-
-/// The folder of the program's own files: `$XDG_DATA_HOME/freesynergy/tasks`.
-fn data_dir() -> Option<std::path::PathBuf> {
-    crate::face::data_dir_in(std::env::var_os("XDG_DATA_HOME"), std::env::var_os("HOME"))
-}
-
 /// Where the choice of the face is kept. A picture or an export neither reads nor writes it.
 fn settings_file(args: &Args) -> Option<std::path::PathBuf> {
     if args.snapshot.is_some() || args.export.is_some() {
         return None;
     }
     data_dir().map(|dir| dir.join("settings.json"))
-}
-
-/// Serve the repository at the default socket, if there is one; a problem is said and the window goes on without.
-fn answer_workers(repo: Arc<TaskRepo>) -> Option<fs_tasks_server::Hosted> {
-    let socket = fs_interfaces::rpc::default_socket("tasks")?;
-    match fs_tasks_server::host(repo, socket) {
-        Ok(hosted) => Some(hosted),
-        Err(e) => {
-            eprintln!("fs-tasks: the command line cannot reach this window: {e}");
-            None
-        }
-    }
 }
 
 fn run(argv: &[String]) -> Result<(), String> {
@@ -105,42 +48,9 @@ fn run(argv: &[String]) -> Result<(), String> {
         println!("{HELP}");
         return Ok(());
     }
-    let store_file = store_file(&options)?;
     let runtime = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
-    let store: Arc<dyn Store> = runtime
-        .block_on(async {
-            match &store_file {
-                Some(file) => TursoStore::open(file).await,
-                None => TursoStore::open_in_memory().await,
-            }
-        })
-        .map(|s| Arc::new(s) as Arc<dyn Store>)
-        .map_err(|e| {
-            let hint = if e.to_string().contains("locked") {
-                " (another fs-tasks holds it, e.g. `fs-tasks serve`: stop that one, or close the other window)"
-            } else {
-                ""
-            };
-            format!("cannot open the store: {e}{hint}")
-        })?;
-    let repo = Arc::new(TaskRepo::new(store, ACTOR));
-    // Tasks stored by 0.0.4 or before have no dependency fields in their index (and 0.6.0 ones no order key): complete
-    // them as the server does, so the window sees the same readiness; what cannot be repaired is named.
-    let report = runtime
-        .block_on(repo.upgrade_index())
-        .map_err(|e| format!("cannot complete the index: {e}"))?;
-    if report.rewritten > 0 {
-        eprintln!("fs-tasks: index completed for {} tasks", report.rewritten);
-    }
-    for failed in &report.failed {
-        eprintln!("fs-tasks: task not repaired: {failed}");
-    }
-    let items: Arc<dyn TaskItems> = repo.clone();
-    // The window holds the store (one process only can), so it also answers the command line: workers see and change
-    // the tasks the board shows. Only for the shared store; a picture, an export or a file given by --store stays alone.
-    let _answering = (options.store.is_none() && store_file.is_some())
-        .then(|| answer_workers(repo))
-        .flatten();
+    let opened = open(&options, &runtime)?;
+    let items = opened.items;
     let handle = runtime.handle().clone();
 
     let today = options.today.unwrap_or_else(Day::today);
@@ -175,7 +85,7 @@ fn run(argv: &[String]) -> Result<(), String> {
             return Ok(());
         }
     }
-    show(&options, items, handle, status, today)
+    show(&options, items, handle, status, today, opened.changes)
 }
 
 fn show(
@@ -184,6 +94,7 @@ fn show(
     handle: tokio::runtime::Handle,
     status: Option<Status>,
     today: Day,
+    live: Option<Arc<Changes>>,
 ) -> Result<(), String> {
     let app = match args.plan {
         Some(plan @ (Plan::OldBoard | Plan::OldNext)) => {
@@ -193,7 +104,7 @@ fn show(
             }
             screen_widget(widget).map_err(|e| e.to_string())?
         }
-        _ => faces_window(args, items, handle, today)?,
+        _ => faces_window(args, items, handle, today, live)?,
     };
     app.set_status(status);
     let (width, height) = args.size;
@@ -255,6 +166,7 @@ fn faces_window(
     items: Arc<dyn TaskItems>,
     handle: tokio::runtime::Handle,
     today: Day,
+    live: Option<Arc<Changes>>,
 ) -> Result<fs_components_app::AppWidget, String> {
     let remember = settings_file(args).map(Preference::new);
     let start = args
@@ -269,30 +181,8 @@ fn faces_window(
         open: args.open.clone(),
         view: args.view,
         remember,
+        live,
     };
     let faces = Faces::new(items, handle, start, options).map_err(|e| e.to_string())?;
     Ok(faces.app().clone())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn an_old_app_db_moves_to_the_shared_name_with_its_side_files_and_never_over_a_new_one() {
-        let dir = tempfile::tempdir().unwrap();
-        for name in ["app.db", "app.db-wal", "settings.json"] {
-            std::fs::write(dir.path().join(name), name).unwrap();
-        }
-        adopt_legacy_store(dir.path()).unwrap();
-        let read = |n: &str| std::fs::read_to_string(dir.path().join(n)).ok();
-        assert_eq!(read("objects.db").as_deref(), Some("app.db"));
-        assert_eq!(read("objects.db-wal").as_deref(), Some("app.db-wal"));
-        assert!(read("app.db").is_none() && read("settings.json").is_some());
-        // With a shared store in place an old file is left alone: nothing is overwritten.
-        std::fs::write(dir.path().join("app.db"), "old").unwrap();
-        adopt_legacy_store(dir.path()).unwrap();
-        assert_eq!(read("objects.db").as_deref(), Some("app.db"));
-        assert_eq!(read("app.db").as_deref(), Some("old"));
-    }
 }

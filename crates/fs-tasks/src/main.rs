@@ -14,10 +14,11 @@ fn main() {
 
 /// Options only the window has; the command line does not know them.
 /// Kept in step with `fs-tasks-app/src/args.rs` (all its options except `-h`/`--help`, which the CLI answers too).
-const WINDOW_OPTIONS: [&str; 12] = [
+const WINDOW_OPTIONS: [&str; 13] = [
     "--size",
     "--snapshot",
     "--store",
+    "--connect",
     "--view",
     "--plan",
     "--open",

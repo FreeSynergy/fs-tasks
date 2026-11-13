@@ -14,6 +14,7 @@ mod edit;
 mod exec;
 mod fail;
 mod make;
+mod next;
 pub mod policy;
 mod program;
 mod run;

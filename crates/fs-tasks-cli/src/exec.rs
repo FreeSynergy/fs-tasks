@@ -4,7 +4,7 @@
 //! policy decides before whether they may run at all.
 
 use std::io::Read;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
@@ -41,17 +41,39 @@ fn drain(mut from: impl Read + Send + 'static) -> JoinHandle<Vec<u8>> {
     })
 }
 
-/// Run `argv` (program first) for at most `seconds`.
+/// End the child and everything it started. Unix: the child leads its own process group (`execute` makes it so), and
+/// `kill -s KILL -- -<pgid>` ends the whole group, grandchildren included (`kill(2)` with a negative pid; the tool is
+/// used so that no library is added). Elsewhere (Windows) only the child itself is ended: a documented limit.
+fn stop(child: &mut Child) {
+    #[cfg(unix)]
+    {
+        let group = format!("-{}", child.id());
+        let _ = Command::new("kill")
+            .args(["-s", "KILL", "--", &group])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+    let _ = child.kill();
+}
+
+/// Run `argv` (program first) for at most `seconds`; when the time runs out the whole process group is ended (Unix).
 ///
 /// # Errors
 /// The program could not be started.
 pub fn execute(argv: &[String], seconds: u64) -> Result<Outcome, String> {
     let (program, rest) = argv.split_first().ok_or("the check command is empty")?;
-    let mut child = Command::new(program)
+    let mut command = Command::new(program);
+    command
         .args(rest)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    // Its own process group, so a timeout can end the grandchildren too.
+    #[cfg(unix)]
+    std::os::unix::process::CommandExt::process_group(&mut command, 0);
+    let mut child = command
         .spawn()
         .map_err(|e| format!("cannot start {program}: {e}"))?;
     let readers = child
@@ -64,7 +86,7 @@ pub fn execute(argv: &[String], seconds: u64) -> Result<Outcome, String> {
         match child.try_wait().map_err(|e| e.to_string())? {
             Some(s) => break Some(s),
             None if Instant::now() >= deadline => {
-                let _ = child.kill();
+                stop(&mut child);
                 let _ = child.wait();
                 break None;
             }

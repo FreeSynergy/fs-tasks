@@ -20,6 +20,7 @@ fn options(remember: Option<Preference>) -> FaceOptions {
         open: None,
         view: None,
         remember,
+        live: None,
     }
 }
 

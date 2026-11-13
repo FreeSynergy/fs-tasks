@@ -5,19 +5,17 @@
 //! `policy`; here they are only asked.
 
 use chrono::{DateTime, Duration, Utc};
-use fs_interfaces::rpc::write_uuid;
 use fs_interfaces::tasks_capnp::items;
 use fs_objects::ObjectId;
-use fs_tasks_core::contract::readiness_from_wire;
 use fs_tasks_core::model::{ActorType, MAX_CLAIM_HOURS, MAX_NOTE_BYTES, NOTE_KEY};
-use fs_tasks_core::plan::Readiness;
 use fs_tasks_core::{Task, now_utc};
 use serde_json::{Value, json};
 
 use crate::args::{To, Work};
 use crate::check::check;
-use crate::edit::{all_tasks, change, project_of, status_word, view};
+use crate::edit::{change, status_word, view};
 use crate::fail::Failure;
+use crate::next::next;
 use crate::policy::{Policy, actor_iri};
 use crate::secrets::refuse_secret;
 
@@ -47,7 +45,7 @@ pub(crate) fn worker(name: &str) -> Result<String, String> {
 }
 
 /// `90m`, `2h`, or a UTC time `2026-11-13T18:00:00Z`; at most 24 hours from now.
-fn until_of(text: Option<&str>, now: DateTime<Utc>) -> Result<DateTime<Utc>, String> {
+pub(crate) fn until_of(text: Option<&str>, now: DateTime<Utc>) -> Result<DateTime<Utc>, String> {
     let Some(text) = text else {
         return Ok(now + Duration::hours(DEFAULT_HOURS));
     };
@@ -69,7 +67,12 @@ fn until_of(text: Option<&str>, now: DateTime<Utc>) -> Result<DateTime<Utc>, Str
 }
 
 /// Take the task for the worker; a live claim of somebody else is a conflict.
-fn take(task: &mut Task, name: &str, iri: &str, until: DateTime<Utc>) -> Result<(), Failure> {
+pub(crate) fn take(
+    task: &mut Task,
+    name: &str,
+    iri: &str,
+    until: DateTime<Utc>,
+) -> Result<(), Failure> {
     if let Some(held) = task.claimed_at(Utc::now())
         && held.by != iri
     {
@@ -177,57 +180,6 @@ async fn status(
         Ok(())
     })
     .await
-}
-
-async fn ready(items: &items::Client, id: ObjectId) -> Result<bool, Failure> {
-    let mut req = items.readiness_request();
-    write_uuid(req.get().init_id(), Some(id.as_uuid()));
-    let answer = req.send().promise.await.map_err(|e| e.to_string())?;
-    let report = answer
-        .get()
-        .and_then(items::readiness_results::Reader::get_report)
-        .map_err(|e| e.to_string())?;
-    let by = report
-        .get_by()
-        .map_err(|e| e.to_string())?
-        .iter()
-        .map(|t| {
-            Ok(t.map_err(|e| e.to_string())?
-                .to_string()
-                .unwrap_or_default())
-        })
-        .collect::<Result<Vec<_>, String>>()?;
-    let state = report
-        .get_readiness()
-        .map_err(|e| capnp::Error::from(e).to_string())?;
-    Ok(matches!(readiness_from_wire(state, by), Readiness::Ready))
-}
-
-/// The first open, ready task without somebody else's claim (the worker's own claim counts), claimed.
-async fn next(
-    items: &items::Client,
-    name: &str,
-    project: Option<&str>,
-) -> Result<Option<(ObjectId, Task)>, Failure> {
-    let iri = worker(name)?;
-    let until = until_of(None, Utc::now())?;
-    for (id, task, _) in all_tasks(items).await? {
-        let free = task.claimed_at(Utc::now()).is_none_or(|c| c.by == iri);
-        if task.effective_progress() != "needs-action"
-            || !free
-            || project.is_some_and(|p| project_of(&task) != Some(p))
-            || !ready(items, id).await?
-        {
-            continue;
-        }
-        match change(items, id, |t| take(t, name, &iri, until)).await {
-            Ok(task) => return Ok(Some((id, task))),
-            // Somebody was quicker: the next one.
-            Err(f) if f.conflict => {}
-            Err(f) => return Err(f),
-        }
-    }
-    Ok(None)
 }
 
 fn answer(id: ObjectId, task: &Task, json: bool, plain: &str) -> String {

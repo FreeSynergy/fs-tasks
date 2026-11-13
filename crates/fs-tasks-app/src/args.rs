@@ -43,6 +43,8 @@ impl Plan {
 pub struct Args {
     /// Store file; `None` = the data folder for a window, memory for a picture or an export.
     pub store: Option<PathBuf>,
+    /// Socket of the tasks server to use (started if none answers), also for a picture or an export.
+    pub connect: Option<PathBuf>,
     /// An iCalendar file to import before anything else.
     pub import: Option<PathBuf>,
     /// Write all tasks to this iCalendar file; no window opens then.
@@ -73,6 +75,7 @@ impl Default for Args {
     fn default() -> Self {
         Self {
             store: None,
+            connect: None,
             import: None,
             export: None,
             export_sensitive: Vec::new(),
@@ -104,6 +107,7 @@ pub fn parse(args: &[String]) -> Result<Args, String> {
         };
         match arg.as_str() {
             "--store" => out.store = Some(PathBuf::from(value("--store")?)),
+            "--connect" => out.connect = Some(PathBuf::from(value("--connect")?)),
             "--import" => out.import = Some(PathBuf::from(value("--import")?)),
             "--export" => out.export = Some(PathBuf::from(value("--export")?)),
             "--export-sensitive" => out.export_sensitive.push(value("--export-sensitive")?),
@@ -147,7 +151,10 @@ fn view(text: &str) -> Result<TaskView, String> {
 /// The help text.
 pub const HELP: &str = "fs-tasks app: the window of the tasks program (options of the window)
 
-  --store <file>     keep the tasks in this store file (default: the data folder, $XDG_DATA_HOME/freesynergy/tasks/app.db; a picture or an export uses memory)
+  --connect <socket> use the tasks server at this socket (default for a window: $XDG_RUNTIME_DIR/freesynergy/tasks.sock);
+                     it is started if none answers and keeps running when the window closes
+  --store <file>     keep the tasks in this store file, in this process (then no server is used; a picture or an
+                     export without --connect uses memory)
   --import <file>    import an iCalendar file first; tasks already known are skipped, never replaced
   --export <file>    write all tasks to a new iCalendar file and stop; an existing file is not
                      replaced, tasks marked sensitive are left out and named
