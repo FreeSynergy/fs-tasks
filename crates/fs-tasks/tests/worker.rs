@@ -42,7 +42,9 @@ struct Cleanup<'a>(&'a Path);
 impl Drop for Cleanup<'_> {
     fn drop(&mut self) {
         for pid in servers(self.0) {
-            let _ = Command::new("kill").args(["-TERM", &pid.to_string()]).status();
+            let _ = Command::new("kill")
+                .args(["-TERM", &pid.to_string()])
+                .status();
         }
     }
 }
@@ -57,7 +59,10 @@ fn clients_start_one_server_by_themselves_and_share_one_store() {
         .map(|i| {
             let path = path.to_path_buf();
             std::thread::spawn(move || {
-                run(&path, &["add", &format!("Job {i}"), "--project", "p", "--json"])
+                run(
+                    &path,
+                    &["add", &format!("Job {i}"), "--project", "p", "--json"],
+                )
             })
         })
         .collect();
@@ -65,39 +70,74 @@ fn clients_start_one_server_by_themselves_and_share_one_store() {
     for o in &outs {
         assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
     }
-    assert_eq!(servers(dir.path()).len(), 1, "one server, not one per client");
+    assert_eq!(
+        servers(dir.path()).len(),
+        1,
+        "one server, not one per client"
+    );
 
     let listed = run(dir.path(), &["list", "--project", "p", "--json"]);
     let listed = String::from_utf8(listed.stdout).unwrap();
     assert_eq!(listed.matches("\"id\":").count(), 4, "{listed}");
-    let id = listed.split("\"id\":\"").nth(1).unwrap().split('"').next().unwrap().to_string();
+    let id = listed
+        .split("\"id\":\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap()
+        .to_string();
 
     // Four workers claim the same task at once: one gets exit 0, the others exit 3 naming the holder.
     let claims: Vec<_> = (0..4)
         .map(|i| {
             let (path, id) = (path.to_path_buf(), id.clone());
-            std::thread::spawn(move || run(&path, &["claim", &id, "--as", &format!("w{i}"), "--json"]))
+            std::thread::spawn(move || {
+                run(&path, &["claim", &id, "--as", &format!("w{i}"), "--json"])
+            })
         })
         .collect();
     let codes: Vec<(Option<i32>, String)> = claims
         .into_iter()
         .map(|h| h.join().unwrap())
-        .map(|o| (o.status.code(), String::from_utf8_lossy(&o.stderr).into_owned()))
+        .map(|o| {
+            (
+                o.status.code(),
+                String::from_utf8_lossy(&o.stderr).into_owned(),
+            )
+        })
         .collect();
-    assert_eq!(codes.iter().filter(|c| c.0 == Some(0)).count(), 1, "{codes:?}");
+    assert_eq!(
+        codes.iter().filter(|c| c.0 == Some(0)).count(),
+        1,
+        "{codes:?}"
+    );
     let lost: Vec<_> = codes.iter().filter(|c| c.0 == Some(3)).collect();
     assert_eq!(lost.len(), 3, "{codes:?}");
-    assert!(lost.iter().all(|c| c.1.contains("\"conflict\":true") && c.1.contains("claimed by")));
+    assert!(
+        lost.iter()
+            .all(|c| c.1.contains("\"conflict\":true") && c.1.contains("claimed by"))
+    );
 
     // The data folder is the one of the window: the file the server opened is `objects.db` there.
-    assert!(dir.path().join("data/freesynergy/tasks/objects.db").exists());
+    assert!(
+        dir.path()
+            .join("data/freesynergy/tasks/objects.db")
+            .exists()
+    );
     // One process holds the store: a window started now (next to the autostarted server) says so instead of
     // opening a second copy. (A window started FIRST answers the command line itself; see fs-tasks-server `host`.)
     let store = dir.path().join("data/freesynergy/tasks/objects.db");
     let ics = dir.path().join("window.ics");
     let seen = run(
         dir.path(),
-        &["app", "--store", store.to_str().unwrap(), "--export", ics.to_str().unwrap()],
+        &[
+            "app",
+            "--store",
+            store.to_str().unwrap(),
+            "--export",
+            ics.to_str().unwrap(),
+        ],
     );
     assert!(!seen.status.success());
     assert!(String::from_utf8_lossy(&seen.stderr).contains("another fs-tasks holds it"));

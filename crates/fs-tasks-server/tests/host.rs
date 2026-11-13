@@ -20,12 +20,18 @@ async fn a_client_on_the_socket_changes_the_repository_the_host_holds() {
     local
         .run_until(async {
             let connection = connect::<tasks::Client>(&socket).await.unwrap();
-            let answer = connection.client.items_request().send().promise.await.unwrap();
+            let answer = connection
+                .client
+                .items_request()
+                .send()
+                .promise
+                .await
+                .unwrap();
             let items = answer.get().unwrap().get_items().unwrap();
             let mut create = items.create_request();
-            create
-                .get()
-                .set_jscalendar(r#"{"@type":"Task","version":"2.0","uid":"w","title":"From a worker"}"#);
+            create.get().set_jscalendar(
+                r#"{"@type":"Task","version":"2.0","uid":"w","title":"From a worker"}"#,
+            );
             create.send().promise.await.unwrap();
             drop(answer);
             drop(connection);

@@ -12,23 +12,47 @@ fn json(text: &str) -> Value {
 #[tokio::test(flavor = "current_thread")]
 async fn a_claim_held_by_somebody_else_is_a_conflict_that_names_the_holder() {
     with_cli(|root| async move {
-        let id = id_of(&cmd(&root, "add Work --project p1 --json", &[]).await.unwrap());
-        cmd(&root, &format!("claim {id} --as alpha --until 90m"), &[]).await.unwrap();
+        let id = id_of(
+            &cmd(&root, "add Work --project p1 --json", &[])
+                .await
+                .unwrap(),
+        );
+        cmd(&root, &format!("claim {id} --as alpha --until 90m"), &[])
+            .await
+            .unwrap();
 
-        let lost = cmd(&root, &format!("claim {id} --as beta"), &[]).await.unwrap_err();
+        let lost = cmd(&root, &format!("claim {id} --as beta"), &[])
+            .await
+            .unwrap_err();
         assert!(lost.conflict && lost.code() == 3, "{lost:?}");
-        assert!(lost.text.contains("actors/alpha"), "the holder is named: {lost}");
-        let release = cmd(&root, &format!("release {id} --as beta"), &[]).await.unwrap_err();
+        assert!(
+            lost.text.contains("actors/alpha"),
+            "the holder is named: {lost}"
+        );
+        let release = cmd(&root, &format!("release {id} --as beta"), &[])
+            .await
+            .unwrap_err();
         assert!(release.conflict, "{release:?}");
 
         // The holder renews; after its release another one gets it.
-        cmd(&root, &format!("claim {id} --as alpha"), &[]).await.unwrap();
-        cmd(&root, &format!("release {id} --as alpha"), &[]).await.unwrap();
-        let won = json(&cmd(&root, &format!("claim {id} --as beta --json"), &[]).await.unwrap());
+        cmd(&root, &format!("claim {id} --as alpha"), &[])
+            .await
+            .unwrap();
+        cmd(&root, &format!("release {id} --as alpha"), &[])
+            .await
+            .unwrap();
+        let won = json(
+            &cmd(&root, &format!("claim {id} --as beta --json"), &[])
+                .await
+                .unwrap(),
+        );
         assert_eq!(won["claimed_by"], "https://localhost/actors/beta");
         // The board shows who holds it: the worker is a participant of type Application.
         let shown = cmd(&root, &format!("show {id}"), &[]).await.unwrap();
-        assert!(shown.contains("\"Application\"") && shown.contains("beta"), "{shown}");
+        assert!(
+            shown.contains("\"Application\"") && shown.contains("beta"),
+            "{shown}"
+        );
     })
     .await;
 }
@@ -59,7 +83,9 @@ async fn status_note_report_cost_and_failed_are_on_the_task() {
     with_cli(|root| async move {
         let a = id_of(&cmd(&root, "add Ok --project p1", &[]).await.unwrap());
         let b = id_of(&cmd(&root, "add Bad --project p2", &[]).await.unwrap());
-        cmd(&root, &format!("status {a} in-progress"), &[]).await.unwrap();
+        cmd(&root, &format!("status {a} in-progress"), &[])
+            .await
+            .unwrap();
         let open = json(&cmd(&root, "list --project p1 --json", &[]).await.unwrap());
         assert_eq!(open[0]["status"], "in-progress");
 
@@ -76,8 +102,14 @@ async fn status_note_report_cost_and_failed_are_on_the_task() {
         assert_eq!(done["result"]["report"], "/tmp/r.md");
         assert!((done["result"]["cost_usd"].as_f64().unwrap() - 0.42).abs() < 1e-9);
 
-        cmd(&root, &format!("status {b} failed --note nope"), &[]).await.unwrap();
-        let failed = json(&cmd(&root, "list --status failed --json", &[]).await.unwrap());
+        cmd(&root, &format!("status {b} failed --note nope"), &[])
+            .await
+            .unwrap();
+        let failed = json(
+            &cmd(&root, "list --status failed --json", &[])
+                .await
+                .unwrap(),
+        );
         assert_eq!(failed.as_array().unwrap().len(), 1);
         assert_eq!(failed[0]["project"], "p2");
         let only_p1 = json(&cmd(&root, "list --project p1 --json", &[]).await.unwrap());
@@ -106,7 +138,13 @@ async fn a_note_is_short_and_secrets_are_refused_everywhere() {
         cmd(&root, &format!("note {id} {ok}"), &[]).await.unwrap();
         let shown = cmd(&root, &format!("show {id}"), &[]).await.unwrap();
         assert!(!shown.contains("ghp_") && shown.contains(&ok));
-        assert_eq!(cmd(&root, "list --json", &[]).await.map(|t| json(&t).as_array().unwrap().len()), Ok(1), "only the plain task exists");
+        assert_eq!(
+            cmd(&root, "list --json", &[])
+                .await
+                .map(|t| json(&t).as_array().unwrap().len()),
+            Ok(1),
+            "only the plain task exists"
+        );
     })
     .await;
 }
@@ -122,12 +160,21 @@ async fn next_takes_the_first_ready_task_and_never_one_that_waits() {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("two.ics");
         std::fs::write(&file, TWO).unwrap();
-        cmd(&root, &format!("import {}", file.display()), &[]).await.unwrap();
+        cmd(&root, &format!("import {}", file.display()), &[])
+            .await
+            .unwrap();
 
-        let first = json(&cmd(&root, "next --as w1 --project p1 --json", &[]).await.unwrap());
+        let first = json(
+            &cmd(&root, "next --as w1 --project p1 --json", &[])
+                .await
+                .unwrap(),
+        );
         assert_eq!(first["title"], "First");
         // `Second` waits for `First`; `First` is claimed: nothing is ready for the next worker.
-        assert_eq!(cmd(&root, "next --as w2 --json", &[]).await.unwrap(), "null");
+        assert_eq!(
+            cmd(&root, "next --as w2 --json", &[]).await.unwrap(),
+            "null"
+        );
         assert_eq!(cmd(&root, "next --as w2", &[]).await.unwrap(), "");
         // The same worker asking again gets its own task back.
         assert_eq!(
@@ -138,7 +185,12 @@ async fn next_takes_the_first_ready_task_and_never_one_that_waits() {
         cmd(&root, &format!("status {id} done"), &[]).await.unwrap();
         let second = json(&cmd(&root, "next --as w2 --json", &[]).await.unwrap());
         assert_eq!(second["title"], "Second");
-        assert_eq!(cmd(&root, "next --as w3 --project nope --json", &[]).await.unwrap(), "null");
+        assert_eq!(
+            cmd(&root, "next --as w3 --project nope --json", &[])
+                .await
+                .unwrap(),
+            "null"
+        );
     })
     .await;
 }

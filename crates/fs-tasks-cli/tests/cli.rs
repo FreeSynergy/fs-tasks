@@ -34,7 +34,10 @@ async fn add_list_show_done_delete() {
 
         let gone = run(&root, Command::Delete(id.clone())).await.unwrap();
         assert_eq!(gone, format!("deleted {id}"));
-        assert_eq!(run(&root, Command::List(Query::default())).await.unwrap(), "");
+        assert_eq!(
+            run(&root, Command::List(Query::default())).await.unwrap(),
+            ""
+        );
         let missing = run(&root, Command::Show(id)).await;
         assert!(missing.is_err());
     })

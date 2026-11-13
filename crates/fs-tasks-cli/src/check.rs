@@ -23,7 +23,10 @@ pub(crate) async fn check(
     if let Some(why) = policy.refusal(&task) {
         return Err(why.into());
     }
-    let command = task.check().ok_or("the task has no check command")?.to_string();
+    let command = task
+        .check()
+        .ok_or("the task has no check command")?
+        .to_string();
     let argv: Vec<String> = command.split_whitespace().map(String::from).collect();
     policy
         .program_ok(&argv)
@@ -50,5 +53,8 @@ pub(crate) async fn check(
         (_, Some(c)) => format!("exit {c}"),
         _ => "ended by a signal".into(),
     };
-    Err(format!("check failed: {how}\n{}", outcome.tail).trim_end().to_string().into())
+    Err(format!("check failed: {how}\n{}", outcome.tail)
+        .trim_end()
+        .to_string()
+        .into())
 }

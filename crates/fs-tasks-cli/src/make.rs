@@ -6,9 +6,7 @@
 
 use fs_interfaces::tasks_capnp::items;
 use fs_objects::ObjectId;
-use fs_tasks_core::model::{
-    CHECK_KEY, CREATED_BY_KEY, MAX_NOTE_BYTES, ORIGIN_KEY, ORIGIN_LOCAL,
-};
+use fs_tasks_core::model::{CHECK_KEY, CREATED_BY_KEY, MAX_NOTE_BYTES, ORIGIN_KEY, ORIGIN_LOCAL};
 use serde_json::{Value, json};
 
 use crate::args::{NewTask, Query};
@@ -33,7 +31,9 @@ fn plain(what: &str, text: &str) -> Result<(), String> {
     if ok {
         Ok(())
     } else {
-        Err(format!("{what} is 1 to 64 letters, digits, `.`, `_`, `-` or `:`"))
+        Err(format!(
+            "{what} is 1 to 64 letters, digits, `.`, `_`, `-` or `:`"
+        ))
     }
 }
 
@@ -99,7 +99,10 @@ pub(crate) async fn list(items: &items::Client, query: &Query) -> Out {
         .await?
         .into_iter()
         .filter(|(_, t, _)| {
-            query.project.as_deref().is_none_or(|p| project_of(t) == Some(p))
+            query
+                .project
+                .as_deref()
+                .is_none_or(|p| project_of(t) == Some(p))
                 && query.status.as_deref().is_none_or(|s| status_word(t) == s)
         })
         .collect();

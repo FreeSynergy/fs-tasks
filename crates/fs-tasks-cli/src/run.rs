@@ -125,10 +125,7 @@ pub(crate) async fn all(items: &items::Client) -> Result<Vec<(ObjectId, String, 
     }
 }
 
-pub(crate) async fn fetch(
-    items: &items::Client,
-    id: ObjectId,
-) -> Result<(String, u64), String> {
+pub(crate) async fn fetch(items: &items::Client, id: ObjectId) -> Result<(String, u64), String> {
     let mut req = items.get_request();
     write_uuid(req.get().init_id(), Some(id.as_uuid()));
     let answer = req.send().promise.await.map_err(|e| failed(&e))?;

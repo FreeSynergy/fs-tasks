@@ -145,7 +145,10 @@ fn script_ok(path: &str) -> bool {
     if !plain {
         return false;
     }
-    match (Path::new(path).canonicalize(), Path::new("scripts").canonicalize()) {
+    match (
+        Path::new(path).canonicalize(),
+        Path::new("scripts").canonicalize(),
+    ) {
         (Ok(real), Ok(root)) => real.starts_with(root),
         (Err(_), _) => true,
         (Ok(_), Err(_)) => false,

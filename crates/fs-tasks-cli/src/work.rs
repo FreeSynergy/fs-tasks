@@ -15,8 +15,8 @@ use fs_tasks_core::{Task, now_utc};
 use serde_json::{Value, json};
 
 use crate::args::{To, Work};
-use crate::edit::{all_tasks, change, project_of, status_word, view};
 use crate::check::check;
+use crate::edit::{all_tasks, change, project_of, status_word, view};
 use crate::fail::Failure;
 use crate::policy::{Policy, actor_iri};
 use crate::secrets::refuse_secret;
@@ -61,7 +61,9 @@ fn until_of(text: Option<&str>, now: DateTime<Utc>) -> Result<DateTime<Utc>, Str
     }
     .ok_or("--until is a length like 90m or 2h, or a UTC time like 2026-11-13T18:00:00Z")?;
     if until <= now || until > now + Duration::hours(MAX_CLAIM_HOURS) {
-        return Err(format!("--until is within the next {MAX_CLAIM_HOURS} hours"));
+        return Err(format!(
+            "--until is within the next {MAX_CLAIM_HOURS} hours"
+        ));
     }
     Ok(until)
 }
@@ -135,7 +137,15 @@ async fn status(
 ) -> Result<Task, Failure> {
     for (what, text) in [("the note", &note), ("the report", &report)] {
         if let Some(text) = text {
-            short(what, text, if what == "the note" { MAX_NOTE_BYTES } else { MAX_REPORT })?;
+            short(
+                what,
+                text,
+                if what == "the note" {
+                    MAX_NOTE_BYTES
+                } else {
+                    MAX_REPORT
+                },
+            )?;
         }
     }
     let cost = cost.map(|c| c.parse::<f64>().unwrap_or(0.0));
@@ -146,7 +156,14 @@ async fn status(
                 if to == To::Done {
                     may_finish(t, policy)?;
                 }
-                t.progress = Some(if to == To::Done { "completed" } else { "failed" }.into());
+                t.progress = Some(
+                    if to == To::Done {
+                        "completed"
+                    } else {
+                        "failed"
+                    }
+                    .into(),
+                );
                 t.clear_claim();
                 if report.is_some() || cost.is_some() {
                     t.set_result(json!({"report": report, "cost_usd": cost}));
@@ -174,7 +191,11 @@ async fn ready(items: &items::Client, id: ObjectId) -> Result<bool, Failure> {
         .get_by()
         .map_err(|e| e.to_string())?
         .iter()
-        .map(|t| Ok(t.map_err(|e| e.to_string())?.to_string().unwrap_or_default()))
+        .map(|t| {
+            Ok(t.map_err(|e| e.to_string())?
+                .to_string()
+                .unwrap_or_default())
+        })
         .collect::<Result<Vec<_>, String>>()?;
     let state = report
         .get_readiness()
@@ -191,9 +212,7 @@ async fn next(
     let iri = worker(name)?;
     let until = until_of(None, Utc::now())?;
     for (id, task, _) in all_tasks(items).await? {
-        let free = task
-            .claimed_at(Utc::now())
-            .is_none_or(|c| c.by == iri);
+        let free = task.claimed_at(Utc::now()).is_none_or(|c| c.by == iri);
         if task.effective_progress() != "needs-action"
             || !free
             || project.is_some_and(|p| project_of(&task) != Some(p))
@@ -250,7 +269,13 @@ pub(crate) async fn run_work(
             .await?;
             Ok(answer(id, &t, json, "released"))
         }
-        Work::Status { id, to, note, report, cost } => {
+        Work::Status {
+            id,
+            to,
+            note,
+            report,
+            cost,
+        } => {
             let id = id_of(&id)?;
             let t = status(items, id, (to, note, report, cost), policy).await?;
             Ok(answer(id, &t, json, status_word(&t)))

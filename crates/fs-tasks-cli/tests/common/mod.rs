@@ -78,7 +78,13 @@ pub async fn raw_create(root: &tasks::Client, task: &Value) -> String {
     req.get().set_jscalendar(task.to_string().as_str());
     let answer = req.send().promise.await.unwrap();
     let id = fs_interfaces::rpc::read_envelope(
-        answer.get().unwrap().get_task().unwrap().get_envelope().unwrap(),
+        answer
+            .get()
+            .unwrap()
+            .get_task()
+            .unwrap()
+            .get_envelope()
+            .unwrap(),
     )
     .unwrap()
     .id;

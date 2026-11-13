@@ -15,10 +15,7 @@ fn the_options_come_before_the_command() {
     let a = parse(&words("--socket /x/y --data /d list")).unwrap();
     assert_eq!((a.socket, a.data), (Some("/x/y".into()), Some("/d".into())));
     assert_eq!(a.command, Some(Command::List(Query::default())));
-    assert_eq!(
-        command("--socket /s show abc"),
-        Command::Show("abc".into())
-    );
+    assert_eq!(command("--socket /s show abc"), Command::Show("abc".into()));
     assert_eq!(parse(&words("-h")).unwrap().command, None);
 }
 
@@ -60,17 +57,27 @@ fn the_worker_commands() {
     assert_eq!(
         w(command("claim T1 --as w --until 2h --json")),
         (
-            Work::Claim { id: "T1".into(), name: "w".into(), until: Some("2h".into()) },
+            Work::Claim {
+                id: "T1".into(),
+                name: "w".into(),
+                until: Some("2h".into())
+            },
             true
         )
     );
     assert_eq!(
         w(command("release T1 --as w")).0,
-        Work::Release { id: "T1".into(), name: "w".into() }
+        Work::Release {
+            id: "T1".into(),
+            name: "w".into()
+        }
     );
     assert_eq!(
         w(command("next --as w --project p")).0,
-        Work::Next { name: "w".into(), project: Some("p".into()) }
+        Work::Next {
+            name: "w".into(),
+            project: Some("p".into())
+        }
     );
     assert_eq!(
         w(command("status T1 failed --note x --report /r --cost 1.5")).0,
@@ -84,12 +91,19 @@ fn the_worker_commands() {
     );
     assert_eq!(
         w(command("note T1 hello")).0,
-        Work::Note { id: "T1".into(), text: "hello".into() }
+        Work::Note {
+            id: "T1".into(),
+            text: "hello".into()
+        }
     );
     assert_eq!(w(command("check T1")).0, Work::Check("T1".into()));
     assert_eq!(
         command("list --project p --status failed --json"),
-        Command::List(Query { project: Some("p".into()), status: Some("failed".into()), json: true })
+        Command::List(Query {
+            project: Some("p".into()),
+            status: Some("failed".into()),
+            json: true
+        })
     );
 }
 

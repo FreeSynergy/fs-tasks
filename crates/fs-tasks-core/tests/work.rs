@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use fs_objects::{Store, TursoStore};
-use fs_tasks_core::model::{CHECK_KEY, CHECKED_KEY, NOTE_KEY, ORIGIN_IMPORTED, ORIGIN_KEY, ORIGIN_LOCAL};
+use fs_tasks_core::model::{
+    CHECK_KEY, CHECKED_KEY, NOTE_KEY, ORIGIN_IMPORTED, ORIGIN_KEY, ORIGIN_LOCAL,
+};
 use fs_tasks_core::{Task, TaskItems, TaskRepo};
 use serde_json::json;
 
@@ -29,7 +31,11 @@ DTSTAMP:20261101T000000Z\r\nSUMMARY:In\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
     claiming.set_checked("true", "2026-11-01T00:00:00Z");
     claiming.set_vendor(CHECK_KEY, json!("true"));
     let made = repo.create(claiming).await.unwrap().task;
-    assert_eq!(made.origin(), Some(ORIGIN_LOCAL), "a task made through the wire keeps what it says");
+    assert_eq!(
+        made.origin(),
+        Some(ORIGIN_LOCAL),
+        "a task made through the wire keeps what it says"
+    );
     assert!(made.vendor(CHECKED_KEY).is_some());
 }
 

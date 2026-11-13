@@ -31,6 +31,6 @@ pub use ops::TASK_STATUS_KEY;
 pub use relation::Relation;
 pub use task::Task;
 pub use work::{
-    CHECK_KEY, CHECKED_KEY, CREATED_BY_KEY, MAX_NOTE_BYTES, NOTE_KEY, ORIGIN_IMPORTED,
-    ORIGIN_KEY, ORIGIN_LOCAL, work_issues,
+    CHECK_KEY, CHECKED_KEY, CREATED_BY_KEY, MAX_NOTE_BYTES, NOTE_KEY, ORIGIN_IMPORTED, ORIGIN_KEY,
+    ORIGIN_LOCAL, work_issues,
 };
