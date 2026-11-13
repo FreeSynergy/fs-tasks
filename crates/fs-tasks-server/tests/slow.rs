@@ -32,5 +32,5 @@ async fn the_counter_test_with_the_normal_limit_the_same_call_answers() {
     let socket = dir.path().join("run").join("tasks.sock");
     let _hosted = host(repo, socket.clone()).unwrap();
     let remote = RemoteItems::connect(socket, None).unwrap();
-    assert!(remote.list().await.unwrap().is_empty());
+    assert_eq!(remote.list().await.unwrap().len(), 0);
 }

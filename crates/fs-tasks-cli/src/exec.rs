@@ -151,7 +151,9 @@ pub fn execute(argv: &[String], seconds: u64) -> Result<Outcome, String> {
         _ => String::new(),
     };
     if let Err(why) = stopped {
-        tail.push_str(&format!("\n(the process group could not be ended: {why})"));
+        tail.push_str("\n(the process group could not be ended: ");
+        tail.push_str(&why);
+        tail.push(')');
     }
     Ok(Outcome {
         passed: status.is_some_and(|s| s.success()),
