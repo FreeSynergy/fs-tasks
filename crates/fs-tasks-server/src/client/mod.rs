@@ -8,6 +8,7 @@
 
 mod decode;
 mod items;
+mod walk;
 
 use std::future::Future;
 use std::path::PathBuf;
