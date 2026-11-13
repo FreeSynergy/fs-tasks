@@ -15,7 +15,7 @@ use fs_tasks_core::{
     TaskQuery,
 };
 
-use super::decode::{entry, report, strings};
+use super::decode::{entries, entry, report, strings};
 use super::walk::all;
 use super::RemoteItems;
 

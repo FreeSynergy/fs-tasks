@@ -167,7 +167,7 @@ async fn serve_jobs(
     let ids = answer
         .get()
         .and_then(tasks::capabilities_results::Reader::get_capabilities)
-        .and_then(|c| c.get_ids())
+        .and_then(fs_interfaces::common_capnp::capability_list::Reader::get_ids)
         .map_err(said)?
         .iter()
         .map(|t| Ok(t.map_err(said)?.to_string().unwrap_or_default()))

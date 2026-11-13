@@ -30,14 +30,14 @@ async fn reads_writes_and_hears_changes_over_the_socket() {
     let counter = Arc::clone(&heard);
     remote
         .changes()
-        .on_change(move || drop(counter.fetch_add(1, Ordering::SeqCst)));
+        .on_change(move || { counter.fetch_add(1, Ordering::SeqCst); });
 
-    assert!(remote.list().await.unwrap().is_empty());
+    assert_eq!(remote.list().await.unwrap().len(), 0);
     let made = remote.create(task("a")).await.unwrap();
     assert_eq!(remote.get(made.id).await.unwrap().unwrap().id, made.id);
     assert_eq!(remote.list().await.unwrap().len(), 1);
     assert_eq!(remote.query(&TaskQuery::new().matching("a")).await.unwrap().len(), 1);
-    assert!(remote.query(&TaskQuery::new().matching("zzz")).await.unwrap().is_empty());
+    assert_eq!(remote.query(&TaskQuery::new().matching("zzz")).await.unwrap().len(), 0);
     // The write went into the repository the server holds: one store, not a copy.
     assert_eq!(repo.list().await.unwrap().len(), 1);
 

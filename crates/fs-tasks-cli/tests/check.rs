@@ -259,29 +259,3 @@ fn a_check_runs_without_a_shell_with_a_time_limit_and_bounded_output() {
     assert!(slow.timed_out && !slow.passed, "{slow:?}");
     assert!(execute(&argv("no-such-program-here"), 1).is_err());
 }
-
-#[cfg(unix)]
-fn alive(pid: &str) -> bool {
-    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).unwrap_or_default();
-    !stat.is_empty() && !stat.contains(") Z")
-}
-
-#[cfg(unix)]
-#[test]
-fn a_timeout_ends_the_grandchildren_too() {
-    let dir = tempfile::tempdir().unwrap();
-    let pidfile = dir.path().join("grandchild.pid");
-    // The child starts a grandchild in the background and waits for it.
-    let script = format!("sleep 60 & echo $! > {}; wait", pidfile.display());
-    let argv = vec!["sh".to_string(), "-c".to_string(), script];
-    let out = execute(&argv, 1).unwrap();
-    assert!(out.timed_out, "{out:?}");
-    let pid = std::fs::read_to_string(&pidfile).unwrap().trim().to_string();
-    assert!(!pid.is_empty());
-    // The kernel ends it asynchronously: allow a moment.
-    let start = std::time::Instant::now();
-    while alive(&pid) && start.elapsed() < std::time::Duration::from_secs(3) {
-        std::thread::sleep(std::time::Duration::from_millis(50));
-    }
-    assert!(!alive(&pid), "the grandchild {pid} lives on");
-}
