@@ -163,7 +163,11 @@ impl Frontends {
                 }
             });
         }
-        let screen = Screen::new("tasks", TITLE, Arc::new(FrontendSurface(Arc::clone(&inner))));
+        let screen = Screen::new(
+            "tasks",
+            TITLE,
+            Arc::new(FrontendSurface(Arc::clone(&inner))),
+        );
         let app = AppWidget::new(TITLE, vec![screen])?;
         install(&app, &inner)?;
         Ok(Self { app, inner })
@@ -194,7 +198,11 @@ fn install(app: &AppWidget, inner: &Arc<Inner>) -> Result<(), AppError> {
             .into_iter()
             .map(|f| {
                 let entry = MenuEntry::new(format!("{PREFIX}{}", f.id()), f.label());
-                if f == frontend { entry.disabled() } else { entry }
+                if f == frontend {
+                    entry.disabled()
+                } else {
+                    entry
+                }
             })
             .collect(),
     ));

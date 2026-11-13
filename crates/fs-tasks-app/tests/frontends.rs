@@ -103,8 +103,14 @@ fn saving_makes_the_folder_and_a_failure_is_an_error_not_a_crash() {
 fn the_menu_names_the_frontends_and_the_shown_one_cannot_be_chosen() {
     let w = World::new();
     let frontends = window(&w, Frontend::Board, None);
-    assert_eq!(labels_of(&frontends), ["Frontend", "Classic", "Board", "Day list"]);
-    assert!(!frontends.app().choose("frontend-board"), "it is shown already");
+    assert_eq!(
+        labels_of(&frontends),
+        ["Frontend", "Classic", "Board", "Day list"]
+    );
+    assert!(
+        !frontends.app().choose("frontend-board"),
+        "it is shown already"
+    );
     assert!(!frontends.app().choose("frontend-cube"), "no such frontend");
     assert!(
         !frontends.app().choose("task-new"),
@@ -136,14 +142,20 @@ fn choosing_a_frontend_changes_it_and_the_menus_and_is_remembered() {
     assert!(frontends.app().choose("frontend-day"));
     assert_eq!(frontends.frontend(), Frontend::Day);
     assert_eq!(memory.load(), Frontend::Day);
-    assert_eq!(labels_of(&frontends), ["Frontend", "Classic", "Board", "Day list"]);
+    assert_eq!(
+        labels_of(&frontends),
+        ["Frontend", "Classic", "Board", "Day list"]
+    );
     assert!(frontends.app().choose("frontend-board"));
     assert_eq!(frontends.frontend(), Frontend::Board);
     assert_eq!(memory.load(), Frontend::Board);
     assert!(frontends.app().choose("frontend-classic"));
     assert_eq!(frontends.frontend(), Frontend::Classic);
     assert_eq!(memory.load(), Frontend::Classic);
-    assert_eq!(labels_of(&frontends).first().map(String::as_str), Some("Task"));
+    assert_eq!(
+        labels_of(&frontends).first().map(String::as_str),
+        Some("Task")
+    );
     assert!(
         frontends.app().choose("view-list"),
         "the classic commands work again"
@@ -164,9 +176,18 @@ fn a_choice_that_cannot_be_remembered_still_changes_the_frontend() {
 #[test]
 fn plan_asks_for_a_frontend_and_the_old_spellings_still_work() {
     let plan = |word: &str| parse(&args(&["--plan", word])).unwrap().plan;
-    assert_eq!(plan("classic").and_then(Plan::frontend), Some(Frontend::Classic));
-    assert_eq!(plan("board").and_then(Plan::frontend), Some(Frontend::Board));
-    assert_eq!(plan("board2").and_then(Plan::frontend), Some(Frontend::Board));
+    assert_eq!(
+        plan("classic").and_then(Plan::frontend),
+        Some(Frontend::Classic)
+    );
+    assert_eq!(
+        plan("board").and_then(Plan::frontend),
+        Some(Frontend::Board)
+    );
+    assert_eq!(
+        plan("board2").and_then(Plan::frontend),
+        Some(Frontend::Board)
+    );
     assert_eq!(plan("next").and_then(Plan::frontend), Some(Frontend::Day));
     assert_eq!(plan("next2").and_then(Plan::frontend), Some(Frontend::Day));
     assert_eq!(plan("board1").and_then(Plan::frontend), None);

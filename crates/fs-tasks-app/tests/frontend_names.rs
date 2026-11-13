@@ -47,7 +47,10 @@ fn counter_check_without_any_key_nothing_is_migrated() {
     let file = dir.file("settings.json");
     std::fs::write(&file, "{\"other\": \"day\"}").unwrap();
     assert_eq!(Preference::new(file.clone()).load(), Frontend::DEFAULT);
-    assert_eq!(std::fs::read_to_string(&file).unwrap(), "{\"other\": \"day\"}");
+    assert_eq!(
+        std::fs::read_to_string(&file).unwrap(),
+        "{\"other\": \"day\"}"
+    );
 }
 
 #[test]
@@ -63,7 +66,13 @@ fn the_menu_says_frontend_and_no_visible_text_says_face() {
         remember: None,
         live: None,
     };
-    let window = Frontends::new(items, w.runtime.handle().clone(), Frontend::Classic, options).unwrap();
+    let window = Frontends::new(
+        items,
+        w.runtime.handle().clone(),
+        Frontend::Classic,
+        options,
+    )
+    .unwrap();
     let labels: Vec<String> = window.app().with_shell(|shell| {
         shell
             .menus()
@@ -79,10 +88,16 @@ fn the_menu_says_frontend_and_no_visible_text_says_face() {
         let low = text.to_lowercase();
         assert!(!low.contains("gesicht"), "{text}");
         assert!(
-            !low.split(|c: char| !c.is_alphabetic()).any(|w| w == "face" || w == "faces"),
+            !low.split(|c: char| !c.is_alphabetic())
+                .any(|w| w == "face" || w == "faces"),
             "{text}"
         );
     }
     // counter-check: the test would see an old word
-    assert!("the Face menu".to_lowercase().split(' ').any(|w| w == "face"));
+    assert!(
+        "the Face menu"
+            .to_lowercase()
+            .split(' ')
+            .any(|w| w == "face")
+    );
 }

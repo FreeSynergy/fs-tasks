@@ -10,6 +10,6 @@ permissions:
 jobs:
   check:
     uses: FreeSynergy/fs-release/.github/workflows/check.yml@main
-    # with:
-    #   working-directory: "."
-    #   apt-packages: "libssl-dev"
+    with:
+      # Software Vulkan (lavapipe) for the tests that start the window and draw a picture; a runner has no GPU
+      apt-packages: "mesa-vulkan-drivers libvulkan1 fonts-dejavu-core fonts-noto-core"
