@@ -13,7 +13,8 @@ mod relation;
 mod task;
 
 pub use actor::{
-    ACTOR_KEY, ACTOR_TYPE_KEY, AI_KEY, ActorType, actor_of, actor_type_of, is_non_human,
+    ACTOR_KEY, ACTOR_TYPE_KEY, AI_KEY, ActorType, MAX_ACTOR_IRI, MAX_ACTOR_NAME, MAX_CLAIM_HOURS,
+    actor_of, actor_type_of, check_actor, is_non_human,
 };
 pub use board::{Board, BoardTask, Column, ColumnLayout, Layout};
 pub use exec::{

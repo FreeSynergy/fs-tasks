@@ -170,3 +170,29 @@ fn plan_asks_for_a_face_and_the_old_spellings_still_work() {
     assert_eq!(plan("next1").and_then(Plan::face), None);
     assert!(parse(&args(&["--plan", "cube"])).is_err());
 }
+
+#[test]
+fn a_relative_data_home_is_ignored_and_the_choice_is_saved_to_its_place() {
+    use fs_tasks_app::data_dir_in;
+    use std::ffi::OsString;
+    use std::path::PathBuf;
+    let os = |s: &str| Some(OsString::from(s));
+    let home = PathBuf::from("/home/u/.local/share/freesynergy/tasks");
+    assert_eq!(
+        data_dir_in(os("/data"), os("/home/u")),
+        Some(PathBuf::from("/data/freesynergy/tasks"))
+    );
+    // relative (and empty) is invalid by the XDG rule: the home is used
+    assert_eq!(data_dir_in(os("rel/dir"), os("/home/u")), Some(home.clone()));
+    assert_eq!(data_dir_in(os(""), os("/home/u")), Some(home.clone()));
+    assert_eq!(data_dir_in(None, os("/home/u")), Some(home));
+    assert_eq!(data_dir_in(os("rel"), None), None);
+    // saving leaves no temporary file behind and the file holds the face
+    let scratch = Scratch::new();
+    let file = scratch.file("sub/settings.json");
+    let memory = Preference::new(file.clone());
+    memory.save(Face::Day).unwrap();
+    assert_eq!(memory.load(), Face::Day);
+    let left: Vec<_> = std::fs::read_dir(file.parent().unwrap()).unwrap().collect();
+    assert_eq!(left.len(), 1);
+}

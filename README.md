@@ -8,7 +8,7 @@ What is different here: a task follows the open JSCalendar standard (RFC 8984), 
 
 ## What it can do today
 
-Version 0.0.7 (in progress). Latest tag: `v0.0.5`.
+Version 0.0.7 (unreleased until tagged). Latest tag: `v0.0.6`.
 
 - Create, edit, assign, label, relate, list and delete tasks. Find them by due date range, progress, label, or a word in the title or description.
 - Import and export iCalendar tasks (VTODO). Events in the same file are left for the calendar.

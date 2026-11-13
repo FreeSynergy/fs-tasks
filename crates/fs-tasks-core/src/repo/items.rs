@@ -76,6 +76,7 @@ impl TaskItems for TaskRepo {
         kind: ActorType,
         name: &str,
     ) -> Result<TaskEntry> {
+        crate::model::check_actor(actor, name).map_err(Error::Conflict)?;
         let (actor, name) = (actor.to_string(), name.to_string());
         self.writing(async || {
             self.modify(id, move |t| {

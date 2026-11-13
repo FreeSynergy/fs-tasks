@@ -215,3 +215,11 @@ column -> status mapping and ordering arrives with boards.
 
 * `cursor.rs` is a copy of `fs-wiki-server`'s: move it to `fs-interfaces` (`rpc`).
 * `issue` texts that are sentences instead of identifiers break §2a: replace them by identifiers where a file is touched anyway.
+
+## 0.0.7 review follow-up (open points and limits)
+
+* **Import of many tasks is judged once** (`repo/unblocked_batch.rs`): from 21 created tasks in one flush on, "who became ready" is one scan of the store, readiness judged without the created tasks and with them, the difference announced (plus a created task that waited only for another created one, as when each is asked alone). Before, each task named by a `DEPENDS-ON` cost a scan (quadratic): a `DEPENDS-ON` chain of 300 imported in 35 s in a debug build (`tests/perf_import_depends.rs`), the 1500 chain of `plan_scale` did not finish in 10 minutes (700: 264 s; the review gave 138 s for 1500 in a release build, not measured again here). Now: 300 chain 2.4 s debug, the 1500 chain test of `plan_scale` 16 s debug, 5000 chain import 2.0 s release. Changes queued by edits are still judged one by one (small by nature).
+* **Bounds** (`model/actor.rs`): actor IRI at most 2048 bytes and not empty, actor name at most 200 bytes (`assign_actor` and `claim`, refused as a conflict), the end of a claim at most 24 hours ahead (as in `fs-interfaces` v0.0.20). An expired claim can be taken over by another (`tests/actors.rs`).
+* **Open: `claim` and `release` trust `by`.** The caller names who claims; nothing binds it to an identity. Harmless today (`task.claim` does not go over the socket, `wire_caps.rs`); it must be tied to the caller's identity when the claim is released onto the socket.
+* **Open: boards have no limits** on the number of columns (a sensible bound would be 32), the cards in `order` per place, or the length of names and uids; `board_layout_inner` is O(placed cards × tasks). Order is a vector index, no fractional index. To be added with constants and tests before boards go onto the wire.
+* The settings file is synced to disk before it replaces the old one; a relative `$XDG_DATA_HOME` is ignored (`face.rs`, `data_dir_in`).

@@ -179,3 +179,52 @@ async fn of_two_simultaneous_claims_one_wins_and_the_other_is_told_who_holds_it(
         assert_eq!(held.by, winner);
     }
 }
+
+#[tokio::test]
+async fn an_expired_claim_can_be_taken_over_by_another() {
+    let r = repo().await;
+    let t = r.create(Task::new("Take me")).await.unwrap();
+    r.claim(t.id, RUNNER, Utc::now() + Duration::seconds(1))
+        .await
+        .unwrap();
+    assert!(
+        r.claim(t.id, ADA, Utc::now() + Duration::minutes(5))
+            .await
+            .is_err(),
+        "still held"
+    );
+    tokio::time::sleep(std::time::Duration::from_millis(2200)).await;
+    let taken = r
+        .claim(t.id, ADA, Utc::now() + Duration::minutes(5))
+        .await
+        .unwrap();
+    assert_eq!(taken.task.claim().unwrap().by, ADA);
+}
+
+#[tokio::test]
+async fn an_actor_iri_a_name_and_the_end_of_a_claim_are_bounded() {
+    let r = repo().await;
+    let t = r.create(Task::new("Bounded")).await.unwrap();
+    let iri = |n: usize| format!("https://local.invalid/{}", "a".repeat(n - 22));
+    assert_eq!(iri(2048).len(), 2048);
+    r.assign_actor(t.id, &iri(2048), ActorType::Person, &"n".repeat(200))
+        .await
+        .unwrap();
+    for (actor, name) in [(iri(2049), "x".to_string()), (ADA.into(), "n".repeat(201))] {
+        let refused = r.assign_actor(t.id, &actor, ActorType::Person, &name).await;
+        assert!(matches!(refused, Err(Error::Conflict(_))), "{refused:?}");
+    }
+    assert!(matches!(
+        r.claim(t.id, &iri(2049), Utc::now() + Duration::minutes(1))
+            .await,
+        Err(Error::Conflict(_))
+    ));
+    assert!(matches!(
+        r.claim(t.id, RUNNER, Utc::now() + Duration::hours(25))
+            .await,
+        Err(Error::Conflict(_))
+    ));
+    r.claim(t.id, RUNNER, Utc::now() + Duration::hours(23))
+        .await
+        .unwrap();
+}

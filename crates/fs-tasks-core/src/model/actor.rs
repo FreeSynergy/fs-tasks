@@ -17,6 +17,27 @@ pub const ACTOR_TYPE_KEY: &str = "freesynergy.net:actorType";
 /// Vendor member of a participant: the actor is an AI (ADR 0054).
 pub const AI_KEY: &str = "freesynergy.net:ai";
 
+/// The longest actor IRI, in bytes.
+pub const MAX_ACTOR_IRI: usize = 2048;
+/// The longest actor name, in bytes.
+pub const MAX_ACTOR_NAME: usize = 200;
+/// The longest time a claim may run from now (as in fs-interfaces: 24 hours).
+pub const MAX_CLAIM_HOURS: i64 = 24;
+
+/// Is this actor IRI (not empty, at most [`MAX_ACTOR_IRI`] bytes) and name (at most [`MAX_ACTOR_NAME`] bytes) acceptable?
+pub fn check_actor(actor: &str, name: &str) -> Result<(), String> {
+    if actor.trim().is_empty() {
+        return Err("an actor needs an IRI".into());
+    }
+    if actor.len() > MAX_ACTOR_IRI {
+        return Err(format!("an actor IRI is at most {MAX_ACTOR_IRI} bytes"));
+    }
+    if name.len() > MAX_ACTOR_NAME {
+        return Err(format!("an actor name is at most {MAX_ACTOR_NAME} bytes"));
+    }
+    Ok(())
+}
+
 /// The kind of actor that is assigned (AS2 actor types).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActorType {

@@ -1,9 +1,10 @@
 # Changelog
 
-## 0.0.7 (in progress)
+## 0.0.7 (unreleased until tagged)
 
 ### English
 
+- **Import of a long `DEPENDS-ON` chain is linear again**: the tasks of an import are judged for "who became ready" in one pass over the store, not once for each task a relation names (that was quadratic: 300 tasks 35 s in a debug build, 1500 did not finish). Actor IRI (2048 bytes), actor name (200 bytes) and the end of a claim (24 hours) are bounded. The choice of the face is synced to disk before it replaces the old file, and a relative `$XDG_DATA_HOME` is ignored (XDG rule).
 - **The window has three faces**, chosen in the menu **Face**: *Classic* (the first window), *Board* (columns by status, cards, a panel with "Move to") and *Day list* (Today, Upcoming, Anytime, Someday, Logbook, labels). The choice is remembered in `settings.json` in the data folder (`$XDG_DATA_HOME/freesynergy/tasks/`), written atomically; a missing or broken file means the default, **Board**. A failed write is a warning, not a crash.
 - `--plan classic|board|next` starts with a face this time only and does not change the memory (`board2` and `next2` still work; the earlier workbench layouts are `board1` and `next1`). `--version` / `-V` is unchanged.
 - Built on `fs-components` v0.0.13 (the plan widgets live there), `fs-interfaces` v0.0.19. The typing test starts the classic face (`--plan classic`).

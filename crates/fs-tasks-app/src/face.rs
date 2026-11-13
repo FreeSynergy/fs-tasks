@@ -49,6 +49,20 @@ impl Face {
     }
 }
 
+/// The data folder of the program from the two variables: `$XDG_DATA_HOME` if it is an absolute path (the XDG rule: a
+/// relative one is invalid and ignored, else the settings would land wherever the program was started), else
+/// `$HOME/.local/share`; below it `freesynergy/tasks`.
+pub fn data_dir_in(
+    xdg: Option<std::ffi::OsString>,
+    home: Option<std::ffi::OsString>,
+) -> Option<PathBuf> {
+    let base = xdg
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+        .or_else(|| home.map(|h| PathBuf::from(h).join(".local/share")))?;
+    Some(base.join("freesynergy").join("tasks"))
+}
+
 /// The remembered face, in one file.
 #[derive(Clone, Debug)]
 pub struct Preference {
@@ -101,7 +115,15 @@ impl Preference {
         temp_name.push(format!(".{}.tmp", std::process::id()));
         let temp = self.file.with_file_name(temp_name);
         let body = json!({ "face": face.id() }).to_string();
-        std::fs::write(&temp, body).map_err(|e| format!("{}: {e}", temp.display()))?;
+        // on disk before it takes the place of the old file (else a crash may leave an empty file in its place)
+        let written = std::fs::File::create(&temp).and_then(|mut f| {
+            std::io::Write::write_all(&mut f, body.as_bytes())?;
+            f.sync_all()
+        });
+        written.map_err(|e| {
+            let _ = std::fs::remove_file(&temp);
+            format!("{}: {e}", temp.display())
+        })?;
         std::fs::rename(&temp, &self.file).map_err(|e| {
             let _ = std::fs::remove_file(&temp);
             format!("{}: {e}", self.file.display())

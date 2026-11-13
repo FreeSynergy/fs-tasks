@@ -4,12 +4,13 @@
 //! provider process; across devices (no referee) the claim is only an announcement, and the idempotency of the work
 //! itself has to make a doubled claim harmless (see the plan, N3).
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use fs_objects::ObjectId;
 
 use super::handle::TaskRepo;
 use crate::error::{Error, Result};
 use crate::interface::TaskEntry;
+use crate::model::{MAX_CLAIM_HOURS, check_actor};
 use crate::now_utc;
 use crate::time::parse_utc;
 
@@ -21,10 +22,16 @@ impl TaskRepo {
         until: DateTime<Utc>,
     ) -> Result<TaskEntry> {
         let now = parse_utc(&now_utc()).map_err(Error::from)?;
-        if by.trim().is_empty() || until <= now {
+        if until <= now {
             return Err(Error::Conflict(
                 "a claim needs an actor IRI and an end in the future".into(),
             ));
+        }
+        check_actor(by, "").map_err(Error::Conflict)?;
+        if until > now + Duration::hours(MAX_CLAIM_HOURS) {
+            return Err(Error::Conflict(format!(
+                "a claim ends within {MAX_CLAIM_HOURS} hours"
+            )));
         }
         let by = by.to_string();
         self.writing(async || {

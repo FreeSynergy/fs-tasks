@@ -22,6 +22,7 @@ mod scan;
 mod span;
 mod transfer;
 mod unblocked;
+mod unblocked_batch;
 mod unread;
 mod upgrade;
 

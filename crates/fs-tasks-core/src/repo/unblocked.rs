@@ -18,7 +18,7 @@ use crate::model::Task;
 use crate::plan::{Readiness, edges_of, readiness_of};
 
 /// Created tasks asked one by one through the index up to this many, more by one scan of the graph.
-const SMALL_CREATED: usize = 20;
+pub(super) const SMALL_CREATED: usize = 20;
 
 /// Can `old` becoming `new` (an edit) or `old` going (`new` is `None`) free anybody? A change of progress can, a deletion
 /// can, and a relation that is taken away can. A title or a label cannot, and neither can a relation that is only added
@@ -39,7 +39,7 @@ fn may_change_readiness(old: &Task, new: Option<&Task>) -> bool {
 
 /// The tasks that were waiting (blocked, unknown, in a cycle or behind a cancelled task) in `before` and are ready in
 /// `after`.
-fn freed(before: &BTreeMap<String, Readiness>, after: &BTreeMap<String, Readiness>) -> Vec<String> {
+pub(super) fn freed(before: &BTreeMap<String, Readiness>, after: &BTreeMap<String, Readiness>) -> Vec<String> {
     after
         .iter()
         .filter(|(_, now)| **now == Readiness::Ready)
@@ -172,40 +172,19 @@ impl TaskRepo {
             return;
         }
         let uids: Vec<String> = created.into_iter().map(|c| c.uid).collect();
-        let Ok(named) = self.named_as_dependency(&uids).await else {
+        // many at once (an import): one judgement of the graph without and with them, not one for each task named
+        if uids.len() > SMALL_CREATED {
+            self.announce_created_together(&uids).await;
             return;
-        };
-        for uid in named {
-            self.announce_unblocked(None, &uid).await;
         }
-    }
-
-    /// Of these `uid`s, those that some stored task depends on (`depends-on`): creating such a task can free the one that
-    /// waited. A few are asked one by one through the index, many by one scan of the graph.
-    async fn named_as_dependency(&self, uids: &[String]) -> crate::error::Result<Vec<String>> {
-        if uids.len() <= SMALL_CREATED {
-            let mut out = Vec::new();
-            for uid in uids {
-                if !self.tasks_with(DEPENDS_ON, uid).await?.is_empty() {
-                    out.push(uid.clone());
-                }
+        for uid in uids {
+            let Ok(named) = self.tasks_with(DEPENDS_ON, &uid).await else {
+                return;
+            };
+            if !named.is_empty() {
+                self.announce_unblocked(None, &uid).await;
             }
-            return Ok(out);
         }
-        let wanted: std::collections::BTreeSet<&str> = uids.iter().map(String::as_str).collect();
-        let named: std::collections::BTreeSet<String> = self
-            .scan_graph()
-            .await?
-            .values()
-            .flat_map(Task::relations)
-            .filter(|(_, r)| *r == crate::model::Relation::DependsOn)
-            .map(|(other, _)| other)
-            .collect();
-        Ok(uids
-            .iter()
-            .filter(|u| wanted.contains(u.as_str()) && named.contains(*u))
-            .cloned()
-            .collect())
     }
 
     /// Announce the tasks that were waiting when `old` was the task (`None`: it did not exist) and are ready in the store
@@ -250,10 +229,15 @@ impl TaskRepo {
         let after_tasks: Vec<Task> = graph.values().cloned().collect();
         let (before, after) = (readiness_of(&before_tasks), readiness_of(&after_tasks));
         let names = self.not_announced(freed(&before, &after), &after, uid, current.is_none());
+        self.notify_unblocked(&names).await;
+    }
+
+    /// Say `Unblocked` for each of these tasks (by `uid`).
+    pub(super) async fn notify_unblocked(&self, names: &[String]) {
         if names.is_empty() {
             return;
         }
-        let Ok(entries) = self.entries_by_uids(&names).await else {
+        let Ok(entries) = self.entries_by_uids(names).await else {
             return;
         };
         for entry in entries {
@@ -263,7 +247,7 @@ impl TaskRepo {
 
     /// Of the freed tasks, those not announced already; remembers them. A task seen waiting in `after` (or the task that
     /// is gone) is forgotten, so freeing it again later is announced again.
-    fn not_announced(
+    pub(super) fn not_announced(
         &self,
         freed: Vec<String>,
         after: &BTreeMap<String, Readiness>,
