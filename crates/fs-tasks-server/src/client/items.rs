@@ -17,7 +17,7 @@ use fs_tasks_core::{
 
 use super::decode::{entries, entry, report, strings};
 use super::walk::all;
-use super::RemoteItems;
+use super::connection::RemoteItems;
 
 fn wire(e: &capnp::Error) -> Error {
     super::decode::wire(e)

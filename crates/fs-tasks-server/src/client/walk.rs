@@ -1,4 +1,6 @@
 //! Walking all pages of `list` / `query` for [`super::items`].
+//!
+//! Pattern: Iterator — follow the cursor page by page until it comes back empty.
 
 use fs_interfaces::tasks_capnp::items;
 use fs_tasks_core::contract::write_filter;
